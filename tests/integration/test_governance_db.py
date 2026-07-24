@@ -93,16 +93,33 @@ class TestSourceHealth:
         source.degraded_since = datetime.now(timezone.utc) - timedelta(hours=25)
         assert gov.update_source_health(source, False) == "failed"
 
-    def test_recovery_on_success(self, db, redis_client):
+    def test_recovery_requires_two_consecutive_successes(self, db, redis_client):
         source = make_source(db)
         db.commit()
         gov = Governance(db, redis_client)
         for _ in range(3):
             gov.update_source_health(source, False)
         assert source.status == "degraded"
+        # 第 1 次成功：仍为 degraded
+        assert gov.update_source_health(source, True) is None
+        assert source.status == "degraded"
+        # 第 2 次连续成功：恢复 active
         assert gov.update_source_health(source, True) == "active"
         assert source.consecutive_failures == 0
         assert source.last_success_at is not None
+
+    def test_recovery_streak_reset_on_failure(self, db, redis_client):
+        source = make_source(db)
+        db.commit()
+        gov = Governance(db, redis_client)
+        for _ in range(3):
+            gov.update_source_health(source, False)
+        gov.update_source_health(source, True)      # 连胜 1
+        gov.update_source_health(source, False)     # 失败清零连胜（degraded 未超 24h 不变 failed）
+        assert source.status == "degraded"
+        assert gov.update_source_health(source, True) is None   # 重新计 1
+        assert source.status == "degraded"
+        assert gov.update_source_health(source, True) == "active"
 
 
 class TestFailRateAlert:

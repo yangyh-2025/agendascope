@@ -36,9 +36,10 @@ logger = get_logger("governance")
 # 退避重试基数（秒）：第 n 次重试等待 BASE * 2^(n-1)
 RETRY_BACKOFF_BASE_SECONDS = 300
 SOURCE_FAIL_TO_DEGRADED = 3
-SOURCE_SUCCESS_TO_ACTIVE = 2
+SOURCE_SUCCESS_TO_ACTIVE = 2   # degraded 连续 2 次成功才恢复（T1.22）
 DEGRADED_TO_FAILED_HOURS = 24
 DEDUP_FINGERPRINT_TTL_SECONDS = 72 * 3600
+_SUCCESS_STREAK_KEY = "source:health:success_streak:{source_id}"
 
 
 @dataclass
@@ -140,18 +141,30 @@ class Governance:
     # ---------- 源健康状态机（T1.22） ----------
 
     def update_source_health(self, source: Source, success: bool, reason: str = "") -> str | None:
-        """按本轮采集结果推进源健康状态机；返回新状态（未变化返回 None）。状态变更留 status_history。"""
+        """按本轮采集结果推进源健康状态机；返回新状态（未变化返回 None）。状态变更留 status_history。
+
+        恢复语义（T1.22）：degraded 须连续 2 次成功才恢复 active，连胜计数存 Redis；
+        任何失败清零连胜。Redis 不可用时退化为单次成功即恢复（不阻塞主链路）。
+        """
         old_status = source.status
         now = datetime.now(timezone.utc)
         if success:
             source.consecutive_failures = 0
             source.last_success_at = now
             if source.status == "degraded":
-                # degraded 连续成功即恢复（成功计数复用 consecutive_failures=0 语义，直接恢复）
-                source.status = "active"
-                source.degraded_since = None
+                if self.redis is None:
+                    source.status = "active"
+                    source.degraded_since = None
+                else:
+                    streak = self.redis.incr(_SUCCESS_STREAK_KEY.format(source_id=source.id))
+                    if streak >= SOURCE_SUCCESS_TO_ACTIVE:
+                        source.status = "active"
+                        source.degraded_since = None
+                        self.redis.delete(_SUCCESS_STREAK_KEY.format(source_id=source.id))
         else:
             source.consecutive_failures = (source.consecutive_failures or 0) + 1
+            if self.redis is not None:
+                self.redis.delete(_SUCCESS_STREAK_KEY.format(source_id=source.id))
             if source.status == "active" and source.consecutive_failures >= SOURCE_FAIL_TO_DEGRADED:
                 source.status = "degraded"
                 source.degraded_since = now
