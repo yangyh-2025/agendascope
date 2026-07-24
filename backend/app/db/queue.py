@@ -29,9 +29,8 @@ class StreamQueue:
         resp: Any = self.client.xreadgroup(group, consumer, {stream: ">"}, count=count, block=block_ms)
         if not resp:
             return []
-        if isinstance(resp, list):
-            resp = resp[0]
-        entries = next(iter(resp.values()))  # [(msg_id, fields), ...]
+        first = resp[0]  # [(stream, entries), ...] 单流读取只取第一个
+        entries = first[1] if isinstance(first, (list, tuple)) else next(iter(first.values()))
         return entries or []
 
     def ack(self, stream: str, group: str, msg_id: str) -> None:
