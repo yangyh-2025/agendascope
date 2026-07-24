@@ -75,6 +75,7 @@ class CollectorScheduler:
             select(CollectionJob).where(
                 CollectionJob.status == JOB_TEMP_FAIL,
                 CollectionJob.next_run_at <= now,
+                CollectionJob.channel != "gdelt",  # GDELT 由独立周期任务重试，不走源调度路径
             ).limit(50)
         ).all()
         for job in jobs:

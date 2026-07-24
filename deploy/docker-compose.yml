@@ -75,9 +75,7 @@ services:
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   worker:
-    build:
-      context: ../backend
-      dockerfile: ../deploy/Dockerfile.backend
+    image: agendascope-backend:latest   # 与 backend 共用镜像（避免重复构建）
     environment:
       APP_ENV: dev
       DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
