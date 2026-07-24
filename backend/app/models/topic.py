@@ -21,6 +21,8 @@ class Topic(Base):
     topic_category: Mapped[str | None] = mapped_column(String(50))
     summary_zh: Mapped[str | None] = mapped_column(Text)
     naming_method: Mapped[str] = mapped_column(String(20), nullable=False, default="llm")
+    llm_model: Mapped[str | None] = mapped_column(String(100))  # 最近一次 LLM 判定所用模型名（T2.17 留痕）
+    prompt_version: Mapped[str | None] = mapped_column(String(50))  # 最近一次 LLM 判定所用 prompt 版本
     keywords: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     cluster_method: Mapped[str] = mapped_column(String(20), nullable=False, default="bertopic")
     centroid = mapped_column(Vector(768), nullable=True)

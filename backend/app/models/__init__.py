@@ -6,6 +6,7 @@ from app.models import (  # noqa: F401
     article,
     audit,
     collection,
+    llm,
     person,
     report,
     source,
