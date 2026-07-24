@@ -99,3 +99,51 @@ def test_gdelt_round_resolves_sources_and_dedups(db, redis_client, monkeypatch):
     _, new2 = collector2.run_round()
     assert new2 == 0
     assert submitter2.captured == []
+
+
+class TestBufferFallback:
+    def test_api_failure_falls_back_to_csv_buffer(self, db, redis_client, monkeypatch, tmp_path):
+        """DOC API 故障（429/超时）时降级读本地缓冲 CSV，走同一提交通道。"""
+        own = make_source(db, homepage_url="https://stub-media.com", feed_url="https://stub-media.com/feed.xml")
+        db.commit()
+
+        gov = Governance(db, redis_client)
+        submitter = CaptureSubmitter()
+        collector = GdeltCollector(db, gov, submitter)
+        monkeypatch.setattr(collector.settings, "gdelt_buffer_dir", str(tmp_path))
+
+        # 先写入一份缓冲（模拟上一轮成功拉取落盘）
+        from app.collector.gdelt_buffer import GdeltBuffer
+
+        GdeltBuffer(str(tmp_path)).save_articles(GDELT_ARTLIST["articles"])
+
+        # 本轮 API 故障
+        import requests as _requests
+
+        def _boom(*args, **kwargs):
+            raise __requests.ConnectionError("429 / timeout")
+
+        monkeypatch.setattr(_requests, "get", _boom)
+        monkeypatch.setattr(collector.fetcher, "fetch", lambda url: (ARTICLE_HTML, 200))
+
+        found, new = collector.run_round()
+        assert (found, new) == (2, 2)
+        by_url = {p["url"]: p for p in submitter.captured}
+        assert by_url["https://stub-media.com/world/tariffs-2026"]["source_id"] == str(own.id)
+        assert by_url["https://unknown-outlet.net/item/42"]["pub_time"] is not None
+
+    def test_api_success_refreshes_buffer(self, db, redis_client, monkeypatch, tmp_path):
+        """API 成功时自动刷新缓冲 CSV。"""
+        make_source(db, homepage_url="https://stub-media.com", feed_url="https://stub-media.com/feed.xml")
+        db.commit()
+        collector = GdeltCollector(db, Governance(db, redis_client), CaptureSubmitter())
+        monkeypatch.setattr(collector.settings, "gdelt_buffer_dir", str(tmp_path))
+        monkeypatch.setattr(collector, "fetch_latest", lambda timespan="15min": GDELT_ARTLIST["articles"])
+        monkeypatch.setattr(collector.fetcher, "fetch", lambda url: (ARTICLE_HTML, 200))
+
+        collector.run_round()
+        from app.collector.gdelt_buffer import GdeltBuffer
+
+        rows = GdeltBuffer(str(tmp_path)).read_latest()
+        assert len(rows) == 2
+        assert rows[0]["url"] == GDELT_ARTLIST["articles"][0]["url"]

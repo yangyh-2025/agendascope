@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.collector.extractor import extract_with_fallback
 from app.collector.fetcher import RequestsFetcher
+from app.collector.gdelt_buffer import GdeltBuffer
 from app.collector.governance import Governance, TaskUrlFilter
 from app.collector.submitter import Submitter
 from app.collector.types import CollectedData
@@ -63,6 +64,19 @@ class GdeltCollector:
         data = resp.json()
         return data.get("articles") or []
 
+    def fetch_with_buffer_fallback(self, buffer: GdeltBuffer, timespan: str = "15min") -> list[dict]:
+        """先走 DOC API；成功则刷新 15 分钟批 CSV 本地缓冲；故障降级读最近缓冲（T1.19）。
+
+        缓冲也为空时向上抛异常，由调度器记治理状态（绝不静默降级）。
+        """
+        try:
+            articles = self.fetch_latest(timespan)
+        except Exception as exc:  # noqa: BLE001 429/超时/5xx/连接失败/解析失败统一降级
+            logger.warning("gdelt_api_fail_fallback_buffer", error=str(exc)[:200])
+            return buffer.read_latest()
+        buffer.save_articles(articles)
+        return articles
+
     def _resolve_source(self, domain: str) -> Source | None:
         """按域名匹配已登记源（自有采集源优先）；未命中挂靠 GDELT 伪源。"""
         if domain:
@@ -77,9 +91,10 @@ class GdeltCollector:
         return ensure_gdelt_pseudo_source(self.db)
 
     def run_round(self, job=None) -> tuple[int, int]:
-        """执行一轮 GDELT 拉取，返回 (found, new)。网络/解析异常向上抛由调用方记治理状态。"""
+        """执行一轮 GDELT 拉取，返回 (found, new)。缓冲也无效时异常向上抛由调用方记治理状态。"""
         self.submitter.resend_pending()
-        articles = self.fetch_latest()
+        buffer = GdeltBuffer(self.settings.gdelt_buffer_dir)
+        articles = self.fetch_with_buffer_fallback(buffer)
         task_filter = TaskUrlFilter()
         found = 0
         new = 0

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     gdelt_api_base: str = "https://api.gdeltproject.org/api/v2/doc/doc"
     gdelt_countries: str = "US,GB,CN,JP,RU,DE,FR,KR,TR,QA,CA,AU,ES"
     gdelt_max_records: int = 50
+    gdelt_buffer_dir: str = "data/gdelt_buffer"
 
     collect_api_base: str = "http://localhost:8000"
 
