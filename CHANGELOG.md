@@ -71,3 +71,15 @@
 - **修复**：`StreamQueue.consume` 对 xreadgroup 返回的 list/tuple 结构解析有误（Phase 1 无消费者未覆盖到），兼容修复
 - **实测（CPU，开发机）**：lid.176 加载 <2s、识别毫秒级；mpnet 加载 17.7s，批 32 推理 544ms（17ms/篇），单篇 65ms；管线 10 篇批 向量化+落库 43ms/篇 —— 单篇 P95 ≤5s 目标大幅达标；跨语言判别：同事件中英报道对 cosine 0.6+，显著高于无关报道对
 - **测试**：新增 22 项（语言识别 10、向量化 5、管线集成 4、worker 集成 3），全部真实加载 lid.176/mpnet 跑真实推理；累计 116 项全绿；ruff/mypy 全绿
+
+### M2-3 LLM 服务（2026-07-25）
+
+- **T2.12 本地推理服务封装**（`backend/app/llm/`）：transformers + Qwen 系列本地推理，三配置档——`gpu-24g`（1×24GB GPU，Qwen2.5-14B-GPTQ-Int4）/ `cpu-quant`（CPU 量化，Qwen2.5-3B）/ `cpu-dev`（开发测试默认，Qwen2.5-0.5B-Instruct float32），`LLM_PROFILE` 一键切换，`LLM_MODEL_DIR` 可覆盖；JSON Schema 结构化输出采用「prompt 强约束 + pydantic 校验 + 解析失败重试 1 次」路线（未引入 outlines/约束解码，选型理由见 `app/llm/schemas.py`），重试时把校验错误反馈进对话引导模型修正；`LLMTaskQueue` 异步批处理队列（asyncio 队列 + 小窗口聚批 + 独立线程推理），主链路投递即返回 Future，不阻塞采集
+- **T2.13 议题命名器**：输入簇内代表标题 5–10 条 + c-TF-IDF top 词（聚类引擎 M2-2 提供，本服务以函数参数接收）；few-shot 好/坏命名对照写进 prompt；上下文预算 ≤2000 token（超长标题按预算裁剪）；结果落 topics.name_auto 并留痕
+- **T2.14 主题分类器**：预置 7 类（政治安全/经济金融/军事/科技/能源气候/社会民生/其他），系统提示固化 6 条易混边界示例防漂移（如「对台军售→军事」「芯片反倾销→经济金融」）；分类结果强制校验在体系内，自造类别按失败处理兜底「其他」；`LLM_CATEGORIES`（JSON 数组）支持部署方扩展
+- **T2.15 议题摘要生成器**：2–3 句中文摘要（主体+事件→进展/影响，只依据给定标题不编造）
+- **T2.16 降级链**：滑窗（20 样本/最少 5）推理失败率 >20% 或模型加载失败 → c-TF-IDF 关键词标签兜底（`backend/app/llm/ctfidf.py` 自实现：聚类 top 词优先 + 标题内 TF-IDF 补足，中英文混合切词），标签显式「关键词：」前缀不伪装 LLM 命名，topics.naming_method=ctfidf_fallback，分类兜底「其他」，摘要留空不伪造；写 alerts 表 P1 告警（系统规则「系统-LLM服务监控」+ redis 1h 防抖 + WARN 日志，复用 collector 治理告警模式）；恢复后 `backfill_degraded_topics()` 从 topic_articles 关联 articles 重建代表标题，对降级期议题回填重命名/分类/摘要并写 revision_log（before/after/model/prompt_version），人工锁定字段不被推翻
+- **T2.17 prompt 版本管理**：命名/分类/摘要模板带版本号（`app/llm/prompts.py` 注册表，只增不改，历史版本可取）；新增迁移 0003 建 `llm_judgements` 表（详细设计未明确 DDL，自设计并注释：topic_id/task_type/model_name/prompt_version/输入输出快照/成败/耗时，rerun 行以 input_payload.rerun_of 关联基线）+ topics 扩展 `llm_model`/`prompt_version` 两列；`rerun_judgements()` 支持指定 prompt 版本对历史判定批量重跑对比（返回前后对照，留痕不改 topics 现行值）
+- **修复**：`DegradationMonitor.record` 锁内调用 `failure_rate()`（同持锁方法）致非重入死锁，改为锁内联计算
+- **实测（Qwen2.5-0.5B-Instruct，CPU float32，开发机）**：模型加载 6.4s；单议题完整标注（命名+分类+摘要）24.9s——命名 3.6s / 分类 6.4s / 摘要 14.9s（分类与摘要各触发 1 次解析重试后成功，验证重试链路真实有效）；CPU 单议题 P95 ≤60s 目标达标（0.5B 档），GPU 档 ≤10s 目标待 GPU 环境复核
+- **测试**：新增 54 项（单元 45：schemas 解析 8、ctfidf 兜底 6、prompt 注册 7、健康监控 6、异步队列 5、编排逻辑 13；集成 9：持久化/告警/回填/重跑 5——含 alerts 表 P1 告警与防抖断言，真实模型推理 4：命名/分类/摘要/全链路延迟，真实加载 Qwen2.5-0.5B 无 Mock）；本副本全量 170 项：149 passed / 21 skipped（跳过项为 M2-1 模型权重未分发到本副本的用例）/ 0 failed；ruff/mypy 全绿

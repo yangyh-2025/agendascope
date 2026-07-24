@@ -59,6 +59,34 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 
 部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
 
+### LLM 服务（backend/app/llm/，M2-3）
+
+本地大模型推理服务（Qwen 系列，transformers 运行时），负责议题命名/分类/摘要，数据不出内网。模型权重放根目录 `models/`（已 gitignore，部署时单独分发）。
+
+配置档（环境变量 `LLM_PROFILE` 切换）：
+
+| 配置档 | 硬件 | 推荐模型 | 单议题延迟目标（估算） |
+|--------|------|----------|------------------------|
+| `gpu-24g` | 1×24GB GPU | Qwen2.5-14B-Instruct-GPTQ-Int4（或 7B） | P95 ≤10s |
+| `cpu-quant` | CPU 量化 | Qwen2.5-3B-Instruct（int8/GGUF 转换后落 models/） | P95 ≤60s |
+| `cpu-dev`（默认） | CPU 开发/测试 | Qwen2.5-0.5B-Instruct（float32） | 实测见 CHANGELOG |
+
+关键环境变量：`LLM_MODEL_DIR`（覆盖模型目录，相对仓库根）、`LLM_DEVICE`、`LLM_MAX_CONTEXT_TOKENS`（命名 prompt 预算，默认 2000）、`LLM_CATEGORIES`（JSON 数组，扩展主题分类体系）、`LLM_FAILURE_RATE_THRESHOLD`（降级判定阈值，默认 0.2）。
+
+开发环境模型下载（权重不进 git）：
+
+```bash
+# 直连失败时先 export HF_ENDPOINT=https://hf-mirror.com
+.venv/Scripts/python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-0.5B-Instruct', local_dir='models/Qwen2.5-0.5B-Instruct')"
+```
+
+设计与行为要点：
+
+- **结构化输出**：prompt 内嵌 JSON Schema 强约束 + pydantic 校验，解析失败重试 1 次后单点降级（未引入 outlines/约束解码：输出 schema 极简，小模型 CPU 场景收益有限且增加版本耦合，理由见 `app/llm/schemas.py`）
+- **异步批处理**：`LLMTaskQueue`（asyncio 队列 + 小窗口聚批 + 独立线程推理），主链路投递即返回，不阻塞采集
+- **降级链**：推理失败/超时率 >20%（滑窗）或模型加载失败 → c-TF-IDF 关键词标签兜底（`naming_method=ctfidf_fallback`，分类归「其他」，摘要留空不伪造）+ alerts 表 P1 告警（1h 防抖）+ WARN 日志；恢复后 `backfill_degraded_topics()` 对降级期议题回填重命名/分类/摘要并写 revision_log
+- **prompt 版本管理**：命名/分类/摘要模板带版本号（`app/llm/prompts.py` 注册表，只增不改）；每次判定写 `llm_judgements` 表（模型名 + prompt_version + 输入/输出快照 + 耗时），topics 表冗余 `llm_model`/`prompt_version` 列；`rerun_judgements()` 支持换 prompt 后历史判定批量重跑对比
+
 ### 前端（frontend/）
 
 React 18 + TypeScript + Vite。深色红蓝主题，design token 集中在 `frontend/src/theme/tokens.ts`。
