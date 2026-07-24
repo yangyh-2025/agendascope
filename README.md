@@ -44,7 +44,10 @@ cd backend && alembic upgrade head                                             #
 cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      # 种子源（31 国 39 源）+ 初始管理员
 cd backend && uvicorn app.main:app --port 8000                                 # API 服务
 python -m app.collector.worker                                                 # 采集调度 worker（另开终端）
+python -m app.worker.nlp_worker                                                # NLP worker：语言识别→向量化→ES 同步→延迟埋点（另开终端）
 ```
+
+NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
 
 质量门禁（仓库根执行，配置在 `pyproject.toml`）：
 

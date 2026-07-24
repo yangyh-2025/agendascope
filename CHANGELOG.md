@@ -57,3 +57,17 @@
 - passlib 与新版 bcrypt 不兼容，改用 bcrypt 库直接实现
 - alembic.ini 去非 ASCII 字符兼容 Windows 控制台编码
 - audit_logs inet 字段对非 IP 来源（测试客户端）做合法性校验
+
+## Phase 2 · NLP 管线与聚类（2026-07-25 起）
+
+### M2-1 NLP 基础管线（2026-07-25）
+
+- **T2.1 语言识别**：fastText lid.176 封装（`backend/app/nlp/language.py`），权重 `models/lid.176.bin`；送检文本换行清洗 + 截断 2000 字符；置信度 <0.8 回落源默认语言，`language_confidence` 落模型原始置信度即低置信留痕，原始判定记日志备查
+- **T2.2 跨语言向量化**：paraphrase-multilingual-mpnet-base-v2（768 维，L2 归一化），权重 `models/sentence-transformers/`；批量推理（批 32 可配）；CPU 基线，`NLP_DEVICE=cuda/auto` 预留 GPU 开关
+- **T2.3 pgvector 存储与检索**：embedding 随 articles 落库（vector(768) + HNSW，Phase 1 迁移已建列），`backend/app/nlp/similarity.py` 提供 cosine Top-N 检索（`find_similar` / `find_similar_to_article`，min_score 阈值下推 SQL），不引入独立向量库进程
+- **T2.4 ES 全文索引同步**：标题/正文/摘要同步 ES 8，基础字段 standard analyzer + 12 语种专属字段（dynamic_templates 按 `*_<lang>` 后缀挂内置语言 analyzer，中文/日文/韩文走 cjk）；doc `_id=article_id` 幂等 upsert，PG 为事实源最终一致；失败指数退避有界重试（默认 ≤31s，不死等），耗尽抛错由 worker 整批重投递
+- **T2.5 延迟埋点**：新增迁移 0002 建 `pipeline_latency_sample`（详细设计未定义 DDL，自设计：逐篇 published_at→visible_at，六档分桶 <5m/5-15m/15-30m/30-60m/1-2h/>2h，按源/通道索引，`article_id` 唯一 + ON CONFLICT 保证重投递幂等）；`channel_stats` 提供 by_channel P95 聚合（对齐延迟看板口径）
+- **管线接入**：`python -m app.worker.nlp_worker` 消费 raw:articles（消费者组 nlp），语言识别 → 向量化落库（先提交 PG，可见性不被 ES 阻塞）→ ES 同步 → 延迟埋点 → ACK；XAUTOCLAIM 回收滞留 pending 重投递，单消息尝试超 8 次进死信
+- **修复**：`StreamQueue.consume` 对 xreadgroup 返回的 list/tuple 结构解析有误（Phase 1 无消费者未覆盖到），兼容修复
+- **实测（CPU，开发机）**：lid.176 加载 <2s、识别毫秒级；mpnet 加载 17.7s，批 32 推理 544ms（17ms/篇），单篇 65ms；管线 10 篇批 向量化+落库 43ms/篇 —— 单篇 P95 ≤5s 目标大幅达标；跨语言判别：同事件中英报道对 cosine 0.6+，显著高于无关报道对
+- **测试**：新增 22 项（语言识别 10、向量化 5、管线集成 4、worker 集成 3），全部真实加载 lid.176/mpnet 跑真实推理；累计 116 项全绿；ruff/mypy 全绿
