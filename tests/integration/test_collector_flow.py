@@ -1,4 +1,6 @@
 """RSS 采集器与配置驱动管线（pipeline）集成测试：stub 网络层，验证发现→去重→抽取→提交全链路。"""
+from datetime import UTC
+
 import pytest
 
 from app.collector.fetcher import RequestsFetcher
@@ -6,6 +8,7 @@ from app.collector.governance import Governance
 from app.collector.pipeline import PipelineCollector
 from app.collector.rss_collector import RssCollector
 from app.collector.submitter import Submitter
+from app.collector.types import FetchError
 from tests.conftest import make_source
 
 pytestmark = pytest.mark.integration
@@ -130,3 +133,42 @@ class TestPipelineCollector:
         assert found == 5 and new == 5
         assert all(p["adapter_type"] == "pipeline" for p in submitter.captured)
         assert all(p["content_status"] == "full" for p in submitter.captured)
+
+
+FEED_WITH_ENCODED = """<?xml version="1.0"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel><title>Encoded Feed</title>
+<item><title>央行宣布降息二十五个基点</title><link>https://stub-media.com/news/9</link>
+<pubDate>Thu, 24 Jul 2026 10:00:00 GMT</pubDate>
+<content:encoded><![CDATA[<article><p>该国央行今日宣布降息二十五个基点，以应对经济增长放缓的压力。
+行长表示未来货币政策将保持适度宽松，重点关注就业与物价稳定。分析师预计年内仍有一次降息空间，
+消息公布后主要股指收涨，汇率保持平稳，市场流动性合理充裕，债券市场收益率小幅下行。</p></article>]]></content:encoded>
+</item>
+</channel></rss>"""
+
+
+class FailOnArticleFetcher(StubFetcher):
+    """feed 可达、正文页全部 403（模拟反爬站点）。"""
+
+    def fetch(self, url: str):
+        if url.endswith("feed.xml"):
+            return FEED_WITH_ENCODED, 200
+        raise FetchError("HTTP 403", http_status=403)
+
+
+class TestFeedEncodedPreference:
+    def test_encoded_fulltext_used_when_article_blocked(self, db, redis_client):
+        """content:encoded 自带全文时，即使正文页 403 也能产出 full。"""
+        source = make_source(db, feed_url="https://stub-media.com/feed.xml")
+        db.commit()
+        gov = Governance(db, redis_client)
+        from datetime import datetime
+
+        job = gov.create_job(source.id, "rss", datetime.now(UTC))
+        submitter = CaptureSubmitter()
+        collector = RssCollector(gov, submitter, fetcher=FailOnArticleFetcher())
+        found, new = collector.run_round(source, job)
+        assert (found, new) == (1, 1)
+        payload = submitter.captured[0]
+        assert payload["content_status"] == "full"
+        assert "降息二十五个基点" in payload["content"]
