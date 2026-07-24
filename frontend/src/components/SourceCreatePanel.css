@@ -1,0 +1,71 @@
+.create-panel {
+  background: var(--as-colors-navyPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-md);
+  margin-bottom: var(--as-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+}
+
+.create-preview-form {
+  display: flex;
+  gap: var(--as-spacing-sm);
+}
+
+.create-preview-form input {
+  flex: 1;
+}
+
+.preview-meta {
+  margin: 0;
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}
+
+.preview-warnings {
+  margin: 0;
+  padding-left: var(--as-spacing-lg);
+  color: var(--as-colors-warning);
+  font-size: var(--as-fontSize-sm);
+}
+
+.preview-samples {
+  background: var(--as-colors-navyDeep);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-sm);
+}
+
+.preview-sample-title {
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+  border-top: 1px solid var(--as-colors-border);
+  padding-top: var(--as-spacing-md);
+}
+
+.create-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--as-spacing-md);
+}
+
+.create-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-xs);
+  font-size: var(--as-fontSize-sm);
+  color: var(--as-colors-textSecondary);
+}
+
+.create-form button {
+  align-self: flex-start;
+}
