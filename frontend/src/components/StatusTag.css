@@ -1,0 +1,24 @@
+.status-tag {
+  display: inline-block;
+  padding: 1px var(--as-spacing-sm);
+  border-radius: var(--as-radius-sm);
+  font-size: var(--as-fontSize-xs);
+  border: 1px solid var(--as-colors-border);
+  color: var(--as-colors-textSecondary);
+}
+
+.status-active {
+  color: var(--as-colors-success);
+  border-color: var(--as-colors-success);
+}
+
+.status-degraded {
+  color: var(--as-colors-warning);
+  border-color: var(--as-colors-warning);
+}
+
+.status-failed {
+  color: var(--as-colors-red);
+  border-color: var(--as-colors-red);
+  background: var(--as-colors-redDeep);
+}

@@ -1,0 +1,97 @@
+.layout {
+  display: flex;
+  height: 100%;
+}
+
+.layout-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--as-colors-navyDeep);
+  border-right: 1px solid var(--as-colors-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-brand {
+  padding: var(--as-spacing-lg) var(--as-spacing-md);
+  border-bottom: 1px solid var(--as-colors-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-xs);
+}
+
+.layout-brand-name {
+  font-size: var(--as-fontSize-lg);
+  font-weight: 700;
+  color: var(--as-colors-textPrimary);
+}
+
+.layout-brand-sub {
+  font-size: var(--as-fontSize-xs);
+  color: var(--as-colors-textMuted);
+}
+
+.layout-nav {
+  display: flex;
+  flex-direction: column;
+  padding: var(--as-spacing-md) var(--as-spacing-sm);
+  gap: var(--as-spacing-xs);
+}
+
+.layout-nav-item {
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-md);
+}
+
+.layout-nav-item:hover {
+  background: var(--as-colors-navyPanel);
+  color: var(--as-colors-textPrimary);
+}
+
+.layout-nav-item.active {
+  background: var(--as-colors-blue);
+  color: var(--as-colors-textPrimary);
+  border-left: 3px solid var(--as-colors-red);
+}
+
+.layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.layout-topbar {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--as-spacing-lg);
+  border-bottom: 1px solid var(--as-colors-border);
+  background: var(--as-colors-navyPanel);
+}
+
+.layout-topbar-title {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}
+
+.layout-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--as-spacing-md);
+}
+
+.layout-username {
+  font-size: var(--as-fontSize-sm);
+  color: var(--as-colors-textPrimary);
+}
+
+.layout-content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--as-spacing-lg);
+}

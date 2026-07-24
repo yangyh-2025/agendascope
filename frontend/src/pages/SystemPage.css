@@ -1,0 +1,29 @@
+.system-info {
+  margin: 0;
+  background: var(--as-colors-navyPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  max-width: 560px;
+}
+
+.system-info div {
+  display: flex;
+  gap: var(--as-spacing-lg);
+  padding: var(--as-spacing-sm) 0;
+  border-bottom: 1px solid var(--as-colors-border);
+}
+
+.system-info div:last-child {
+  border-bottom: none;
+}
+
+.system-info dt {
+  width: 96px;
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}
+
+.system-info dd {
+  margin: 0;
+}
