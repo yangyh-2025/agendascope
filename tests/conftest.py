@@ -60,13 +60,14 @@ def migrated_db():
     """建测试库并执行 alembic upgrade head；基础设施不可达时跳过集成测试。"""
     if not _db_reachable():
         pytest.skip("本地 PostgreSQL 不可达（需先 docker compose up -d db）")
+    db_name = TEST_DATABASE_URL.rsplit("/", 1)[1]
     engine = create_engine(_admin_url(), isolation_level="AUTOCOMMIT")
     with engine.connect() as conn:
         exists = conn.execute(
-            text("SELECT 1 FROM pg_database WHERE datname='agendascope_test'")
+            text("SELECT 1 FROM pg_database WHERE datname=:name"), {"name": db_name}
         ).scalar()
         if not exists:
-            conn.execute(text("CREATE DATABASE agendascope_test"))
+            conn.execute(text(f'CREATE DATABASE "{db_name}"'))
     env = dict(os.environ, DATABASE_URL=TEST_DATABASE_URL)
     subprocess.run(
         [sys.executable, "-m", "alembic", "-c", "alembic.ini", "upgrade", "head"],
