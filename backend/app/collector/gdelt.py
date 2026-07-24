@@ -26,15 +26,6 @@ from app.services.seed_service import ensure_gdelt_pseudo_source
 
 logger = get_logger("gdelt")
 
-# GDELT ArtList sourcecountry 为英文国名，映射 ISO 3166-1 alpha-2（覆盖监控范围常见国家）
-_COUNTRY_NAME_TO_ISO = {
-    "united states": "US", "united kingdom": "GB", "china": "CN", "japan": "JP",
-    "russia": "RU", "germany": "DE", "france": "FR", "south korea": "KR",
-    "turkey": "TR", "qatar": "QA", "canada": "CA", "australia": "AU",
-    "spain": "ES", "india": "IN", "brazil": "BR", "iran": "IR", "egypt": "EG",
-    "saudi arabia": "SA", "united arab emirates": "AE", "israel": "IL", "italy": "IT",
-}
-
 
 def parse_seen_date(raw: str) -> datetime | None:
     """GDELT seendate 形如 20260724T053000Z。"""
@@ -54,9 +45,9 @@ class GdeltCollector:
         self.settings = get_settings()
 
     def build_query(self) -> str:
+        # GDELT DOC 2.0 的 sourcecountry 操作符接受两位国家码（FIPS 10-4，与常用 ISO 码一致）
         countries = [c.strip() for c in self.settings.gdelt_countries.split(",") if c.strip()]
-        names = {v: k for k, v in _COUNTRY_NAME_TO_ISO.items()}
-        clauses = [f"sourcecountry:{names[c]}" for c in countries if c in names]
+        clauses = [f"sourcecountry:{c}" for c in countries]
         return f"({' OR '.join(clauses)})" if clauses else "breaking"
 
     def fetch_latest(self, timespan: str = "15min") -> list[dict]:

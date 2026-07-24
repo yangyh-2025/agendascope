@@ -243,7 +243,8 @@ class SourceService:
         if adapter_type == "rss":
             fetcher = RequestsFetcher()
             content, _ = fetcher.fetch(config["entry_points"][0])
-            return build_discoverer({"discoverer": {"type": "rss"}}).discover(content), {"entries": None}
+            outcome = build_discoverer({"discoverer": {"type": "rss"}}).discover(content)
+            return outcome.items, outcome.diagnostics
         pipeline = CrawlPipeline(config)
         if not pipeline.entry_points:
             raise BizError(CODE_PARAM_INVALID, "crawl_config.entry_points 必填")

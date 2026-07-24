@@ -1,7 +1,19 @@
 """audit_logs 写入（只增不改）。"""
+import ipaddress
+
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditLog
+
+
+def _valid_ip(ip: str | None) -> str | None:
+    if not ip:
+        return None
+    try:
+        ipaddress.ip_address(ip)
+        return ip
+    except ValueError:
+        return None
 
 
 def write_audit(
@@ -20,7 +32,7 @@ def write_audit(
         action=action,
         resource=resource,
         detail=detail,
-        ip=ip,
+        ip=_valid_ip(ip),
         user_agent=user_agent,
         result=result,
     )
