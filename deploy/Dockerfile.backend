@@ -1,10 +1,22 @@
 # AgendaScope 观澜 后端镜像（api_server 与采集 worker 共用）
 FROM python:3.11-slim
 
+# 构建期代理（离线/受限网络构建时经 --build-arg 注入；默认空=直连）
+ARG HTTP_PROXY=""
+ARG HTTPS_PROXY=""
+ARG NO_PROXY=""
+# apt 源镜像（默认官方源；受限网络可传 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn）
+ARG APT_MIRROR=""
+ENV HTTP_PROXY=${HTTP_PROXY} HTTPS_PROXY=${HTTPS_PROXY} NO_PROXY=${NO_PROXY}
+
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
+
+RUN if [ -n "$APT_MIRROR" ]; then \
+      sed -i "s|http://deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+    fi
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
@@ -13,6 +25,9 @@ RUN pip install -r requirements.txt
 RUN playwright install --with-deps chromium
 
 COPY . .
+
+# 运行期不继承构建期代理
+ENV HTTP_PROXY="" HTTPS_PROXY="" NO_PROXY=""
 
 EXPOSE 8000
 
