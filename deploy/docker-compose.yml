@@ -40,7 +40,7 @@ services:
     ports:
       - "1200:1200"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:1200/ || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:1200/ >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10
