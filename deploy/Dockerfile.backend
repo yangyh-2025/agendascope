@@ -1,0 +1,19 @@
+# AgendaScope 观澜 后端镜像（api_server 与采集 worker 共用）
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Playwright 无头浏览器（pipeline 反爬渲染抓取用；仅 chromium 减体积）
+RUN playwright install --with-deps chromium
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

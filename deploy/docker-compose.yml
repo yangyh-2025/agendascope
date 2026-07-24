@@ -1,0 +1,105 @@
+# AgendaScope 观澜 开发/私有化单机编排（PostgreSQL16+pgvector / Redis7 / ES8 / api_server / worker）
+name: agendascope
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: agenda
+      POSTGRES_PASSWORD: agenda_dev_pwd
+      POSTGRES_DB: agendascope
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agenda -d agendascope"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../deploy/Dockerfile.backend
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: "true"
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_URL: redis://redis:6379/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      COLLECT_API_BASE: http://backend:8000
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-secret-change-me}
+      COLLECTOR_INTERNAL_TOKEN: ${COLLECTOR_INTERNAL_TOKEN:-dev-internal-token-change-me}
+      SCHEDULER_ENABLED: "false"   # 调度在 worker 容器运行，api 进程不重复调度
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: ../deploy/Dockerfile.backend
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_URL: redis://redis:6379/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      COLLECT_API_BASE: http://backend:8000
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-secret-change-me}
+      COLLECTOR_INTERNAL_TOKEN: ${COLLECTOR_INTERNAL_TOKEN:-dev-internal-token-change-me}
+      SCHEDULER_ENABLED: "true"
+      GLOBAL_SITE_PROXY: ${GLOBAL_SITE_PROXY:-}
+      CN_SITE_PROXY: ${CN_SITE_PROXY:-}
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.collector.worker
+
+volumes:
+  pgdata:
+  redisdata:
+  esdata:
