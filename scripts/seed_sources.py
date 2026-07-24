@@ -1,0 +1,129 @@
+"""种子数据导入（T1.21）：初始管理员 + 系统规则 + 17 个真实媒体源 + GDELT 兜底伪源。
+
+用法：
+    cd backend && python ../scripts/seed_sources.py
+    （或在仓库根：python scripts/seed_sources.py；数据库 URL 经 .env/环境变量注入）
+
+种子源 URL 均经实测可达（2026-07-24，feedparser 可解析）；
+IIS 15 媒体任务参数（Apache-2.0 事实性配置：源 URL、抓取方式）为本清单主要参照。
+脚本幂等：按 name 去重，已存在则更新 feed_url/crawl_config 等字段。
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"))
+
+from sqlalchemy import select  # noqa: E402
+
+from app.core.logging import configure_logging, get_logger  # noqa: E402
+from app.db.session import get_session_factory, init_engine  # noqa: E402
+from app.models.source import Source  # noqa: E402
+from app.services.seed_service import (  # noqa: E402
+    ensure_admin,
+    ensure_gdelt_pseudo_source,
+    ensure_system_rules,
+)
+
+logger = get_logger("seed")
+
+# (name, name_zh, country, homepage, feed_url, collect_mode, adapter_type, crawl_config,
+#  media_type, language, poll_interval_min, audience_weight, coverage_confidence)
+SEED_SOURCES = [
+    ("BBC World", "英国广播公司国际新闻", "GB", "https://www.bbc.com/news",
+     "https://feeds.bbci.co.uk/news/world/rss.xml", "rss", "rss", None,
+     "broadcast", "en", 5, 18.0, "high"),
+    ("Voice of America", "美国之音", "US", "https://www.voanews.com",
+     "https://www.voanews.com/api/zqboml-vomx-tpeivmy", "rss", "rss", None,
+     "broadcast", "en", 5, 15.0, "high"),
+    ("TASS", "塔斯社", "RU", "https://tass.com",
+     "https://tass.com/rss/v2.xml", "rss", "rss", None,
+     "agency", "en", 5, 14.0, "high"),
+    ("NHK", "日本放送协会", "JP", "https://www3.nhk.or.jp",
+     "https://www3.nhk.or.jp/rss/news/cat0.xml", "rss", "rss", None,
+     "broadcast", "ja", 5, 16.0, "high"),
+    ("Deutsche Welle", "德国之声", "DE", "https://www.dw.com",
+     "https://rss.dw.com/rdf/rss-en-all", "rss", "rss", None,
+     "broadcast", "en", 15, 12.0, "high"),
+    ("France 24", "法兰西24", "FR", "https://www.france24.com/en",
+     "https://www.france24.com/en/rss", "rss", "rss", None,
+     "broadcast", "en", 15, 11.0, "high"),
+    ("RFI", "法国国际广播电台", "FR", "https://www.rfi.fr/en",
+     "https://www.rfi.fr/en/rss", "rss", "rss", None,
+     "broadcast", "en", 15, 9.0, "medium"),
+    ("El País", "国家报", "ES", "https://elpais.com",
+     "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada", "rss", "rss", None,
+     "newspaper", "es", 15, 13.0, "high"),
+    ("Anadolu Agency", "阿纳多卢通讯社", "TR", "https://www.aa.com.tr",
+     "https://www.aa.com.tr/tr/rss/default?cat=guncel", "rss", "rss", None,
+     "agency", "tr", 15, 12.0, "medium"),
+    ("NTV", "土耳其NTV电视台", "TR", "https://www.ntv.com.tr",
+     "https://www.ntv.com.tr/son-dakika.rss", "rss", "rss", None,
+     "broadcast", "tr", 15, 10.0, "medium"),
+    ("Yonhap News", "韩国联合通讯社", "KR", "https://www.yna.co.kr",
+     "https://www.yna.co.kr/rss/news.xml", "rss", "rss", None,
+     "agency", "ko", 5, 15.0, "high"),
+    ("新华网", "新华网", "CN", "http://www.xinhuanet.com",
+     "http://www.xinhuanet.com/politics/news_politics.xml", "rss", "rss", None,
+     "agency", "zh-CN", 5, 18.0, "high"),
+    ("中新网", "中国新闻网", "CN", "https://www.chinanews.com.cn",
+     "https://www.chinanews.com.cn/rss/scroll-news.xml", "rss", "rss", None,
+     "agency", "zh-CN", 5, 14.0, "high"),
+    ("Al Jazeera", "半岛电视台", "QA", "https://www.aljazeera.com",
+     "https://www.aljazeera.com/xml/rss/all.xml", "rss", "rss", None,
+     "broadcast", "en", 15, 12.0, "high"),
+    ("CBC News", "加拿大广播公司", "CA", "https://www.cbc.ca/news",
+     "https://www.cbc.ca/webfeed/rss/rss-topstories", "rss", "rss", None,
+     "broadcast", "en", 15, 13.0, "high"),
+    ("ABC News (AU)", "澳大利亚广播公司", "AU", "https://www.abc.net.au/news",
+     "https://www.abc.net.au/news/feed/51120/rss.xml", "rss", "rss", None,
+     "broadcast", "en", 15, 13.0, "high"),
+    ("Investing.com", "英为财情", "US", "https://www.investing.com",
+     "https://www.investing.com/rss/news.rss", "rss", "rss", None,
+     "online", "en", 15, 8.0, "medium"),
+    # 无 RSS 长尾示例：adapter_type='pipeline'，ListPageDiscoverer 签名聚类免手写 selector
+    ("新华网时政列表页", "新华网时政频道(列表页)", "CN", "https://www.news.cn",
+     None, "rss", "pipeline",
+     {"fetcher": {"type": "requests"}, "discoverer": {"type": "list_page"},
+      "extractor": {"type": "trafilatura"}, "entry_points": ["https://www.news.cn/politics/"],
+      "scroll_pages": 0, "post_extra_action": None, "proxy": None},
+     "agency", "zh-CN", 15, 6.0, "medium"),
+]
+
+
+def main() -> None:
+    configure_logging(debug=False)
+    init_engine()
+    db = get_session_factory()()
+    try:
+        admin = ensure_admin(db)
+        ensure_system_rules(db, admin)
+        ensure_gdelt_pseudo_source(db)
+
+        created = updated = 0
+        for (name, name_zh, country, homepage, feed_url, collect_mode, adapter_type,
+             crawl_config, media_type, language, poll_interval, weight, confidence) in SEED_SOURCES:
+            source = db.scalar(select(Source).where(Source.name == name))
+            fields = dict(
+                name_zh=name_zh, country_code=country, homepage_url=homepage,
+                feed_url=feed_url, collect_mode=collect_mode, adapter_type=adapter_type,
+                crawl_config=crawl_config or {}, media_type=media_type, language=language,
+                poll_interval_min=poll_interval, audience_weight=weight,
+                coverage_confidence=confidence,
+            )
+            if source is None:
+                db.add(Source(name=name, **fields))
+                created += 1
+            else:
+                for key, value in fields.items():
+                    setattr(source, key, value)
+                updated += 1
+        db.commit()
+        logger.info("seed_done", created=created, updated=updated,
+                    admin=admin.username, total=len(SEED_SOURCES))
+        print(f"种子导入完成: 新增 {created} / 更新 {updated} / 共 {len(SEED_SOURCES)} 个媒体源；管理员 {admin.username}")
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    main()
