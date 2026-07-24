@@ -27,6 +27,11 @@ requests>=2.31
 lxml>=5.0
 playwright>=1.43
 
+# NLP 管线（Phase 2 M2-1）
+fasttext-predict>=0.9.2    # lid.176 纯推理预编译 wheel（免 C++ 编译）
+sentence-transformers>=2.7,<4
+elasticsearch>=8.13,<9
+
 # 日志
 structlog>=24.1
 
