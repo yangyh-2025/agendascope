@@ -32,6 +32,11 @@ fasttext-predict>=0.9.2    # lid.176 纯推理预编译 wheel（免 C++ 编译�
 sentence-transformers>=2.7,<4
 elasticsearch>=8.13,<9
 
+# 聚类引擎（Phase 2 M2-2）
+bertopic>=0.17,<0.18       # UMAP+HDBSCAN+c-TF-IDF 主线聚类
+scikit-learn>=1.4          # Agglomerative 硬阈值对照策略
+jieba>=0.42                # 中文分词（c-TF-IDF/关键词降级匹配）
+
 # 日志
 structlog>=24.1
 
