@@ -22,8 +22,8 @@ logs/
 .env.*
 !.env.example
 
-# 模型权重（体积大，部署时单独分发）
-models/
+# 模型权重（体积大，部署时单独分发；仅根目录 models/，不排除后端代码包）
+/models/
 *.bin
 *.gguf
 
