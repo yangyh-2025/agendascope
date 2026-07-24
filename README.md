@@ -33,6 +33,29 @@
 
 开发中。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
 
+### 前端（frontend/）
+
+React 18 + TypeScript + Vite。深色红蓝主题，design token 集中在 `frontend/src/theme/tokens.ts`。
+
+```bash
+cd frontend
+npm install        # 已配置 npmmirror registry（frontend/.npmrc）
+npm run dev        # 开发服务器 http://localhost:5173，/api 代理至 http://localhost:8000
+npm run build      # 类型检查 + 产物构建（dist/）
+npm run test       # Vitest 组件级测试
+npm run lint       # ESLint
+```
+
+前置条件：后端服务已启动（`http://localhost:8000`）且已执行种子脚本（`scripts/seed_sources.py`）创建管理员账号。
+
+功能（Phase 1）：
+
+- 登录页：账号密码登录（`POST /api/v1/auth/login`），失败展示后端 message，未登录访问受保护路由自动跳登录页
+- 主界面：左侧导航（看板/媒体源/系统），顶栏显示当前用户（`GET /api/v1/auth/me`）与退出登录
+- 看板：基于 `GET /api/v1/sources` 实时数据按国家聚合的媒体源覆盖总览卡片
+- 媒体源管理：源列表（名称/国家/类型/健康状态/最近采集时间，分页）；自助配源——粘贴 URL 试运行（`POST /api/v1/sources/crawl-preview`）核对样例后确认入库（`POST /api/v1/sources`，需 admin 角色）
+- 会话：access_token 过期自动拦截 401 → `POST /api/v1/auth/refresh`（单飞，防并发重复刷新）→ 重试原请求；刷新失败清空会话并跳登录页
+
 ## 许可
 
 私有软件，保留所有权利，详见 [LICENSE](LICENSE)。
