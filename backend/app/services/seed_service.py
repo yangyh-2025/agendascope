@@ -48,3 +48,32 @@ def ensure_system_rules(db: Session, admin: User) -> AlertRule:
 
 def get_system_source_health_rule(db: Session) -> AlertRule | None:
     return db.scalar(select(AlertRule).where(AlertRule.name == SYSTEM_SOURCE_HEALTH_RULE))
+
+
+# GDELT 兜底通道伪源：GDELT 文章无法归属具体已登记源时挂靠此源
+GDELT_PSEUDO_SOURCE_NAME = "GDELT 兜底通道"
+
+
+def ensure_gdelt_pseudo_source(db: Session):
+    from app.models.source import Source
+
+    source = db.scalar(select(Source).where(Source.name == GDELT_PSEUDO_SOURCE_NAME))
+    if source is not None:
+        return source
+    source = Source(
+        name=GDELT_PSEUDO_SOURCE_NAME,
+        name_zh="GDELT 兜底通道",
+        country_code="ZZ",  # 跨国聚合通道，不冒充任何单一国家
+        homepage_url="https://www.gdeltproject.org",
+        feed_url=None,
+        collect_mode="gdelt",
+        adapter_type="rss",
+        media_type="online",
+        language="en",
+        poll_interval_min=15,
+        coverage_confidence="low",
+        is_custom=False,
+    )
+    db.add(source)
+    db.flush()
+    return source

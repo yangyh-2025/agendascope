@@ -26,6 +26,10 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api/v1")
 
+    from app.api.routes import internal
+
+    app.include_router(internal.router)
+
     return app
 
 
