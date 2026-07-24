@@ -54,19 +54,20 @@ class DegradationMonitor:
         flipped = False
         with self._lock:
             self._outcomes.append(success)
+            rate = 1.0 - sum(self._outcomes) / len(self._outcomes)  # 锁内联计算，勿调 failure_rate()（不可重入）
             if not self._degraded:
                 if (
                     len(self._outcomes) >= self.settings.health_min_samples
-                    and self.failure_rate() > self.settings.failure_rate_threshold
+                    and rate > self.settings.failure_rate_threshold
                 ):
                     self._degraded = True
                     self._degraded_since = datetime.now(UTC)
-                    self._reason = reason or f"推理失败率 {self.failure_rate():.0%} > {self.settings.failure_rate_threshold:.0%}"
+                    self._reason = reason or f"推理失败率 {rate:.0%} > {self.settings.failure_rate_threshold:.0%}"
                     flipped = True
             else:
                 if (
                     len(self._outcomes) >= self.settings.health_min_samples
-                    and self.failure_rate() <= self.settings.failure_rate_threshold
+                    and rate <= self.settings.failure_rate_threshold
                 ):
                     self._degraded = False
                     recovered_since = self._degraded_since
