@@ -4,6 +4,8 @@
 
 ## Phase 1 · 基础搭建与采集管线（2026-07-24）
 
+> **阶段验收**：2026-07-24 独立审核复审通过（PASS）——pytest 94 项全绿、ruff/mypy 全绿、种子源 31 国 39 源抽测可达、署名与 git 合规零问题。阶段标签 `v0.1.0-phase1`。
+
 ### 后端骨架与数据基座
 
 - FastAPI 应用工厂与分层结构（api / services / repositories / models），pydantic-settings 配置管理（`backend/.env.example`）
