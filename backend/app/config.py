@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     gdelt_max_records: int = 50
     gdelt_buffer_dir: str = "data/gdelt_buffer"
 
+    rsshub_base: str = "http://localhost:1200"
+
     collect_api_base: str = "http://localhost:8000"
 
     global_site_proxy: str = ""

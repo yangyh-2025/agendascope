@@ -91,6 +91,8 @@ class SourceService:
                 raise BizError(CODE_CONFLICT, "该 feed_url 已存在于源库", {"existing_source_id": str(existing.id)})
         if body.adapter_type == "pipeline" and not (body.crawl_config or {}).get("entry_points"):
             raise BizError(CODE_PARAM_INVALID, "adapter_type=pipeline 时 crawl_config.entry_points 必填")
+        if body.collect_mode == "rsshub" and not (body.crawl_config or {}).get("rsshub_route"):
+            raise BizError(CODE_PARAM_INVALID, "collect_mode=rsshub 时 crawl_config.rsshub_route 必填")
         source = Source(
             name=body.name,
             name_zh=body.name_zh,

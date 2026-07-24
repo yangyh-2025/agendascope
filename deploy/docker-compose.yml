@@ -31,6 +31,20 @@ services:
       timeout: 3s
       retries: 12
 
+  rsshub:
+    # 独立容器进程隔离（AGPL-3.0 合规）：无原生 RSS 站点经 RSSHub 路由转 feed 后走 RSS 采集路径
+    image: diygod/rsshub:latest
+    environment:
+      NODE_ENV: production
+      CACHE_TYPE: memory
+    ports:
+      - "1200:1200"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:1200/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
     environment:
@@ -59,6 +73,7 @@ services:
       REDIS_STREAM_URL: redis://redis:6379/1
       ELASTICSEARCH_URL: http://elasticsearch:9200
       COLLECT_API_BASE: http://backend:8000
+      RSSHUB_BASE: http://rsshub:1200
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-secret-change-me}
       COLLECTOR_INTERNAL_TOKEN: ${COLLECTOR_INTERNAL_TOKEN:-dev-internal-token-change-me}
       SCHEDULER_ENABLED: "false"   # 调度在 worker 容器运行，api 进程不重复调度
@@ -83,6 +98,7 @@ services:
       REDIS_STREAM_URL: redis://redis:6379/1
       ELASTICSEARCH_URL: http://elasticsearch:9200
       COLLECT_API_BASE: http://backend:8000
+      RSSHUB_BASE: http://rsshub:1200
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-secret-change-me}
       COLLECTOR_INTERNAL_TOKEN: ${COLLECTOR_INTERNAL_TOKEN:-dev-internal-token-change-me}
       SCHEDULER_ENABLED: "true"

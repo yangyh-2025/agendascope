@@ -25,6 +25,23 @@ def _entry_pub_time(entry) -> datetime | None:
     return None
 
 
+def resolve_feed_url(source, settings=None) -> str | None:
+    """按 collect_mode 解析实际拉取地址：
+
+    - rss/gdelt：直接用 sources.feed_url
+    - rsshub：RSSHUB_BASE + crawl_config.rsshub_route（RSSHub 自建实例将无原生 RSS 站点转为 feed）
+    """
+    if source.collect_mode == "rsshub":
+        from app.config import get_settings
+
+        settings = settings or get_settings()
+        route = (source.crawl_config or {}).get("rsshub_route")
+        if not route:
+            return None
+        return f"{settings.rsshub_base.rstrip('/')}/{route.lstrip('/')}"
+    return source.feed_url
+
+
 class RssCollector:
     """对单个 adapter_type='rss' 的源执行一轮采集。"""
 
@@ -35,12 +52,13 @@ class RssCollector:
 
     def run_round(self, source, job, max_articles: int = 50) -> tuple[int, int]:
         """执行一轮采集，返回 (articles_found, articles_new)。失败抛 FetchError 由调度器转治理状态机。"""
-        if not source.feed_url:
-            raise FetchError("RSS 源缺少 feed_url")
+        feed_url = resolve_feed_url(source)
+        if not feed_url:
+            raise FetchError(f"{source.collect_mode} 源缺少可用 feed 地址（feed_url / rsshub_route）")
 
         self.submitter.resend_pending()  # 防重②：先重发上轮提交失败缓存
 
-        feed_content, http_status = self.fetcher.fetch(source.feed_url)
+        feed_content, http_status = self.fetcher.fetch(feed_url)
         parsed = feedparser.parse(feed_content)
         if parsed.bozo and not parsed.entries:
             raise FetchError(f"feed 解析失败: {parsed.bozo_exception}", http_status=http_status)
