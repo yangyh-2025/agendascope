@@ -1,0 +1,104 @@
+/* 全局样式：具体取值全部来自 theme/tokens.ts 注入的 CSS 变量（--as-*）。 */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--as-colors-navy);
+  color: var(--as-colors-textPrimary);
+  font-family:
+    "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Helvetica Neue",
+    Arial, sans-serif;
+  font-size: var(--as-fontSize-md);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--as-colors-blueBright);
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--as-radius-sm);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-blue);
+  color: var(--as-colors-textPrimary);
+  transition: background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--as-colors-blueBright);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.as-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--as-colors-border);
+  color: var(--as-colors-textSecondary);
+}
+
+button.as-btn-ghost:hover:not(:disabled) {
+  background: var(--as-colors-navyPanel);
+  color: var(--as-colors-textPrimary);
+}
+
+button.as-btn-danger {
+  background: var(--as-colors-red);
+}
+
+button.as-btn-danger:hover:not(:disabled) {
+  background: var(--as-colors-redDeep);
+}
+
+input,
+select {
+  font: inherit;
+  color: var(--as-colors-textPrimary);
+  background: var(--as-colors-navyDeep);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-sm);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--as-colors-blueBright);
+}
+
+input::placeholder {
+  color: var(--as-colors-textMuted);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  border-bottom: 1px solid var(--as-colors-border);
+  font-size: var(--as-fontSize-md);
+}
+
+th {
+  color: var(--as-colors-textSecondary);
+  font-weight: 500;
+  font-size: var(--as-fontSize-sm);
+}
