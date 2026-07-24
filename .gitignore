@@ -12,6 +12,7 @@ venv/
 node_modules/
 dist/
 *.local
+*.tsbuildinfo
 
 # 数据与运行时产物
 data/
