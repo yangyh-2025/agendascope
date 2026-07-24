@@ -167,13 +167,13 @@ def main() -> None:
         for (name, name_zh, country, homepage, feed_url, collect_mode, adapter_type,
              crawl_config, media_type, language, poll_interval, weight, confidence) in SEED_SOURCES:
             source = db.scalar(select(Source).where(Source.name == name))
-            fields = dict(
-                name_zh=name_zh, country_code=country, homepage_url=homepage,
-                feed_url=feed_url, collect_mode=collect_mode, adapter_type=adapter_type,
-                crawl_config=crawl_config or {}, media_type=media_type, language=language,
-                poll_interval_min=poll_interval, audience_weight=weight,
-                coverage_confidence=confidence,
-            )
+            fields = {
+                "name_zh": name_zh, "country_code": country, "homepage_url": homepage,
+                "feed_url": feed_url, "collect_mode": collect_mode, "adapter_type": adapter_type,
+                "crawl_config": crawl_config or {}, "media_type": media_type, "language": language,
+                "poll_interval_min": poll_interval, "audience_weight": weight,
+                "coverage_confidence": confidence,
+            }
             if source is None:
                 db.add(Source(name=name, **fields))
                 created += 1

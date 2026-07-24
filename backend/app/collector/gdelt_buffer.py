@@ -8,7 +8,7 @@ seendate,socialimage,domain,language,sourcecountry）落盘本地缓冲目录；
 import csv
 import io
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.core.logging import get_logger
@@ -32,7 +32,7 @@ class GdeltBuffer:
 
     def save_articles(self, articles: list[dict], now: datetime | None = None) -> Path:
         """将本轮 ArtList 文章写成缓冲 CSV，并按 keep 滚动清理旧文件。"""
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
         path = Path(self.buffer_dir) / f"gdelt_artlist_{now.strftime('%Y%m%dT%H%M%SZ')}.csv"
         buf = io.StringIO()
         writer = csv.DictWriter(buf, fieldnames=CSV_FIELDS, extrasaction="ignore")

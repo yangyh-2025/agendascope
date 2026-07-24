@@ -6,7 +6,7 @@
 - 正文经同一抽取降级链获取；抽取失败的条目跳过并记日志（不伪造内容）
 - 统一走 POST /internal/collect 通道入库
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 import requests
@@ -31,7 +31,7 @@ logger = get_logger("gdelt")
 def parse_seen_date(raw: str) -> datetime | None:
     """GDELT seendate 形如 20260724T053000Z。"""
     try:
-        return datetime.strptime(raw, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+        return datetime.strptime(raw, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
     except (ValueError, TypeError):
         return None
 
@@ -123,6 +123,7 @@ class GdeltCollector:
 
             domain = (item.get("domain") or urlparse(url).hostname or "").lower()
             source = self._resolve_source(domain)
+            assert source is not None
             submitted = self.submitter.submit(CollectedData(
                 source_id=str(source.id),
                 job_id=str(job.id) if job else None,

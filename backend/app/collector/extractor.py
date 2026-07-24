@@ -3,7 +3,7 @@
 content_status: full（正文抽取成功）/ partial（仅标题摘要兜底）/ failed（无任何可用文本）。
 降级链是设计功能（PRD 8.5）：绝不静默降级，返回对象携带实际命中的 method。
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import trafilatura
 from readability import Document

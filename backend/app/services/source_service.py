@@ -1,7 +1,7 @@
 """sources 业务：CRUD、覆盖率汇总、crawl-preview 试运行（US-02）、失败源人工重验证。"""
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import feedparser
 import lxml.html
@@ -15,7 +15,6 @@ from app.collector.types import FetchError
 from app.core.errors import (
     CODE_CONFLICT,
     CODE_DATA_INSUFFICIENT,
-    CODE_NOT_FOUND,
     CODE_PARAM_INVALID,
     CODE_STATE_INVALID,
     BizError,
@@ -86,8 +85,8 @@ class SourceService:
         validate_public_url(body.homepage_url, resolve_dns=False)
         if body.feed_url:
             validate_public_url(body.feed_url, resolve_dns=False)
-            if self.repo.get_by_feed_url(body.feed_url):
-                existing = self.repo.get_by_feed_url(body.feed_url)
+            existing = self.repo.get_by_feed_url(body.feed_url)
+            if existing is not None:
                 raise BizError(CODE_CONFLICT, "该 feed_url 已存在于源库", {"existing_source_id": str(existing.id)})
         if body.adapter_type == "pipeline" and not (body.crawl_config or {}).get("entry_points"):
             raise BizError(CODE_PARAM_INVALID, "adapter_type=pipeline 时 crawl_config.entry_points 必填")
@@ -122,13 +121,13 @@ class SourceService:
             history.append({
                 "from": source.status,
                 "to": data["status"],
-                "at": datetime.now(timezone.utc).isoformat(),
+                "at": datetime.now(UTC).isoformat(),
                 "reason": "管理员手工调整",
                 "actor": "human",
             })
             source.status_history = history[-20:]
             if data["status"] == "failed":
-                source.degraded_since = source.degraded_since or datetime.now(timezone.utc)
+                source.degraded_since = source.degraded_since or datetime.now(UTC)
         for key, value in data.items():
             setattr(source, key, value)
         self.db.flush()
@@ -281,11 +280,11 @@ def run_verify_job(source_id, job_id) -> None:
             source.status = "active"
             source.consecutive_failures = 0
             source.degraded_since = None
-            source.last_success_at = datetime.now(timezone.utc)
+            source.last_success_at = datetime.now(UTC)
             history = list(source.status_history or [])
             history.append({
                 "from": old, "to": "active",
-                "at": datetime.now(timezone.utc).isoformat(),
+                "at": datetime.now(UTC).isoformat(),
                 "reason": f"人工重验证通过（试采集 {found} 篇）", "actor": "human",
             })
             source.status_history = history[-20:]

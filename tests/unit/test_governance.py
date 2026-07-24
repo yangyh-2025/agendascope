@@ -1,5 +1,5 @@
 """治理状态机纯逻辑单元测试（六态流转/退避/should_crawl/防重③/URL 规范化）。"""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.collector.governance import (
     RETRY_BACKOFF_BASE_SECONDS,
@@ -9,7 +9,7 @@ from app.collector.governance import (
 )
 from app.collector.utils import normalize_url, url_hash
 
-NOW = datetime(2026, 7, 24, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 7, 24, 12, 0, 0, tzinfo=UTC)
 
 
 class TestDecideFailure:

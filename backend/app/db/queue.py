@@ -14,7 +14,8 @@ class StreamQueue:
 
     def publish(self, stream: str, payload: dict[str, Any], trace_id: str = "") -> str:
         fields = {"trace_id": trace_id, "data": json.dumps(payload, ensure_ascii=False)}
-        return self.client.xadd(stream, fields)
+        msg_id = self.client.xadd(stream, fields)  # type: ignore[arg-type]
+        return str(msg_id)
 
     def ensure_group(self, stream: str, group: str) -> None:
         try:
@@ -25,10 +26,13 @@ class StreamQueue:
 
     def consume(self, stream: str, group: str, consumer: str, count: int = 10, block_ms: int = 5000):
         self.ensure_group(stream, group)
-        resp = self.client.xreadgroup(group, consumer, {stream: ">"}, count=count, block=block_ms)
+        resp: Any = self.client.xreadgroup(group, consumer, {stream: ">"}, count=count, block=block_ms)
         if not resp:
             return []
-        return resp[0][1]  # [(msg_id, fields), ...]
+        if isinstance(resp, list):
+            resp = resp[0]
+        entries = next(iter(resp.values()))  # [(msg_id, fields), ...]
+        return entries or []
 
     def ack(self, stream: str, group: str, msg_id: str) -> None:
         self.client.xack(stream, group, msg_id)

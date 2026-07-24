@@ -13,7 +13,8 @@
 """
 import asyncio
 import concurrent.futures
-from datetime import datetime, timedelta, timezone
+import contextlib
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -28,7 +29,7 @@ from app.config import get_settings
 from app.core.logging import get_logger, new_trace_id, set_trace_id
 from app.db.redis_client import get_cache_redis
 from app.db.session import get_session_factory
-from app.models.collection import JOB_PENDING, JOB_TEMP_FAIL, CollectionJob
+from app.models.collection import JOB_TEMP_FAIL, CollectionJob
 from app.models.source import Source
 
 logger = get_logger("scheduler")
@@ -52,10 +53,8 @@ class CollectorScheduler:
                 await loop.run_in_executor(self.executor, self.tick)
             except Exception as exc:  # noqa: BLE001
                 logger.error("scheduler_tick_error", exc_info=exc)
-            try:
+            with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(self._stopped.wait(), timeout=self.settings.scheduler_tick_seconds)
-            except asyncio.TimeoutError:
-                pass
 
     # ---------- 同步执行区（线程池内） ----------
 
@@ -70,7 +69,7 @@ class CollectorScheduler:
             db.close()
 
     def _dispatch_retries(self, db: Session) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         jobs = db.scalars(
             select(CollectionJob).where(
                 CollectionJob.status == JOB_TEMP_FAIL,
@@ -85,7 +84,7 @@ class CollectorScheduler:
             self.executor.submit(self._run_job, source.id, job.id)
 
     def _dispatch_due_sources(self, db: Session) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         sources = db.scalars(
             select(Source).where(Source.status.in_(("active", "degraded")), Source.collect_mode != "gdelt")
         ).all()
@@ -111,7 +110,7 @@ class CollectorScheduler:
             self.executor.submit(self._run_job, source.id, job.id)
 
     def _dispatch_gdelt(self, db: Session) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if self._last_gdelt_at and now - self._last_gdelt_at < timedelta(seconds=self.settings.gdelt_interval_seconds):
             return
         self._last_gdelt_at = now
@@ -162,7 +161,7 @@ class CollectorScheduler:
             from app.services.seed_service import ensure_gdelt_pseudo_source
 
             pseudo = ensure_gdelt_pseudo_source(db)
-            job = gov.create_job(pseudo.id, "gdelt", datetime.now(timezone.utc))
+            job = gov.create_job(pseudo.id, "gdelt", datetime.now(UTC))
             gov.mark_running(job)
             db.commit()
             try:

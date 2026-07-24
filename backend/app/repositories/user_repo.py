@@ -1,5 +1,5 @@
 """users 数据访问。"""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,7 +25,7 @@ class UserRepository:
     def record_login_success(self, user: User) -> None:
         user.failed_login_count = 0
         user.locked_until = None
-        user.last_login_at = datetime.now(timezone.utc)
+        user.last_login_at = datetime.now(UTC)
         self.db.flush()
 
     def record_login_failure(self, user: User, lock_threshold: int, lock_minutes: int) -> bool:
@@ -35,7 +35,7 @@ class UserRepository:
         user.failed_login_count = (user.failed_login_count or 0) + 1
         locked = False
         if user.failed_login_count >= lock_threshold:
-            user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=lock_minutes)
+            user.locked_until = datetime.now(UTC) + timedelta(minutes=lock_minutes)
             user.failed_login_count = 0
             locked = True
         self.db.flush()

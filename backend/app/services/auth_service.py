@@ -1,5 +1,5 @@
 """认证服务：登录/刷新/登出（详细设计 1.4、7.1）。"""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -39,11 +39,11 @@ class AuthService:
     def _issue_pair(self, user: User) -> dict:
         access_token, _, access_exp = create_access_token(str(user.id), user.role)
         refresh_token, refresh_jti, refresh_exp = create_refresh_token(str(user.id))
-        register_refresh_session(str(user.id), refresh_jti, int(refresh_exp.timestamp() - datetime.now(timezone.utc).timestamp()))
+        register_refresh_session(str(user.id), refresh_jti, int(refresh_exp.timestamp() - datetime.now(UTC).timestamp()))
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
-            "expires_in": int((access_exp - datetime.now(timezone.utc)).total_seconds()),
+            "expires_in": int((access_exp - datetime.now(UTC)).total_seconds()),
         }
 
     def login(self, username: str, password: str, ip: str) -> tuple[dict, User, str]:
@@ -57,7 +57,7 @@ class AuthService:
         if user.status != "active":
             raise BizError(CODE_ACCOUNT_DISABLED, "账号已被禁用，请联系管理员")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if user.locked_until and user.locked_until > now:
             retry_after = int((user.locked_until - now).total_seconds())
             raise BizError(CODE_RATE_LIMITED, "账号已锁定，请稍后再试", {"retry_after": retry_after})

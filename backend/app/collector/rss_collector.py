@@ -3,7 +3,7 @@
 每源一行配置（sources.crawl_config JSONB，adapter_type='rss'），不是每源一个代码文件。
 流程：feedparser 拉取 → 任务内/持久去重 → trafilatura→readability 正文抽取 → CollectedData 提交中枢。
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import feedparser
 
@@ -21,7 +21,7 @@ logger = get_logger("rss_collector")
 def _entry_pub_time(entry) -> datetime | None:
     struct = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
     if struct:
-        return datetime(*struct[:6], tzinfo=timezone.utc)
+        return datetime(struct[0], struct[1], struct[2], struct[3], struct[4], struct[5], tzinfo=UTC)
     return None
 
 
@@ -102,7 +102,7 @@ class RssCollector:
 
             pub_time = _entry_pub_time(entry)
             if pub_time:
-                latencies.append((datetime.now(timezone.utc) - pub_time).total_seconds() / 60)
+                latencies.append((datetime.now(UTC) - pub_time).total_seconds() / 60)
 
             submitted = self.submitter.submit(CollectedData(
                 source_id=str(source.id),

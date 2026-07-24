@@ -152,18 +152,18 @@ def auth_headers(client, admin_user, db):
 def make_source(db, **overrides) -> "object":
     from app.models.source import Source
 
-    defaults = dict(
-        name=f"Test Media {uuid.uuid4().hex[:6]}",
-        country_code="US",
-        homepage_url="https://example.com",
-        feed_url=f"https://example.com/feed-{uuid.uuid4().hex[:8]}.xml",
-        collect_mode="rss",
-        adapter_type="rss",
-        media_type="online",
-        language="en",
-        poll_interval_min=5,
-        audience_weight=10.0,
-    )
+    defaults = {
+        "name": f"Test Media {uuid.uuid4().hex[:6]}",
+        "country_code": "US",
+        "homepage_url": "https://example.com",
+        "feed_url": f"https://example.com/feed-{uuid.uuid4().hex[:8]}.xml",
+        "collect_mode": "rss",
+        "adapter_type": "rss",
+        "media_type": "online",
+        "language": "en",
+        "poll_interval_min": 5,
+        "audience_weight": 10.0,
+    }
     defaults.update(overrides)
     source = Source(**defaults)
     db.add(source)

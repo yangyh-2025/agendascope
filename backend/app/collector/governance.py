@@ -12,8 +12,7 @@
 源失败率超阈值（默认 10%，24h 滑动）→ 写 alerts 表主动告警（US-03）。
 """
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -82,17 +81,17 @@ class Governance:
         return job
 
     def job_should_run(self, job: CollectionJob, now: datetime | None = None) -> bool:
-        return should_crawl(job.status, job.next_run_at, now or datetime.now(timezone.utc))
+        return should_crawl(job.status, job.next_run_at, now or datetime.now(UTC))
 
     def mark_running(self, job: CollectionJob) -> None:
         job.status = JOB_RUNNING
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = datetime.now(UTC)
         self.db.flush()
 
     def mark_success(self, job: CollectionJob, articles_found: int, articles_new: int,
                      latency_stats: dict | None = None, http_status: int | None = None) -> None:
         job.status = JOB_SUCCESS
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         job.articles_found = articles_found
         job.articles_new = articles_new
         job.latency_stats = latency_stats
@@ -101,11 +100,11 @@ class Governance:
         self.db.flush()
 
     def mark_failure(self, job: CollectionJob, error: str, http_status: int | None = None) -> FailureDecision:
-        decision = decide_failure(job.retry_count, self.settings.crawl_max_retries, datetime.now(timezone.utc))
+        decision = decide_failure(job.retry_count, self.settings.crawl_max_retries, datetime.now(UTC))
         job.status = decision.status
         job.retry_count = decision.retry_count
         job.next_run_at = decision.next_run_at
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         job.error = error[:2000]
         if http_status is not None:
             job.http_status = http_status
@@ -118,7 +117,7 @@ class Governance:
 
     def mark_skipped(self, job: CollectionJob, reason: str) -> None:
         job.status = JOB_SKIPPED
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         job.error = reason[:500]
         self.db.flush()
 
@@ -147,7 +146,7 @@ class Governance:
         任何失败清零连胜。Redis 不可用时退化为单次成功即恢复（不阻塞主链路）。
         """
         old_status = source.status
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if success:
             source.consecutive_failures = 0
             source.last_success_at = now
@@ -197,7 +196,7 @@ class Governance:
 
     def source_fail_rate(self, source_id, window_hours: int | None = None) -> float:
         hours = window_hours or self.settings.source_fail_rate_window_hours
-        since = datetime.now(timezone.utc) - timedelta(hours=hours)
+        since = datetime.now(UTC) - timedelta(hours=hours)
         total, failed = self.db.execute(
             select(
                 func.count(),

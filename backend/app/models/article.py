@@ -3,11 +3,11 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CHAR, Boolean, CheckConstraint, DateTime, ForeignKey, String, Text, Numeric
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import CHAR, Boolean, CheckConstraint, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
 

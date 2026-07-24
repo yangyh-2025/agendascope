@@ -2,11 +2,11 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CHAR, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, Numeric, UniqueConstraint
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import CHAR, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
 

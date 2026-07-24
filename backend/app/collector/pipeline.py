@@ -4,7 +4,6 @@ crawl_config JSONB 驱动，工厂按配置实例化：
   Fetcher(requests/playwright) → Discoverer(rss/sitemap/list_page) → Extractor(trafilatura/readability/generic_css)
 服务于 adapter_type='pipeline' 的无 RSS 长尾源（~20%，估算）。与 RSS 路径共用治理状态机与 /internal/collect。
 """
-from datetime import datetime, timezone
 
 from app.collector.discoverer import ListPageDiscoverer, RSSDiscoverer, SitemapDiscoverer, build_discoverer
 from app.collector.fetcher import build_fetcher
@@ -29,8 +28,8 @@ class CrawlPipeline:
 
     def discover_items(self):
         """对全部入口页执行发现，返回 (items, diagnostics)。"""
-        all_items = []
-        diagnostics = {}
+        all_items: list = []
+        diagnostics: dict = {}
         for entry_url in self.entry_points:
             content, _ = self.fetcher.fetch(entry_url)
             if isinstance(self.discoverer, (ListPageDiscoverer, RSSDiscoverer)):

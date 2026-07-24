@@ -5,6 +5,7 @@
   post_extra_action 声明式点弹窗（参考 IIS NHK 案例）。浏览器二进制为运行时可选依赖。
 """
 import random
+from typing import Any, cast
 
 import requests
 
@@ -89,7 +90,7 @@ class PlaywrightFetcher:
 
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True, proxy=proxy_conf)
+                browser = p.chromium.launch(headless=True, proxy=cast(Any, proxy_conf))
                 try:
                     context = browser.new_context(user_agent=random.choice(USER_AGENTS))
                     context.add_init_script(_STEALTH_INIT_SCRIPT)

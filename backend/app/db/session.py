@@ -32,6 +32,7 @@ def get_session_factory() -> sessionmaker:
     global _SessionLocal
     if _SessionLocal is None:
         init_engine()
+    assert _SessionLocal is not None
     return _SessionLocal
 
 

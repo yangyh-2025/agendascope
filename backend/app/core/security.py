@@ -5,7 +5,7 @@
 """
 import re
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 from jose import JWTError, jwt
@@ -37,7 +37,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def _encode(subject: str, token_type: str, expires_minutes: int, extra: dict | None = None) -> tuple[str, str, datetime]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires_at = now + timedelta(minutes=expires_minutes)
     jti = str(uuid.uuid4())
     payload = {

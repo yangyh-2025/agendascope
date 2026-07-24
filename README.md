@@ -33,6 +33,29 @@
 
 开发中。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
 
+### 后端（backend/）
+
+Python 3.11 + FastAPI。配置项集中在 `backend/app/config.py`（`.env` 注入，模板见 `backend/.env.example`）。
+
+```bash
+python -m venv .venv && .venv/Scripts/python.exe -m pip install -r backend/requirements.txt
+docker compose -f deploy/docker-compose.yml up -d db redis elasticsearch rsshub  # 基础设施
+cd backend && alembic upgrade head                                             # 建表（14 张核心表）
+cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      # 种子源（31 国 39 源）+ 初始管理员
+cd backend && uvicorn app.main:app --port 8000                                 # API 服务
+python -m app.collector.worker                                                 # 采集调度 worker（另开终端）
+```
+
+质量门禁（仓库根执行，配置在 `pyproject.toml`）：
+
+```bash
+.venv/Scripts/python.exe -m ruff check backend tests scripts   # lint（E/F/W/I/UP/B/SIM/RET/C4）
+.venv/Scripts/python.exe -m mypy                               # 类型检查（backend/app 全量）
+.venv/Scripts/python.exe -m pytest tests -q                    # 单元 + 集成测试（集成需基础设施在线）
+```
+
+部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
+
 ### 前端（frontend/）
 
 React 18 + TypeScript + Vite。深色红蓝主题，design token 集中在 `frontend/src/theme/tokens.ts`。

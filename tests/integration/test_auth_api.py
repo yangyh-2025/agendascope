@@ -1,5 +1,4 @@
 """认证 API 集成测试：登录/锁定/刷新轮换/重放吊销/登出/RBAC。"""
-import uuid
 
 import pytest
 

@@ -84,8 +84,8 @@ class TestRssCollector:
         submitter2 = CaptureSubmitter()
         collector2 = RssCollector(Governance(db, redis_client), submitter2, fetcher=StubFetcher())
         # 模拟已入库：第一轮指纹已写 redis + 模拟 articles 行
-        from app.models.article import Article
         from app.collector.utils import url_hash
+        from app.models.article import Article
 
         db.add(Article(
             source_id=source.id, url="https://stub-media.com/news/1",
@@ -117,8 +117,8 @@ class TestPipelineCollector:
         submitter = CaptureSubmitter()
         collector = PipelineCollector(gov, submitter)
 
-        import app.collector.pipeline as pipeline_module
         import app.collector.fetcher as fetcher_module
+        import app.collector.pipeline as pipeline_module
 
         original = fetcher_module.build_fetcher
         pipeline_module.build_fetcher = lambda config, country_code="": StubFetcher()

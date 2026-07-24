@@ -1,11 +1,12 @@
 """ListPageDiscoverer 链接签名聚类单元测试（详细设计算法 6）。"""
+import lxml.html
+
 from app.collector.discoverer import (
     ListPageDiscoverer,
     RSSDiscoverer,
     SitemapDiscoverer,
     path_signature,
 )
-import lxml.html
 
 LIST_HTML = """
 <html><body>

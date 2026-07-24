@@ -3,13 +3,12 @@
 可见性优先：文章写入即设 visible_at（published_at→visible_at 为延迟红线考核点），
 NLP/聚类在 Phase 2 经 raw:articles 异步补标签，不阻塞可见。
 """
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.collector.governance import DEDUP_FINGERPRINT_TTL_SECONDS, Governance
+from app.collector.governance import Governance
 from app.collector.utils import url_hash
 from app.core.errors import CODE_PARAM_INVALID, BizError
 from app.core.logging import get_logger, get_trace_id
@@ -46,7 +45,7 @@ class CollectService:
                 self.redis.setex(uuid_key, _UUID_DEDUP_TTL, "1")
             return {"uuid": str(payload.uuid), "accepted": True, "duplicate": True}
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         published_at = payload.pub_time or now
         time_source = payload.time_source or ("feed" if payload.pub_time else "crawled")
         article = Article(

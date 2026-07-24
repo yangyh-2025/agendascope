@@ -1,0 +1,38 @@
+[project]
+name = "agendascope-backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["backend", "tests", "scripts"]
+
+[tool.ruff.lint]
+# 门禁基线：语法错误/未用导入与变量/命名/导入排序/部分 bug 模式
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RET", "C4"]
+ignore = [
+    "E501",   # 行长由 formatter 处理
+    "B008",   # FastAPI Depends 惯用法
+    "RET504", # 返回前赋值可读性
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "backend"
+packages = ["app"]
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+strict_equality = true
+exclude = "(alembic/versions/)"
+
+[[tool.mypy.overrides]]
+module = ["app.config"]
+disallow_untyped_defs = true

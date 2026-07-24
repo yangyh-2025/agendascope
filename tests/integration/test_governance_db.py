@@ -1,16 +1,15 @@
 """治理状态机六态流转 + 源健康状态机 + 失败率告警（DB 集成）。"""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from app.collector.governance import Governance
 from app.models.alert import Alert
-from app.models.collection import CollectionJob
 from tests.conftest import make_source
 
 pytestmark = pytest.mark.integration
 
-NOW = datetime(2026, 7, 24, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 7, 24, 12, 0, 0, tzinfo=UTC)
 
 
 class TestJobStateMachine:
@@ -48,7 +47,7 @@ class TestJobStateMachine:
         source = make_source(db)
         db.commit()
         gov = Governance(db, redis_client)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         job = gov.create_job(source.id, "rss", now)
         gov.mark_running(job)
         gov.mark_failure(job, "超时")
@@ -90,7 +89,7 @@ class TestSourceHealth:
         gov = Governance(db, redis_client)
         for _ in range(3):
             gov.update_source_health(source, False)
-        source.degraded_since = datetime.now(timezone.utc) - timedelta(hours=25)
+        source.degraded_since = datetime.now(UTC) - timedelta(hours=25)
         assert gov.update_source_health(source, False) == "failed"
 
     def test_recovery_requires_two_consecutive_successes(self, db, redis_client):

@@ -1,15 +1,15 @@
 """RSSHub 补源通道：feed 地址解析与 rsshub 源采集（T1.20）。"""
+from datetime import UTC
+
 import pytest
 
-from app.collector.fetcher import RequestsFetcher
 from app.collector.governance import Governance
 from app.collector.rss_collector import RssCollector, resolve_feed_url
-from app.collector.submitter import Submitter
 from app.core.errors import BizError
 from app.schemas.source import SourceCreate
 from app.services.source_service import SourceService
 from tests.conftest import make_source
-from tests.integration.test_collector_flow import ARTICLE_HTML, FEED_XML, CaptureSubmitter, StubFetcher
+from tests.integration.test_collector_flow import CaptureSubmitter, StubFetcher
 
 pytestmark = pytest.mark.integration
 
@@ -43,9 +43,9 @@ class TestRsshubSourceRound:
         )
         db.commit()
         gov = Governance(db, redis_client)
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        job = gov.create_job(source.id, "rsshub", datetime.now(timezone.utc))
+        job = gov.create_job(source.id, "rsshub", datetime.now(UTC))
         submitter = CaptureSubmitter()
 
         # StubFetcher 对任意 feed.xml 返回 FEED_XML；RSSHub 路由地址以 /stub/feed.xml 结尾

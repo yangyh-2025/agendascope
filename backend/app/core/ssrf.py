@@ -40,7 +40,7 @@ def validate_public_url(url: str, resolve_dns: bool = True) -> str:
     if not ips and resolve_dns:
         try:
             infos = socket.getaddrinfo(host, None)
-            ips = sorted({info[4][0] for info in infos})
+            ips = sorted({str(info[4][0]) for info in infos})
         except socket.gaierror:
             raise BizError(CODE_URL_INVALID, "URL 主机名无法解析") from None
     if any(_is_private_ip(ip) for ip in ips):

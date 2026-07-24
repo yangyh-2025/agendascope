@@ -3,7 +3,7 @@
 注：GDELT ArtList JSON 结构（url/title/seendate/domain/language/sourcecountry）为官方文档公开契约；
 本测试用符合该契约的样例验证解析与归属逻辑，外部 HTTP 由 stub 替代。
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -61,7 +61,7 @@ class CaptureSubmitter(Submitter):
 
 def test_parse_seen_date():
     dt = parse_seen_date("20260724T053000Z")
-    assert dt == datetime(2026, 7, 24, 5, 30, 0, tzinfo=timezone.utc)
+    assert dt == datetime(2026, 7, 24, 5, 30, 0, tzinfo=UTC)
     assert parse_seen_date("bad") is None
 
 
@@ -82,9 +82,10 @@ def test_gdelt_round_resolves_sources_and_dedups(db, redis_client, monkeypatch):
     # 域名命中已登记源 → 归属该源
     assert by_url["https://stub-media.com/world/tariffs-2026"]["source_id"] == str(own.id)
     # 未命中 → 挂靠 GDELT 兜底伪源
-    from app.services.seed_service import GDELT_PSEUDO_SOURCE_NAME
-    from app.models.source import Source
     from sqlalchemy import select
+
+    from app.models.source import Source
+    from app.services.seed_service import GDELT_PSEUDO_SOURCE_NAME
 
     pseudo = db.scalar(select(Source).where(Source.name == GDELT_PSEUDO_SOURCE_NAME))
     assert pseudo is not None and pseudo.collect_mode == "gdelt"
@@ -121,7 +122,7 @@ class TestBufferFallback:
         import requests as _requests
 
         def _boom(*args, **kwargs):
-            raise __requests.ConnectionError("429 / timeout")
+            raise _requests.ConnectionError("429 / timeout")
 
         monkeypatch.setattr(_requests, "get", _boom)
         monkeypatch.setattr(collector.fetcher, "fetch", lambda url: (ARTICLE_HTML, 200))

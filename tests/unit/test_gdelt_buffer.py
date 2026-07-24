@@ -1,5 +1,5 @@
 """GDELT 缓冲读写单元测试（不依赖 DB/网络）。"""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.collector.gdelt_buffer import CSV_FIELDS, GdeltBuffer
 
@@ -13,7 +13,7 @@ ARTICLES = [
 
 def test_save_and_read_latest(tmp_path):
     buf = GdeltBuffer(str(tmp_path))
-    buf.save_articles(ARTICLES, now=datetime(2026, 7, 24, 6, 0, tzinfo=timezone.utc))
+    buf.save_articles(ARTICLES, now=datetime(2026, 7, 24, 6, 0, tzinfo=UTC))
     rows = buf.read_latest()
     assert len(rows) == 2
     assert rows[0]["url"] == "https://a.com/1"
@@ -23,7 +23,7 @@ def test_save_and_read_latest(tmp_path):
 
 def test_rolling_keep(tmp_path):
     buf = GdeltBuffer(str(tmp_path), keep=3)
-    base = datetime(2026, 7, 24, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 7, 24, 0, 0, tzinfo=UTC)
     for i in range(5):
         buf.save_articles(ARTICLES, now=base + timedelta(minutes=15 * i))
     assert len(list(tmp_path.glob("gdelt_artlist_*.csv"))) == 3

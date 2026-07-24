@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import Float, cast, func, select
 from sqlalchemy.orm import Session
 
-from app.models.collection import JOB_SUCCESS, JOB_TEMP_FAIL, JOB_PERM_FAIL, CollectionJob
+from app.models.collection import JOB_SUCCESS, CollectionJob
 from app.models.source import Source
 
 
@@ -21,7 +21,7 @@ class SourceRepository:
     def get_by_feed_url(self, feed_url: str) -> Source | None:
         return self.db.scalar(select(Source).where(Source.feed_url == feed_url))
 
-    def list(self, country_code=None, status=None, collect_mode=None, is_custom=None,
+    def list_sources(self, country_code=None, status=None, collect_mode=None, is_custom=None,
              keyword=None, sort="audience_weight_desc", page=1, page_size=20):
         stmt = select(Source)
         if country_code:
@@ -46,7 +46,7 @@ class SourceRepository:
         return total, items
 
     def health_24h(self, source_id) -> dict:
-        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        since = datetime.now(UTC) - timedelta(hours=24)
         row = self.db.execute(
             select(
                 func.count(),

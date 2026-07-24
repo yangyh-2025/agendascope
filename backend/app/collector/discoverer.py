@@ -6,7 +6,7 @@ ListPageDiscoverer 实现详细设计算法 6：对列表页所有 <a> 生成结
 """
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urljoin, urlparse
 
 import feedparser
@@ -153,9 +153,7 @@ class SitemapDiscoverer:
     def _accept(self, url: str) -> bool:
         if self.include and not self.include.search(url):
             return False
-        if self.exclude and self.exclude.search(url):
-            return False
-        return True
+        return not (self.exclude and self.exclude.search(url))
 
     def _parse_sitemap(self, xml_content: str, fetcher, depth: int) -> list[str]:
         try:
@@ -180,7 +178,7 @@ class SitemapDiscoverer:
 def _entry_pub_time(entry) -> datetime | None:
     struct = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
     if struct:
-        return datetime(*struct[:6], tzinfo=timezone.utc)
+        return datetime(struct[0], struct[1], struct[2], struct[3], struct[4], struct[5], tzinfo=UTC)
     return None
 
 

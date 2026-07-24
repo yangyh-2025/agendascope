@@ -1,6 +1,5 @@
 """/internal/collect 集成测试：内部 token 鉴权、载荷校验、uuid/url_hash 幂等。"""
 import uuid
-from datetime import datetime, timezone
 
 import pytest
 

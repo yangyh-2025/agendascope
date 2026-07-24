@@ -1,5 +1,7 @@
 """sources 模块端点（详细设计 1.5）。"""
+import contextlib
 import uuid
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
@@ -38,7 +40,7 @@ def list_sources(
     user: User = Depends(require_role(ROLE_REGISTERED)),
 ):
     service = SourceService(db)
-    total, items = service.repo.list(
+    total, items = service.repo.list_sources(
         country_code=country_code, status=status, collect_mode=collect_mode,
         is_custom=is_custom, keyword=keyword, sort=sort, page=page, page_size=page_size,
     )
@@ -127,10 +129,8 @@ def update_source(
                 ip=request.client.host if request.client else None)
     db.commit()
     # 热更新信号（Pub/Sub 通知采集 worker；调度器每 tick 亦重读 DB，双保险）
-    try:
+    with contextlib.suppress(Exception):  # 信号失败不影响 DB 配置生效
         get_cache_redis().publish("sources:reload", str(source.id))
-    except Exception:  # noqa: BLE001 信号失败不影响 DB 配置生效
-        pass
     return ok({"id": str(source.id), "status": source.status})
 
 
@@ -141,13 +141,13 @@ def verify_source(
     db: Session = Depends(get_db),
     user: User = Depends(require_role("admin")),
 ):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     source = _get_source_or_404(db, source_id)
     if source.status != "failed":
         raise BizError(CODE_STATE_INVALID, "仅 failed 状态的源可发起人工重验证")
     gov = Governance(db, get_cache_redis())
-    job = gov.create_job(source.id, source.collect_mode, datetime.now(timezone.utc))
+    job = gov.create_job(source.id, source.collect_mode, datetime.now(UTC))
     write_audit(db, "source.verify", user=user, resource=f"sources/{source.id}",
                 ip=request.client.host if request.client else None)
     db.commit()

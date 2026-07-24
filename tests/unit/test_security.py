@@ -4,7 +4,6 @@ import pytest
 from app.core.errors import BizError
 from app.core.security import (
     TOKEN_TYPE_ACCESS,
-    TOKEN_TYPE_REFRESH,
     check_password_policy,
     create_access_token,
     create_refresh_token,
