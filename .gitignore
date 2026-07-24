@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+*.local
+
+# 数据与运行时产物
+data/
+logs/
+*.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+
+# 模型权重（体积大，部署时单独分发）
+models/
+*.bin
+*.gguf
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 测试与覆盖率
+htmlcov/
+.coverage
+coverage.xml
