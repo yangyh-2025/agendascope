@@ -17,6 +17,7 @@ import os
 import socket
 from uuid import UUID
 
+from app.clustering import STREAM_EMBEDDED_ARTICLES
 from app.config import get_settings
 from app.core.logging import configure_logging, get_logger, new_trace_id, set_trace_id
 from app.db.queue import STREAM_RAW_ARTICLES, StreamQueue
@@ -96,6 +97,15 @@ class NlpWorker:
         try:
             pipeline = NlpPipeline(db, self.detector, self.embedder, self.es_indexer)
             pipeline.process(article_ids)
+            # 向量化已落库：投递 nlp:embedded 供聚类 worker 在线归簇（聚类接在向量化之后）。
+            # 投递失败按批失败处理不 ACK，重投递后聚类侧幂等去重，不重复建簇。
+            trace_id = valid[0][1].get("trace_id") or ""
+            for (_, fields), article_id in zip(valid, article_ids, strict=True):
+                self.queue.publish(
+                    STREAM_EMBEDDED_ARTICLES,
+                    {"article_id": str(article_id)},
+                    trace_id=fields.get("trace_id") or trace_id,
+                )
         except Exception as exc:  # noqa: BLE001 统一失败处置：重投递/死信
             db.rollback()
             self._handle_failure(valid, exc)
