@@ -72,6 +72,19 @@
 - **实测（CPU，开发机）**：lid.176 加载 <2s、识别毫秒级；mpnet 加载 17.7s，批 32 推理 544ms（17ms/篇），单篇 65ms；管线 10 篇批 向量化+落库 43ms/篇 —— 单篇 P95 ≤5s 目标大幅达标；跨语言判别：同事件中英报道对 cosine 0.6+，显著高于无关报道对
 - **测试**：新增 22 项（语言识别 10、向量化 5、管线集成 4、worker 集成 3），全部真实加载 lid.176/mpnet 跑真实推理；累计 116 项全绿；ruff/mypy 全绿
 
+### M2-2 聚类引擎（2026-07-25）
+
+- **T2.6 BERTopic 主线聚类**（`backend/app/clustering/bertopic_cluster.py`）：UMAP(cosine, 5 维) + HDBSCAN(min_cluster_size=10) + c-TF-IDF（自实现 `ctfidf.py`，jieba/拉丁混合分词 `tokenize.py`）；新簇 ≥10 篇且凝聚度（成员对质心平均 cosine）≥0.5 才保留，不达标簇解散入噪声；噪声点撤归属回"未归类"池；**超大簇黑洞护栏**：单簇占比 >80%（可配）判本轮结果不可信，抛错回落并行 Agglomerative 结果，绝不静默放行
+- **T2.7 Agglomerative 硬阈值对照策略**（`agglomerative.py`）：sklearn cosine 距离阈值 0.25 + average linkage，与 BERTopic 每轮并行评估（快照留双方簇数/噪声/孤证/最大簇占比对照指标）；孤证自然保留为 size=1 微簇，不判噪声、不丢弃
+- **T2.8 在线增量双阈值归簇**（`online.py`）：T_dup=0.95 判重（转载标记 is_duplicate/canonical_id，只指向原始报道不形成转载链，跟风报道共享原议题归属不重复建簇）；T_event=0.85 归簇（活跃议题质心 pgvector HNSW 最近邻）；均不命中建 size=1 nascent 孤证微簇；质心时间衰减加权池化（半衰期 24h，非 mean pooling）；归簇幂等，重投递不重复建簇
+- **T2.9 每小时全局重聚类校正 + 快照发布**（`recluster.py`/`snapshot.py`）：近 24h 窗双策略重算，簇质心 ≥T_event 复用既有议题（merges）否则新建，文章跨议题迁移留 assign_method=recluster 痕迹，空壳议题归档；快照走 Redis `cluster:snapshot:latest` 单键原子替换（详细设计 L2 缓存口径），校正期间读侧读上一版快照并标注 correcting=true（"校正中"），无读写不一致
+- **T2.10 topics/topic_articles 落库与生命周期初版**（`repository.py`）：size=1 nascent / 2–9 forming / ≥10 confirmed（阈值可配）；last_seen_at 随归入刷新；country_scope 并集维护；"未归类"池 = 已向量化无归属非重复文章（隐式池不建表），滞留超 48h 按关键词粗分入兜底议题
+- **T2.11 关键词匹配降级链**（`fallback.py`）：双策略均不可用 → 历史议题 keywords 重叠匹配（≥2 词）+ 国家-主题词典（六类目预置分类体系）粗分，cluster_method=keyword_fallback 标记；写 alerts 表 P1 告警（系统内置规则"系统-聚类降级监控"，1h 防抖）+ Redis 降级旗标记录起始时刻；恢复后首轮校正窗口自动扩展覆盖降级期完成回填并清旗标
+- **管线接法**：NLP worker 向量化落库后投递 `nlp:embedded`（cluster worker 消费组 cluster，聚类接在向量化之后）；cluster worker（`python -m app.worker.cluster_worker`）同款可靠性语义（XAUTOCLAIM 回收/尝试超限死信 nlp:embedded:dlq），启动即校正一轮后按 recluster_interval_minutes=60 周期校正，校正失败不阻塞在线归簇
+- **LLM 接线接口**（`service.py`）：`list_pending_naming`（兜底命名留痕的待命名议题）/`get_cluster_dossier`（簇 ID、c-TF-IDF top 词、代表标题权重降序 5–10 条、国家分布）/`record_llm_naming`（回填 name/category/summary_zh，naming_method=llm 留痕，human_locked_fields 人工锁定字段不覆盖）
+- **部署**：docker-compose 新增 nlp-worker/cluster-worker 服务（共用 backend 镜像，模型权重卷挂载 /models:ro）；`.env.example` 补 NLP_*/CLUSTER_* 配置示例
+- **实测（CPU，开发机，39 篇三主题跨语言校验语料）**：Agglomerative 24 簇/孤证微簇 9/噪声 0/最大簇占比 5.1%/簇纯度 1.0（硬阈值碎簇多但绝不并错主题、孤证全保留）；BERTopic 3 簇（14/13/12 篇）/凝聚度 0.66–0.79/纯度 0.93/最大簇占比 35.9%（护栏内）；在线归簇单篇 ~10ms（判重+质心比对+落库，P95 ≤5s 预算的 0.2%）；26 篇窗口重聚类校正冷态 39.8s（其中 BERTopic 首次拟合 21.1s 含 numba JIT 一次性编译，热态 ~0.1s；Agglomerative 69ms）
+- **测试**：新增 34 项（策略 5、分词/c-TF-IDF 5、质心池化/生命周期 3、在线归簇 6、重聚类/快照/降级链 6、service 接口 5、cluster worker 与 NLP 衔接 4），全部真实 mpnet 向量跑真实聚类；累计 150 项全绿；ruff/mypy 全绿
 ### M2-3 LLM 服务（2026-07-25）
 
 - **T2.12 本地推理服务封装**（`backend/app/llm/`）：transformers + Qwen 系列本地推理，三配置档——`gpu-24g`（1×24GB GPU，Qwen2.5-14B-GPTQ-Int4）/ `cpu-quant`（CPU 量化，Qwen2.5-3B）/ `cpu-dev`（开发测试默认，Qwen2.5-0.5B-Instruct float32），`LLM_PROFILE` 一键切换，`LLM_MODEL_DIR` 可覆盖；JSON Schema 结构化输出采用「prompt 强约束 + pydantic 校验 + 解析失败重试 1 次」路线（未引入 outlines/约束解码，选型理由见 `app/llm/schemas.py`），重试时把校验错误反馈进对话引导模型修正；`LLMTaskQueue` 异步批处理队列（asyncio 队列 + 小窗口聚批 + 独立线程推理），主链路投递即返回 Future，不阻塞采集

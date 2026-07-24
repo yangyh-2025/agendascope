@@ -45,9 +45,12 @@ cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      #
 cd backend && uvicorn app.main:app --port 8000                                 # API 服务
 python -m app.collector.worker                                                 # 采集调度 worker（另开终端）
 python -m app.worker.nlp_worker                                                # NLP worker：语言识别→向量化→ES 同步→延迟埋点（另开终端）
+python -m app.worker.cluster_worker                                            # 聚类 worker：在线归簇（消费 nlp:embedded）+ 每小时重聚类校正（另开终端）
 ```
 
 NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
+
+聚类引擎（`backend/app/clustering/`，`CLUSTER_` 前缀环境变量可配）：BERTopic（UMAP+HDBSCAN+c-TF-IDF）主线 + Agglomerative 硬阈值（cosine 0.25，average linkage）双策略并行评估，单簇占比 >80% 触发超大簇黑洞护栏回落 Agglomerative；在线增量双阈值归簇（T_event=0.85 归簇 / T_dup=0.95 判重），孤证保留为 size=1 nascent 微簇；每小时全局重聚类校正（近 24h 窗）+ Redis 快照发布（校正期间读侧读上一版并标注"校正中"）；双策略均不可用时关键词匹配粗聚类降级（cluster_method=keyword_fallback + P1 告警 + 恢复后回填）。议题命名/分类/摘要由 LLM 服务经 `app.clustering.service.ClusterService` 接口接线。
 
 质量门禁（仓库根执行，配置在 `pyproject.toml`）：
 
@@ -57,7 +60,7 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 .venv/Scripts/python.exe -m pytest tests -q                    # 单元 + 集成测试（集成需基础设施在线）
 ```
 
-部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
+部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
 
 ### LLM 服务（backend/app/llm/，M2-3）
 
