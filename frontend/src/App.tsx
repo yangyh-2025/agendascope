@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
+import MapPage from "./pages/MapPage";
 import SourcesPage from "./pages/SourcesPage";
 import SystemPage from "./pages/SystemPage";
 
@@ -14,6 +15,7 @@ export default function App() {
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="map" element={<MapPage />} />
             <Route path="sources" element={<SourcesPage />} />
             <Route path="system" element={<SystemPage />} />
           </Route>

@@ -2,13 +2,8 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
-    agenda_events,
-    articles,
-    auth,
-    persons_orgs,
-    snapshots,
-    sources,
-    topics,
+    agenda_events, alert_rules, articles, auth,
+    persons_orgs, snapshots, sources, topics,
 )
 from app.api.routes import (
     map as map_route,
@@ -23,3 +18,4 @@ api_router.include_router(articles.router, prefix="/articles", tags=["articles"]
 api_router.include_router(persons_orgs.router, prefix="/persons-orgs", tags=["persons-orgs"])
 api_router.include_router(snapshots.router, prefix="/snapshots", tags=["snapshots"])
 api_router.include_router(map_route.router, prefix="/map", tags=["map"])
+api_router.include_router(alert_rules.router, prefix="/alert-rules", tags=["alert-rules"])
