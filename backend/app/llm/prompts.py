@@ -1,6 +1,6 @@
-"""prompt 模板与版本注册表（T2.13/T2.14/T2.15/T2.17）。
+"""prompt 模板与版本注册表（T2.13/T2.14/T2.15/T2.17/T3.8）。
 
-每个任务类型（topic_naming/topic_category/topic_summary）的 prompt 带版本号，
+每个任务类型（topic_naming/topic_category/topic_summary/first_utterance）的 prompt 带版本号，
 历史版本保留在注册表中，支持换 prompt 后对历史判定批量重跑对比（T2.17）。
 新增/调整 prompt 时追加新版本，禁止原地修改已发布版本。
 """
@@ -8,11 +8,18 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from app.llm.schemas import CategoryOutput, NamingOutput, SummaryOutput, schema_instruction
+from app.llm.schemas import (
+    CategoryOutput,
+    FirstUtteranceOutput,
+    NamingOutput,
+    SummaryOutput,
+    schema_instruction,
+)
 
 TASK_NAMING = "topic_naming"
 TASK_CATEGORY = "topic_category"
 TASK_SUMMARY = "topic_summary"
+TASK_FIRST_UTTERANCE = "first_utterance"
 
 # ---------------------------------------------------------------------------
 # 主题分类体系（T2.14）：预置 7 类，部署方可经 LLM_CATEGORIES 环境变量（JSON 数组）覆盖扩展
@@ -137,6 +144,55 @@ def _summary_user_v1(payload: dict[str, Any]) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# 首发表述判定（T3.8，详细设计 4.2 算法 4 llm_first_utterance）：
+# 候选全文片段 + 实体历史表述摘要 ≤4000 token；强制 evidence_quote 原文摘录；
+# 无依据判定返回空 quote 由调用方丢弃进人工队列。
+# ---------------------------------------------------------------------------
+_FIRST_UTTERANCE_SYSTEM_V1 = (
+    "你是全球新闻议题监控平台的首发表述判定器。给定一篇候选报道片段、目标实体在该议题下的"
+    "历史已确认首发表述摘要，以及议题背景，你要判断候选报道是否包含该实体对该议题的"
+    "**首发表述**（即该实体第一次公开提出/宣布/倡议该议题相关立场、政策或行动）。\n"
+    "判定规则：\n"
+    "1. 仅依据给定候选片段与历史表述摘要判断，不得编造候选片段之外的事实；\n"
+    "2. 若候选片段中含有「该实体主动提出的、且时间早于历史摘要中所有表述的」实质内容，"
+    "则 is_first_utterance=True；\n"
+    "3. 若候选片段仅引用他人更早表态、或仅转述该实体此前已公开的立场、或与该议题无关，"
+    "则 is_first_utterance=False；\n"
+    "4. evidence_quote 必须是候选片段的**原文摘录**（不得改写、不得翻译、不得拼接多段）；"
+    "is_first_utterance=True 时 evidence_quote 必填且必须能在候选片段中作为子串找到；"
+    "is_first_utterance=False 且无明确反证时 evidence_quote 填空字符串；\n"
+    "5. occurred_at 给出你推断的首发时间（ISO 8601 字符串，如 2026-07-20T10:00:00+00:00），"
+    "无法推断时填空字符串；\n"
+    "6. reasoning 用≤200 字说明你作出判断的依据，供分析师复核。\n"
+    + schema_instruction(FirstUtteranceOutput)
+)
+
+
+def _first_utterance_user_v1(payload: dict[str, Any]) -> str:
+    history = payload.get("history_quotes") or []
+    if history:
+        history_lines = [
+            f"  - [{record.get('occurred_at', '?')}] {record.get('quote', '')}"
+            for record in history
+        ]
+        history_block = "实体历史已确认首发表述（按时间升序）：\n" + "\n".join(history_lines)
+    else:
+        history_block = "实体历史已确认首发表述：（无——该实体在该议题下尚未确认过首发）"
+    titles = payload.get("topic_titles") or []
+    titles_block = "\n".join(f"  {i + 1}. {t}" for i, t in enumerate(titles)) if titles else "  （无）"
+    return (
+        f"议题名：{payload.get('topic_name') or '（未命名）'}\n"
+        f"议题代表性标题：\n{titles_block}\n"
+        f"目标实体：{payload.get('entity_name') or ''}"
+        f"（{payload.get('entity_type') or ''}，{payload.get('country_code') or ''}）\n"
+        f"{history_block}\n"
+        "候选报道片段：\n"
+        f"{payload.get('candidate_excerpt') or ''}\n"
+        "请判定该候选报道是否包含目标实体对该议题的首发表述，并输出符合 Schema 的 JSON。"
+    )
+
+
 @dataclass(frozen=True)
 class _Template(PromptTemplate):
     user_builder: Any = None
@@ -163,6 +219,12 @@ PROMPT_REGISTRY: dict[str, dict[str, PromptTemplate]] = {
         "topic-summary-v1": _Template(
             task_type=TASK_SUMMARY, version="topic-summary-v1",
             system=_SUMMARY_SYSTEM_V1, user_builder=_summary_user_v1,
+        ),
+    },
+    TASK_FIRST_UTTERANCE: {
+        "first-utterance-v1": _Template(
+            task_type=TASK_FIRST_UTTERANCE, version="first-utterance-v1",
+            system=_FIRST_UTTERANCE_SYSTEM_V1, user_builder=_first_utterance_user_v1,
         ),
     },
 }

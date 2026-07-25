@@ -50,6 +50,43 @@ class SummaryOutput(BaseModel):
         return value.strip()
 
 
+class FirstUtteranceOutput(BaseModel):
+    """LLM 首发表述判定输出（T3.8，详细设计 4.2 算法 4 llm_first_utterance）。
+
+    强制输出 evidence_quote（候选片段原文摘录）作为判定依据：
+    - is_first_utterance=True 时 evidence_quote 必须是候选片段中含"首次/initially/proposed"
+      等首发标志的原文子串；
+    - is_first_utterance=False 时 evidence_quote 可为空字符串（无依据判定）；
+    - occurred_at 为 ISO 8601 时间字符串（LLM 推断首发时间；空字符串表示无法推断）；
+    - reasoning ≤200 字，留痕用，供前端展示"机器为什么这样判"。
+    """
+
+    is_first_utterance: bool = Field(description="候选片段是否包含该实体对该议题的首发表述")
+    evidence_quote: str = Field(
+        default="",
+        description="候选片段中作为判定依据的原文摘录（不得改写；无依据时为空字符串）",
+    )
+    confidence: str = Field(description="置信度：high/medium/low")
+    occurred_at: str = Field(
+        default="",
+        description="首发时间（ISO 8601 字符串，LLM 推断；无法推断时为空字符串）",
+    )
+    reasoning: str = Field(default="", description="判定理由（≤200 字）")
+
+    @field_validator("confidence")
+    @classmethod
+    def _normalize_confidence(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if cleaned not in ("high", "medium", "low"):
+            raise ValueError(f"confidence 必须为 high/medium/low: {value!r}")
+        return cleaned
+
+    @field_validator("reasoning")
+    @classmethod
+    def _cap_reasoning(cls, value: str) -> str:
+        return value.strip()[:200]
+
+
 def schema_instruction(output_model: type[BaseModel]) -> str:
     """把 pydantic 模型的 JSON Schema 渲染为 prompt 内的强约束说明。"""
     schema = output_model.model_json_schema()
