@@ -221,13 +221,7 @@ class TopicAnnotator:
         redis_client: Any = None,
     ) -> None:
         """标注结果落 topics 表并逐条写 llm_judgements 留痕；降级时写 P1 告警。"""
-        for result in (annotation.name, annotation.category, annotation.summary):
-            if result is None:
-                continue
-            self._record_judgement(db, topic.id, result, {
-                **annotation.inputs,
-                "keywords": annotation.keywords,
-            })
+        self.record_judgements(db, topic.id, annotation)
 
         topic.name_auto = str(annotation.name.value)
         if "name" not in (topic.human_locked_fields or []):
@@ -250,6 +244,22 @@ class TopicAnnotator:
                 redis_client=redis_client,
                 debounce_seconds=self.settings.alert_debounce_seconds,
             )
+
+    def record_judgements(
+        self, db: Session, topic_id: uuid.UUID | None, annotation: TopicAnnotation
+    ) -> None:
+        """一次组合标注的命名/分类/摘要判定逐条写 llm_judgements 留痕。
+
+        persist_annotation 与命名 worker（app.worker.naming_worker）共用：
+        每次判定都必须留痕（模型名 + prompt_version + 输入/输出快照 + 成败 + 耗时）。
+        """
+        for result in (annotation.name, annotation.category, annotation.summary):
+            if result is None:
+                continue
+            self._record_judgement(db, topic_id, result, {
+                **annotation.inputs,
+                "keywords": annotation.keywords,
+            })
 
     def _record_judgement(
         self, db: Session, topic_id: uuid.UUID | None, result: JudgementResult, extra_input: dict[str, Any]
