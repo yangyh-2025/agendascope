@@ -46,6 +46,7 @@ cd backend && uvicorn app.main:app --port 8000                                 #
 python -m app.collector.worker                                                 # 采集调度 worker（另开终端）
 python -m app.worker.nlp_worker                                                # NLP worker：语言识别→向量化→ES 同步→延迟埋点（另开终端）
 python -m app.worker.cluster_worker                                            # 聚类 worker：在线归簇（消费 nlp:embedded）+ 每小时重聚类校正（另开终端）
+python -m app.worker.naming_worker                                             # 命名 worker：待命名议题 → LLM 命名/分类/摘要回填（另开终端）
 ```
 
 NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
@@ -60,7 +61,7 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 .venv/Scripts/python.exe -m pytest tests -q                    # 单元 + 集成测试（集成需基础设施在线）
 ```
 
-部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
+部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
 
 ### LLM 服务（backend/app/llm/，M2-3）
 
@@ -89,6 +90,7 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 - **异步批处理**：`LLMTaskQueue`（asyncio 队列 + 小窗口聚批 + 独立线程推理），主链路投递即返回，不阻塞采集
 - **降级链**：推理失败/超时率 >20%（滑窗）或模型加载失败 → c-TF-IDF 关键词标签兜底（`naming_method=ctfidf_fallback`，分类归「其他」，摘要留空不伪造）+ alerts 表 P1 告警（1h 防抖）+ WARN 日志；恢复后 `backfill_degraded_topics()` 对降级期议题回填重命名/分类/摘要并写 revision_log
 - **prompt 版本管理**：命名/分类/摘要模板带版本号（`app/llm/prompts.py` 注册表，只增不改）；每次判定写 `llm_judgements` 表（模型名 + prompt_version + 输入/输出快照 + 耗时），topics 表冗余 `llm_model`/`prompt_version` 列；`rerun_judgements()` 支持换 prompt 后历史判定批量重跑对比
+- **聚类管线接线**：`python -m app.worker.naming_worker` 轮询聚类侧待命名队列（`ClusterService.list_pending_naming`：在线归簇新建微簇与重聚类校正产出的兜底命名议题），经 `LLMTaskQueue` 投递 `TopicAnnotator` 组合标注（命名+分类+摘要），`record_llm_naming` 回填 topics；降级时议题落「关键词：」兜底标签保持 `ctfidf_fallback` 留痕 + P1 告警，worker 每轮做恢复探针（真实推理验证），恢复后自动 `backfill_degraded_topics` 回填降级期议题；单点降级议题 10 分钟重试冷却，不刷判定留痕
 
 ### 前端（frontend/）
 
