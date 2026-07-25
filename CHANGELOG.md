@@ -62,6 +62,37 @@
 
 > **M2-3 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M2-3-review.md`）——T2.12-T2.17 六项任务全落地，聚类管线接线（待命名队列 → LLM 组合标注 → 回填留痕 + 降级不静默 + 恢复回填）经真实 Qwen2.5-0.5B 推理端到端验证，git 署名合规、文档同步。阶段标签 `v0.2.0-m2-3`。
 
+## Phase 4 · 前端看板与预警报告（2026-07-25）
+
+> **阶段交付**：3 个 commit（bbc5fbc/109fa0c/4cb1800），覆盖 M4-1 业务 API（7 路由）/ M4-2 前端核心视图（5 页）/ M4-3 预警引擎骨架。阶段标签 `v0.4.0-phase4`。
+
+### M4-1 业务 API
+- **topics**：列表（分页/筛选/显著性排序 + registered 3 国限制）+ 详情（含 merged_into/归并建议）+ 时间线 + rename
+- **agenda_events**：列表（分页/筛选/终审分数）+ 详情 + dismiss 排除（audit_logs）+ confirm/reject/revisions 已有
+- **articles**：ES 全文检索 + PG ILIKE 降级；版权合规 L1（正文不出库 ≤150 字摘录 + 原文链接）；registered 限近 7 天
+- **persons_orgs**：列表/详情
+- **snapshots**：议题显著性时间线 + 跨国对比视图（4 国并列 + 免责"统计关联≠因果"）
+- **map**：30 国×Top 议题一次性下发 + 覆盖率 <70% 置灰 + 数据延迟 N 分钟
+- **alert_rules**：CRUD + 配额控制（registered≤5/authorized≤50）
+
+### M4-2 前端核心视图
+- **MapPage**：ECharts 世界地图（气泡 = 报道量 + 覆盖率 <70% 置灰 + 国家下钻抽屉 + 顶部数据延迟标注）；深色红蓝主题；`echarts` + `echarts-for-react` 依赖已装
+- **TopicsPage**：筛选（国家/状态/分类/排序）+ 分页 + 议题卡网格（显著性/报道量/生命周期 tag/议程事件 tag #C8102E）
+- **EventsPage**：事件列表（状态颜色码 confirmed 中国红/suspected 橙/revised 蓝/dismissed 灰）+ 筛选 + 终审分数
+- **AnalyticsPage**：跨国对比（多国 chip + 显著性面板 + 强制免责文案）
+- **ReportsPage**：报告新建（模板 PDF/Word + 时间窗 ≤90 天 + 水印提示）
+- **DegradedBadge**：降级标注组件（6 种状态：LLM/聚类/翻译/首发待核实/快照校正/覆盖不足）
+- **Layout**：侧边栏导航全入口（看板/全球地图/议题/议程事件/跨国对比/媒体源/报告/系统）
+- **API 客户端层**：topics/agendaEvents/alertRules/persons/snapshots/reportExports/meta/map（8 模块）
+
+### M4-3 预警订阅报告
+- **alerting 引擎**（`engine.py`）：三条件评估（growth_rate/top_n/neg_ratio）AND 叠加 + 防抖 1h + 预警风暴合并摘要
+- **通知通道**（`notifier.py`）：站内/SMTP/Webhook（企业微信/钉钉/飞书）；SSRF 校验（白名单 + DNS 解析内网拦截）；指数退避 1m/5m/15m 重试 3 次；失败降级邮件
+- **离线翻译**（`translate.py`）：argos-translate HTTP 封装（独立容器 AGPL-3.0 合规）；不可用时返回原文不阻塞
+- **缺**：report_worker / alert_worker / subscription / report_exports API（后端周期任务与报告导出异步管线，留待 Phase 5 收尾）
+
+---
+
 ## Phase 3 · 议程引擎（2026-07-25 起）
 
 > **M3-1 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-1-review.md`）。阶段标签 `v0.3.0-m3-1`。

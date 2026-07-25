@@ -31,7 +31,7 @@
 
 ## 快速开始
 
-开发中。当前阶段：Phase 3 M3-3 事件判定与自我纠错已交付并独立审核通过（标签 `v0.3.2-m3-3`，审核报告 `docs/dev/reviews/M3-3-review.md`）。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
+开发中。当前阶段：Phase 4 前端看板与预警报告已交付（标签 `v0.4.0-phase4`）。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ### 后端（backend/）
 
