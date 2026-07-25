@@ -87,6 +87,7 @@ def db(migrated_db):
         for table in (
             "alerts", "alert_rules", "topic_articles", "agenda_snapshots", "topics",
             "collection_jobs", "articles", "sources", "users",
+            "persons_orgs", "llm_judgements",
         ):
             conn.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
         conn.commit()
