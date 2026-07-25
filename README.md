@@ -48,6 +48,7 @@ python -m app.worker.nlp_worker                                                #
 python -m app.worker.cluster_worker                                            # 聚类 worker：在线归簇（消费 nlp:embedded）+ 每小时重聚类校正（另开终端）
 python -m app.worker.naming_worker                                             # 命名 worker：待命名议题 → LLM 命名/分类/摘要回填（另开终端）
 python -m app.worker.agenda_worker                                             # 议程引擎 worker：次日归并/消亡扫描/实体黑名单周期任务（另开终端）
+python -m app.worker.snapshot_worker                                           # 快照 worker：国家×议题显著性 15min 刷新（另开终端）
 ```
 
 NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
@@ -62,7 +63,7 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 .venv/Scripts/python.exe -m pytest tests -q                    # 单元 + 集成测试（集成需基础设施在线）
 ```
 
-部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker/agenda-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
+部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker/agenda-worker/snapshot-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
 
 ### LLM 服务（backend/app/llm/，M2-3）
 
@@ -103,6 +104,23 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 - **议题分裂与误并回滚**（`split.py` + `POST /api/v1/topics/{parent_id}/split`）：恢复双方 topic_id 与文章归属；双方写入 no_merge_with 防再误并；revision_log(actor='human', trigger='manual_split')；audit_logs 留痕；质心按剩余文章重算（time_decay_pool 不可逆）
 - **动态高频实体黑名单**（`entity_blacklist.py` + `entity_extract.py`）：jieba 中文 NER + 英文大写规则，近 30 天 Top-50 实体写 Redis Set `entity:blacklist` TTL 48h；聚类/归并比对前过滤；刷新失败保旧值不抛错（优化非正确性依赖）
 - **agenda worker**（`python -m app.worker.agenda_worker`）：归并（默认 60min）/消亡扫描（默认 60min）/黑名单刷新（默认 24h）三任务独立调度，启动即首轮全触发；单任务失败不阻塞其他任务
+
+#### M3-2 首发源判定与传播链路（已交付，标签 `v0.3.1-m3-2`）
+
+- **媒体首发锚点判定**（`origin.py` `detect_media_origin`）：议题簇内最早 published_at UTC；同秒并列通讯社原文优先（media_type/agency/wire 双通道）；time_source='crawled' 低置信"首发源待核实"不自动告警
+- **persons_orgs 实体库与 NER**（`entity_repo.py`）：别名表精确匹配；同名歧义 confidence 衰减 + needs_review 进人工队列；与 T3.5 实体黑名单联动降权
+- **LLM 首发表述判定器**（`first_utterance.py` + prompt `first-utterance-v1`）：候选全文+历史表述 ≤4000 token；evidence_quote 强制原文子串；无依据判定丢弃进人工队列；不可用回落 media_time_fallback；llm_judgements 留痕
+- **跟随国序列计算**（`origin.py` `compute_follower_sequence`）：各国首篇 lag_hours 升序；14 天窗口；仅原创节点
+- **统计佐证计算**（`stats_evidence.py`）：XCorr lag 0-14 + Granger + QAP；样本量 <100 硬性拒绝"数据量不足"；降级不抛异常
+
+#### M3-3 事件判定与自我纠错（已交付，标签 `v0.3.2-m3-3`）
+
+- **AgendaEvent 状态机**（`event.py`）：watching/suspected/confirmed/dismissed/revised/archived 六态；判定条件 a-d（首发源明确 + ≥3 国 14 天内跟随 + 统计显著 + 议题活跃）；upsert 不重置已 confirmed/archived 事件（人工结论机器不推翻）
+- **LLM 终审审查官**（`final_review.py` + prompt `final-review-v1`）：对 suspected 事件评逻辑连贯性 1-10 分；<5 自动降 watching 不自动告警；≥5 维持；不可用跳过直进人工复核队列；final_review 字段（score/verdict/model/prompt_version/reasoning/concerns）留痕
+- **增量重估与 revision_log**（`revision.py`）：新证据（更早报道/LLM 人物首发/统计变化）触发自动重跑首发源判定；判定变化字段逐个 append_revision（actor='machine'，含 model/prompt_version/trigger_evidence）；status='revised'；human_locked_fields 中的字段机器不推翻
+- **置信度自动升降**（`confidence.py`）：watching→suspected 满足条件升级（origin_type 确定 + origin_confidence ∈ medium/high + 跟随国 ≥1 + 降级时统计显著）；origin_confidence 降 'low' 或 follower 清空撤销回 watching；修正风暴保护（24h 修正 >5 次冻结自动修正转人工）
+- **人工确认/否决优先 API**（`api/routes/agenda_events.py`）：`POST /agenda-events/{id}/confirm` 人工确认升 confirmed（audit_logs 留痕）；`POST /agenda-events/{id}/revisions/{seq}/reject` 人工否决回滚到修正前值 + 新 revision 条目 + human_locked_fields 增加；`GET /agenda-events/{id}/revisions` 列出修正历史（rejected 标记）
+- **AgendaSnapshot 快照引擎**（`snapshot.py` + `python -m app.worker.snapshot_worker`）：每 15 min 刷新国家×议题显著性得分/排名/top_attributes/network_metrics；单次 ≤5 min 超时保留上版；连续 3 次失败写 alerts P1 告警；UPSERT 幂等（UK country×topic×window×granularity）；sentiment 留 NULL 不伪造（Phase 4 情感分析接入后回填）
 
 ### 前端（frontend/）
 

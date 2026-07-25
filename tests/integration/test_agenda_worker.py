@@ -9,7 +9,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.agenda_engine.config import get_agenda_settings
 from app.agenda_engine.entity_blacklist import get_entity_blacklist
 from app.models.topic import Topic
 from app.worker.agenda_worker import AgendaWorker

@@ -29,8 +29,24 @@ class AgendaSettings(BaseSettings):
     merge_batch_size: int = 200        # 单轮归并处理的候选议题上限（防失控）
     merge_interval_minutes: int = 60   # 次日归并触发周期（与重聚类校正同节拍可配）
 
-    # 修正风暴保护（详细设计 4.2 算法 4 注释，T3.14 预留）
+    # 修正风暴保护（详细设计 4.2 算法 4 注释，T3.14）
     revision_storm_threshold: int = 5  # 单议题 24h 修正 > N 次冻结自动修正转人工（估算）
+    revision_storm_window_hours: int = 24  # 修正风暴窗口（小时，估算）
+
+    # 置信度升级条件（详细设计 4.2 算法 4 注释 + T3.14）
+    # watching → suspected：满足 rules 中全部子条件即升级
+    # suspected → confirmed：仅人工 POST /agenda-events/{id}/confirm（不在此自动化）
+    confidence_escalation_rules: dict = {
+        "watching_to_suspected": {
+            "require_origin_type": True,         # 至少一个 origin_type 已确定（media/person/org）
+            "min_origin_confidence": "medium",   # origin_confidence ∈ ('medium','high')
+            "min_follower_countries": 1,         # follower_sequence 至少 1 个国家
+            "fallback_requires_stats_significant": True,  # detection_method='media_time_fallback' 需 stats_evidence 显著
+        },
+        "suspected_to_confirmed": {
+            "manual_only": True,                 # 只能人工确认触发，机器不自动跨档
+        },
+    }
 
     # 消亡扫描周期（T3.2）
     sweep_interval_minutes: int = 60   # 消亡扫描触发周期
@@ -73,6 +89,16 @@ class AgendaSettings(BaseSettings):
 
     # 议程引擎 worker（app.worker.agenda_worker，M3-1 收尾接入）
     worker_poll_seconds: float = 60.0  # 主循环节拍（归并/消亡/黑名单按各自周期到期触发）
+
+    # 议程快照刷新（详细设计 2.9 agenda_snapshots + 4 开发计划 T3.16，app.worker.snapshot_worker）
+    snapshot_interval_minutes: int = 15        # 快照刷新周期（15min 滚动）
+    snapshot_window_hours: int = 24            # 每次计算覆盖时间窗（近 24h）
+    snapshot_timeout_seconds: int = 300        # 单次计算 ≤5 min，超时保留上版
+    snapshot_max_countries: int = 30           # 最多覆盖 N 国（按窗内文章量排序）
+    snapshot_max_topics_per_country: int = 50  # 每国 Top 议题上限
+    snapshot_failure_alert_threshold: int = 3  # 连续 N 次失败写 P1 告警（详细设计 2.130）
+    snapshot_top_attributes_limit: int = 20    # 实质属性 top 词上限（写 top_attributes JSONB）
+    snapshot_granularity: str = "hour"         # 快照粒度（hour/day/week；当前 15min 滚动以 hour 写库）
 
     @property
     def entity_blacklist_key(self) -> str:

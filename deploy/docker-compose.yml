@@ -193,6 +193,23 @@ services:
         condition: service_healthy
     command: python -m app.worker.agenda_worker
 
+  snapshot-worker:
+    image: agendascope-backend:latest   # 与 backend 共用镜像
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      AGENDA_SNAPSHOT_INTERVAL_MINUTES: ${AGENDA_SNAPSHOT_INTERVAL_MINUTES:-15}
+      AGENDA_SNAPSHOT_TIMEOUT_SECONDS: ${AGENDA_SNAPSHOT_TIMEOUT_SECONDS:-300}
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.worker.snapshot_worker
+
 volumes:
   pgdata:
   redisdata:
