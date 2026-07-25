@@ -154,6 +154,26 @@ services:
         condition: service_healthy
     command: python -m app.worker.cluster_worker
 
+  naming-worker:
+    image: agendascope-backend:latest   # 与 backend 共用镜像（避免重复构建）
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_URL: redis://redis:6379/1
+      LLM_PROFILE: ${LLM_PROFILE:-cpu-dev}
+      LLM_MODEL_DIR: /models/Qwen2.5-0.5B-Instruct   # 模型权重经卷挂载（镜像不含模型，控制体积）
+    volumes:
+      - ../models:/models:ro
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.worker.naming_worker
+
 volumes:
   pgdata:
   redisdata:

@@ -64,6 +64,11 @@ class LLMSettings(BaseSettings):
 
     categories: str = ""  # JSON 数组，覆盖默认主题分类体系（部署方可扩展，T2.14）
 
+    # 命名 worker（app.worker.naming_worker）：聚类待命名议题 → LLM 标注回填
+    naming_worker_batch_size: int = 20  # 每轮拉取的待命名议题上限
+    naming_worker_poll_seconds: float = 30.0  # 无待命名议题时的轮询间隔
+    naming_worker_retry_cooldown_seconds: float = 600.0  # 单点降级议题的重试冷却（避免每轮重复判定刷留痕）
+
     def _profile_defaults(self) -> dict[str, object]:
         if self.profile not in PROFILES:
             raise ValueError(f"未知 LLM 配置档: {self.profile}（可选: {sorted(PROFILES)}）")
