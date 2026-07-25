@@ -41,6 +41,36 @@ class AgendaSettings(BaseSettings):
     entity_blacklist_ttl_hours: int = 48     # Redis Set TTL（刷新失败保旧值不丢）
     entity_blacklist_refresh_hours: int = 24  # 刷新周期（每日）
 
+    # 媒体首发锚点判定（详细设计 4.2 算法 4，T3.6）
+    origin_wire_services: list[str] = [      # 通讯社识别名单（大小写不敏感匹配 source.name）
+        "Reuters", "AP", "AFP", "Bloomberg", "TASS", "Xinhua",
+    ]
+    origin_wire_boost_hours: float = 6.0     # 通讯社原文锚点向早于普通媒体最多 N 小时倾斜（估算）
+    origin_min_confidence_for_alert: str = "high"  # 低置信首发不自动告警，需人工核实
+
+    # 跟随国序列计算（详细设计 4.2 算法 4，T3.9）
+    follower_window_days: int = 14           # 跟随统计窗口（估算）：超过 N 天的"跟随"不计入序列
+
+    # 统计佐证（详细设计 4.2 算法 4 evidence 部分 + 2.129 数据不足 4004，T3.10）
+    stats_min_articles: int = 100            # 统计检验最小样本量硬性阈值，<100 拒绝输出误导性结论
+    stats_xcorr_max_lag_days: int = 14       # 时滞互相关最大 lag（天，估算）
+    stats_granger_max_lag_days: int = 7      # Granger 因果最大 lag（天，估算）
+    stats_qap_permutations: int = 1000       # QAP 置换检验次数（估算）
+    stats_significance_alpha: float = 0.05   # 显著性水平 α（p < α 判显著）
+    stats_window_days: int = 30              # 统计窗默认天数（与 follower_window_days 对齐可按场景调整）
+
+    # 实体库与 NER 提及识别（详细设计 4.2 算法 4，T3.7）
+    entity_ambiguity_low_confidence: float = 0.6  # 同名歧义置信度阈值，低于此进人工复核队列（估算）
+    entity_blacklist_dampen: float = 0.3          # 黑名单命中降权系数（与 T3.5 黑名单联动，防超级节点虚假关联）
+    entity_country_match_boost: float = 1.0       # 上下文 country_code 一致时置信度系数
+    entity_country_mismatch_dampen: float = 0.5   # 上下文 country_code 不一致时置信度衰减
+
+    # LLM 首发表述判定器（详细设计 4.2 算法 4 llm_first_utterance，T3.8）
+    first_utterance_total_budget: int = 4000     # 总 token 预算（详细设计约束）
+    first_utterance_candidate_budget: int = 2000 # 候选全文片段 token 预算（超出截断，不裁剪历史表述）
+    first_utterance_history_limit: int = 5       # 实体历史表述摘要取近 N 条（保持时间升序喂入）
+    first_utterance_topic_titles_limit: int = 5  # 议题代表标题取 N 条（议题背景）
+
     # 议程引擎 worker（app.worker.agenda_worker，M3-1 收尾接入）
     worker_poll_seconds: float = 60.0  # 主循环节拍（归并/消亡/黑名单按各自周期到期触发）
 
