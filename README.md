@@ -47,6 +47,7 @@ python -m app.collector.worker                                                 #
 python -m app.worker.nlp_worker                                                # NLP worker：语言识别→向量化→ES 同步→延迟埋点（另开终端）
 python -m app.worker.cluster_worker                                            # 聚类 worker：在线归簇（消费 nlp:embedded）+ 每小时重聚类校正（另开终端）
 python -m app.worker.naming_worker                                             # 命名 worker：待命名议题 → LLM 命名/分类/摘要回填（另开终端）
+python -m app.worker.agenda_worker                                             # 议程引擎 worker：次日归并/消亡扫描/实体黑名单周期任务（另开终端）
 ```
 
 NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
@@ -61,7 +62,7 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 .venv/Scripts/python.exe -m pytest tests -q                    # 单元 + 集成测试（集成需基础设施在线）
 ```
 
-部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
+部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker/agenda-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
 
 ### LLM 服务（backend/app/llm/，M2-3）
 
@@ -91,6 +92,17 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 - **降级链**：推理失败/超时率 >20%（滑窗）或模型加载失败 → c-TF-IDF 关键词标签兜底（`naming_method=ctfidf_fallback`，分类归「其他」，摘要留空不伪造）+ alerts 表 P1 告警（1h 防抖）+ WARN 日志；恢复后 `backfill_degraded_topics()` 对降级期议题回填重命名/分类/摘要并写 revision_log
 - **prompt 版本管理**：命名/分类/摘要模板带版本号（`app/llm/prompts.py` 注册表，只增不改）；每次判定写 `llm_judgements` 表（模型名 + prompt_version + 输入/输出快照 + 耗时），topics 表冗余 `llm_model`/`prompt_version` 列；`rerun_judgements()` 支持换 prompt 后历史判定批量重跑对比
 - **聚类管线接线**：`python -m app.worker.naming_worker` 轮询聚类侧待命名队列（`ClusterService.list_pending_naming`：在线归簇新建微簇与重聚类校正产出的兜底命名议题），经 `LLMTaskQueue` 投递 `TopicAnnotator` 组合标注（命名+分类+摘要），`record_llm_naming` 回填 topics；降级时议题落「关键词：」兜底标签保持 `ctfidf_fallback` 留痕 + P1 告警，worker 每轮做恢复探针（真实推理验证），恢复后自动 `backfill_degraded_topics` 回填降级期议题；单点降级议题 10 分钟重试冷却，不刷判定留痕
+
+### 议程引擎（backend/app/agenda_engine/，M3-1）
+
+回声消除 + 议题生命周期 + 次日归并 + 分裂回滚 + 动态实体黑名单；自我纠错核心（ADR-006），全部产出真实落库且 revision_log 留痕。`AGENDA_` 前缀环境变量可配（`backend/app/agenda_engine/config.py`）。
+
+- **回声消除折叠**（`echo.py`）：同日 cosine ≥0.65 / 3 日内 ≥0.85 折叠为同一议题节点，全部来源保留 related_docs，canonical 永远是最早 TIME_PUB，时间衰减加权质心
+- **议题生命周期状态机**（`lifecycle.py`）：nascent/forming/confirmed/evolving/archived 五态完整版；连续 7 天无新报道自动归档（保留可查）；人工锁定字段议题不自动消亡
+- **次日自动归并**（`merge.py`）：candidate nascent 微簇 vs 历史活跃议题跨语言向量比对 ≥0.85 并入旧议题，topic_id 复用 + 推进 lifecycle_state；加载 no_merge_with 名单先行排除；人工锁定 'merged_into' 字段的源议题不自动归并
+- **议题分裂与误并回滚**（`split.py` + `POST /api/v1/topics/{parent_id}/split`）：恢复双方 topic_id 与文章归属；双方写入 no_merge_with 防再误并；revision_log(actor='human', trigger='manual_split')；audit_logs 留痕；质心按剩余文章重算（time_decay_pool 不可逆）
+- **动态高频实体黑名单**（`entity_blacklist.py` + `entity_extract.py`）：jieba 中文 NER + 英文大写规则，近 30 天 Top-50 实体写 Redis Set `entity:blacklist` TTL 48h；聚类/归并比对前过滤；刷新失败保旧值不抛错（优化非正确性依赖）
+- **agenda worker**（`python -m app.worker.agenda_worker`）：归并（默认 60min）/消亡扫描（默认 60min）/黑名单刷新（默认 24h）三任务独立调度，启动即首轮全触发；单任务失败不阻塞其他任务
 
 ### 前端（frontend/）
 
