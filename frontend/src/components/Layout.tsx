@@ -5,7 +5,12 @@ import "./Layout.css";
 
 const NAV_ITEMS = [
   { to: "/", label: "看板", end: true },
+  { to: "/map", label: "全球地图", end: false },
+  { to: "/topics", label: "议题", end: false },
+  { to: "/events", label: "议程事件", end: false },
+  { to: "/analytics", label: "跨国对比", end: false },
   { to: "/sources", label: "媒体源", end: false },
+  { to: "/reports", label: "报告", end: false },
   { to: "/system", label: "系统", end: false },
 ];
 

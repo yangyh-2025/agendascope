@@ -1,0 +1,7 @@
+.reports-page { padding: 24px; }
+.reports-page h1 { color: #E2E8F0; margin-bottom: 16px; }
+.report-form { display: flex; flex-direction: column; gap: 12px; max-width: 480px; }
+.report-form select, .report-form input { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 8px 12px; border-radius: 4px; }
+.report-form button { background: #1D4E9E; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer; }
+.watermark-hint { color: #64748B; font-size: 0.8rem; }
+.status-msg { color: #60A5FA; font-size: 0.85rem; }

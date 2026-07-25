@@ -1,0 +1,13 @@
+.analytics-page { padding: 24px; }
+.analytics-page h1 { color: #E2E8F0; margin-bottom: 16px; }
+.country-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.country-chip { background: #1e3a5f; color: #94A3B8; border: 1px solid #2a4a70; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
+.country-chip.active { background: #1D4E9E; color: #E2E8F0; border-color: #3B82F6; }
+.compare-btn { background: #1D4E9E; color: white; border: none; padding: 6px 20px; border-radius: 4px; cursor: pointer; margin-left: 12px; }
+.disclaimer { color: #94A3B8; font-size: 0.8rem; padding: 8px; background: #1e3a5f; border-radius: 4px; margin-bottom: 16px; }
+.compare-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.country-panel { background: #0f1f3d; border: 1px solid #1e3a5f; border-radius: 8px; padding: 16px; }
+.country-panel h3 { color: #60A5FA; font-size: 1.1rem; margin: 0 0 12px; }
+.stat-row { display: flex; justify-content: space-between; padding: 4px 0; color: #94A3B8; font-size: 0.85rem; }
+.stat-row b { color: #E2E8F0; }
+.stat-row b.low { color: #D97706; }
