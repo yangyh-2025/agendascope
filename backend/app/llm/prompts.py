@@ -10,6 +10,7 @@ from typing import Any
 
 from app.llm.schemas import (
     CategoryOutput,
+    FinalReviewOutput,
     FirstUtteranceOutput,
     NamingOutput,
     SummaryOutput,
@@ -20,6 +21,7 @@ TASK_NAMING = "topic_naming"
 TASK_CATEGORY = "topic_category"
 TASK_SUMMARY = "topic_summary"
 TASK_FIRST_UTTERANCE = "first_utterance"
+TASK_FINAL_REVIEW = "final_review"
 
 # ---------------------------------------------------------------------------
 # 主题分类体系（T2.14）：预置 7 类，部署方可经 LLM_CATEGORIES 环境变量（JSON 数组）覆盖扩展
@@ -193,6 +195,61 @@ def _first_utterance_user_v1(payload: dict[str, Any]) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# 终审审查官（T3.12，详细设计 4.2 算法 4 llm_final_review）：
+# 对 suspected 议程设置事件评逻辑连贯性 1-10 分；<5 自动降疑似/驳回，≥5 维持；
+# 终审不可用跳过直进人工复核队列（PRD 8.5 降级链）。
+# ---------------------------------------------------------------------------
+_FINAL_REVIEW_SYSTEM_V1 = (
+    "你是全球新闻议题监控平台的终审审查官。给定一个由上游管线自动判定为"
+    "「疑似议程设置事件」的证据包（首发源、跟随国序列、统计佐证、检测方法），"
+    "你要对该判定的**逻辑连贯性**打分（1-10 分），并给出维持（completed）或"
+    "驳回（rejected）结论。\n"
+    "评分维度（各 0-2.5 分，总分 1-10）：\n"
+    "1. 首发源是否可靠（通讯社原文 > 普通媒体 > time_source='crawled' 低置信）；\n"
+    "2. 跟随链路是否合理（跟随国数 ≥3、lag_hours 序列是否符合常规传播节奏、"
+    "是否存在同期独立事件更可能解释多国同期报道）；\n"
+    "3. 统计佐证是否支撑（xcorr/granger 显著性、样本量是否足够、方向是否一致）；\n"
+    "4. 是否存在更可能的非议程设置解释（同期重大突发事件、共享通讯社通稿、"
+    "话题天然全球性——如奥运/气候变化——导致多国独立自发报道）。\n"
+    "判定规则：\n"
+    "- score ≥5 → verdict='completed'（维持 suspected，事件证据链进入人工复核队列）\n"
+    "- score <5  → verdict='rejected'（自动降为 watching，不自动告警；样本作负例积累）\n"
+    "- 仅依据给定证据包判断，不编造；reasoning ≤500 字；concerns 列出主要疑虑点。\n"
+    + schema_instruction(FinalReviewOutput)
+)
+
+
+def _final_review_user_v1(payload: dict[str, Any]) -> str:
+    followers = payload.get("follower_sequence") or []
+    followers_block = (
+        "\n".join(
+            f"  - {f.get('country_code')}: lag={f.get('lag_hours')}h, first_media={f.get('first_media_name')}"
+            for f in followers
+        )
+        if followers else "  （无）"
+    )
+    stats = payload.get("stats_evidence") or {}
+    stats_block = (
+        f"sample_size={stats.get('sample_size')}, "
+        f"xcorr={stats.get('xcorr')}, granger={stats.get('granger')}, qap={stats.get('qap')}"
+        if stats else "（无统计佐证）"
+    )
+    return (
+        f"议题名：{payload.get('topic_name') or '（未命名）'}\n"
+        f"首发类型：{payload.get('origin_type')}\n"
+        f"首发国：{payload.get('origin_country_code')}\n"
+        f"首发时间：{payload.get('origin_at')}\n"
+        f"首发置信度：{payload.get('origin_confidence')}\n"
+        f"首发引文：{payload.get('origin_quote') or '（无）'}\n"
+        f"跟随国数：{payload.get('follower_count')}\n"
+        f"跟随序列：\n{followers_block}\n"
+        f"统计佐证：{stats_block}\n"
+        f"检测方法：{payload.get('detection_method')}\n"
+        "请输出符合 Schema 的 JSON。"
+    )
+
+
 @dataclass(frozen=True)
 class _Template(PromptTemplate):
     user_builder: Any = None
@@ -225,6 +282,12 @@ PROMPT_REGISTRY: dict[str, dict[str, PromptTemplate]] = {
         "first-utterance-v1": _Template(
             task_type=TASK_FIRST_UTTERANCE, version="first-utterance-v1",
             system=_FIRST_UTTERANCE_SYSTEM_V1, user_builder=_first_utterance_user_v1,
+        ),
+    },
+    TASK_FINAL_REVIEW: {
+        "final-review-v1": _Template(
+            task_type=TASK_FINAL_REVIEW, version="final-review-v1",
+            system=_FINAL_REVIEW_SYSTEM_V1, user_builder=_final_review_user_v1,
         ),
     },
 }

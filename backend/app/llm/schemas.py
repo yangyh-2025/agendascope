@@ -7,7 +7,7 @@
 3. 解析失败有明确兜底（重试 1 次 → 单点降级 c-TF-IDF），不静默产出脏数据。
 """
 import json
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -94,6 +94,28 @@ def schema_instruction(output_model: type[BaseModel]) -> str:
     return (
         "你必须只输出一个 JSON 对象，不要输出任何其他文字、解释或 markdown 代码块标记。\n"
         f"输出必须符合以下 JSON Schema：{compact}"
+    )
+
+
+class FinalReviewOutput(BaseModel):
+    """LLM 终审审查官输出（T3.12，详细设计 4.2 算法 4 llm_final_review）。
+
+    score 1-10，≥5 维持 suspected（completed）；<5 自动降为 watching（rejected）。
+    reasoning ≤500 字，留痕用，供分析师复核参考。
+    concerns 主要疑虑点列表（无则空数组）。
+    """
+
+    score: int = Field(ge=1, le=10, description="逻辑连贯性评分 1-10，5 分为通过阈值")
+    verdict: Literal["completed", "rejected"] = Field(
+        description="completed=评分≥5 维持 suspected；rejected=评分<5 自动降疑似/驳回"
+    )
+    reasoning: str = Field(
+        max_length=500,
+        description="评分理由（≤500 字）：首发源是否可靠、跟随链路是否合理、统计是否支撑、是否存在更可能的非议程设置解释",
+    )
+    concerns: list[str] = Field(
+        default_factory=list,
+        description="主要疑虑点列表（无则空数组）",
     )
 
 
