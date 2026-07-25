@@ -78,7 +78,11 @@ class TopicAnnotator:
         settings: LLMSettings | None = None,
     ):
         self.settings = settings or get_llm_settings()
-        self.engine = engine or LLMEngine(self.settings)
+        if self.settings.is_api_mode:
+            from app.llm.api_engine import OpenAICompatibleEngine
+            self.engine = engine or OpenAICompatibleEngine(self.settings)
+        else:
+            self.engine = engine or LLMEngine(self.settings)
         self.monitor = monitor or DegradationMonitor(self.settings)
         self.categories = prompts.parse_categories(self.settings.categories) or prompts.DEFAULT_CATEGORIES
 

@@ -1,0 +1,179 @@
+"""OpenAI 兼容 API 推理引擎（OpenAICompatibleEngine）。
+
+当 LLM_PROFILE=api 时，通过三个环境变量接入远程大模型：
+  LLM_API_BASE_URL — OpenAI 兼容端点（如 https://dashscope.aliyuncs.com/compatible-mode/v1
+                       或 https://api.deepseek.com/v1 或本地 vLLM http://localhost:8000/v1）
+  LLM_API_KEY      — API 密钥（空则无鉴权，适用本地 vLLM）
+  LLM_API_MODEL    — 模型名（如 qwen-max / qwen-plus / deepseek-chat / gpt-4o）
+
+接口签名与 LLMEngine.generate_structured 完全一致（返回 (pydantic_object, elapsed_s)），
+因此 TopicAnnotator / naming_worker / final_review / first_utterance 无需任何改动即可切换。
+
+结构化输出策略：使用 OpenAI 的 response_format={"type":"json_object"} +
+prompt 内嵌 JSON Schema 指令（双重保险，与本地 LLMEngine 同口径）。
+解析失败重试 1 次（与本地引擎一致）；最终失败抛 LLMParseError 触发上层降级链。
+"""
+from __future__ import annotations
+
+import json
+import time
+from typing import Any
+
+import httpx
+from pydantic import BaseModel
+
+from app.llm.errors import LLMParseError, LLMUnavailableError
+from app.llm.schemas import parse_structured
+from app.llm.settings import LLMSettings, get_llm_settings
+
+
+class OpenAICompatibleEngine:
+    """OpenAI 兼容 API 推理引擎——替代本地 transformers LLMEngine。"""
+
+    def __init__(self, settings: LLMSettings | None = None):
+        self.settings = settings or get_llm_settings()
+        self._client: httpx.Client | None = None
+        self._model_name: str = ""
+        self._load_error: str | None = None
+        # 会话内缓存 token 统计近似值（API 层无法精确 count；按 2 字符≈1 token 粗估）
+        self._token_cache: dict[str, int] = {}
+
+    # ------------------------------------------------------------------
+    # 生命周期（接口对齐 LLMEngine）
+    # ------------------------------------------------------------------
+    @property
+    def model_name(self) -> str:
+        return self._model_name or self.settings.api_model or "api-model"
+
+    @property
+    def is_loaded(self) -> bool:
+        return self._client is not None
+
+    @property
+    def load_error(self) -> str | None:
+        return self._load_error
+
+    def model_dir_exists(self) -> bool:
+        """API 模式不需要本地模型目录。"""
+        return True
+
+    def load(self) -> None:
+        """初始化 httpx 客户端并先发一次空请求验证连通性（幂等）。"""
+        if self._client is not None:
+            return
+        base_url = self.settings.api_base_url
+        if not base_url:
+            self._load_error = "LLM_API_BASE_URL 未配置（profile=api 时必须设置）"
+            raise LLMUnavailableError(self._load_error)
+        api_key = self.settings.api_key
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        timeout = httpx.Timeout(self.settings.resolved_request_timeout(), connect=10.0)
+        self._client = httpx.Client(base_url=base_url.rstrip("/"), headers=headers, timeout=timeout)
+        self._model_name = self.settings.api_model or "api-model"
+        self._load_error = None
+
+        # 连通性自检：列出可用模型（失败不阻塞——端点可能不支持 /models）
+        try:
+            resp = self._client.get("/models")
+            if resp.status_code == 200:
+                models_data = resp.json().get("data", [])
+                if models_data:
+                    available_ids = [m.get("id", "") for m in models_data]
+                    if self._model_name not in available_ids:
+                        pass  # 不阻塞：自定义模型名可能在 /models 列表中不可见
+        except Exception:
+            pass  # 连通性探针不影响加载判定
+
+    def unload(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
+    # ------------------------------------------------------------------
+    # token 估算（API 模式无本地 tokenizer，统一用 2 字符≈1 token）
+    # ------------------------------------------------------------------
+    def count_tokens(self, text: str) -> int:
+        if text in self._token_cache:
+            return self._token_cache[text]
+        count = max(1, len(text) // 2)
+        self._token_cache[text] = count
+        return count
+
+    # ------------------------------------------------------------------
+    # 结构化生成（签名与 LLMEngine.generate_structured 完全一致）
+    # ------------------------------------------------------------------
+    def generate_structured(
+        self,
+        system: str,
+        user: str,
+        output_model: type[BaseModel],
+        max_retries: int = 1,
+    ) -> tuple[Any, float]:
+        """调用远程 API 做结构化生成。返回 (pydantic 对象, 总耗时秒)。
+
+        重试策略与本地 LLMEngine 一致：首次失败重试 max_retries 次，最终失败抛 LLMParseError。
+        """
+        started = time.monotonic()
+        if self._client is None:
+            self.load()
+        client = self._client
+        if client is None:
+            raise LLMUnavailableError("API 客户端未初始化")
+
+        schema_json = json.dumps(output_model.model_json_schema(), ensure_ascii=False)
+
+        # 系统提示追加 JSON Schema 指令（与本地引擎同口径）
+        full_system = (
+            f"{system}\n"
+            "你必须只输出一个 JSON 对象，不要输出任何其他文字、解释或 markdown 代码块标记。\n"
+            f"输出必须符合以下 JSON Schema：{schema_json}"
+        )
+
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": full_system},
+            {"role": "user", "content": user},
+        ]
+        last_error: LLMParseError | None = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                body: dict[str, Any] = {
+                    "model": self._model_name,
+                    "messages": messages,
+                    "temperature": 0.0,  # 贪心等价：判定任务要求可复现
+                    "max_tokens": self.settings.resolved_max_new_tokens(),
+                    "response_format": {"type": "json_object"},
+                }
+                resp = client.post("/chat/completions", json=body)
+                if resp.status_code == 401 or resp.status_code == 403:
+                    self._load_error = f"API 鉴权失败 ({resp.status_code}): {resp.text[:200]}"
+                    raise LLMUnavailableError(self._load_error)
+                if resp.status_code >= 500:
+                    self._load_error = f"API 服务端错误 ({resp.status_code}): {resp.text[:200]}"
+                    raise LLMUnavailableError(self._load_error)
+                resp.raise_for_status()
+
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                result = parse_structured(content, output_model)
+                return result, time.monotonic() - started
+            except LLMParseError as exc:
+                last_error = exc
+                # 重试：把错误反馈进对话
+                messages = messages + [
+                    {"role": "assistant", "content": content if "content" in dir() else ""},
+                    {"role": "user", "content": f"输出不符合要求：{exc}。请重新只输出符合 JSON Schema 的 JSON 对象。"},
+                ]
+            except LLMUnavailableError:
+                raise
+            except Exception as exc:
+                last_error = LLMParseError(f"API 调用异常: {exc}")
+                if attempt == max_retries:
+                    raise last_error from exc
+
+        raise last_error or LLMParseError("结构化输出解析失败")
+
+
+__all__ = ["OpenAICompatibleEngine"]
