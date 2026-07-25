@@ -60,6 +60,8 @@
 
 ## Phase 2 · NLP 管线与聚类（2026-07-25 起）
 
+> **M2-3 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M2-3-review.md`）——T2.12-T2.17 六项任务全落地，聚类管线接线（待命名队列 → LLM 组合标注 → 回填留痕 + 降级不静默 + 恢复回填）经真实 Qwen2.5-0.5B 推理端到端验证，git 署名合规、文档同步。阶段标签 `v0.2.0-m2-3`。
+
 ### M2-1 NLP 基础管线（2026-07-25）
 
 - **T2.1 语言识别**：fastText lid.176 封装（`backend/app/nlp/language.py`），权重 `models/lid.176.bin`；送检文本换行清洗 + 截断 2000 字符；置信度 <0.8 回落源默认语言，`language_confidence` 落模型原始置信度即低置信留痕，原始判定记日志备查
@@ -96,3 +98,13 @@
 - **修复**：`DegradationMonitor.record` 锁内调用 `failure_rate()`（同持锁方法）致非重入死锁，改为锁内联计算
 - **实测（Qwen2.5-0.5B-Instruct，CPU float32，开发机）**：模型加载 6.4s；单议题完整标注（命名+分类+摘要）24.9s——命名 3.6s / 分类 6.4s / 摘要 14.9s（分类与摘要各触发 1 次解析重试后成功，验证重试链路真实有效）；CPU 单议题 P95 ≤60s 目标达标（0.5B 档），GPU 档 ≤10s 目标待 GPU 环境复核
 - **测试**：新增 54 项（单元 45：schemas 解析 8、ctfidf 兜底 6、prompt 注册 7、健康监控 6、异步队列 5、编排逻辑 13；集成 9：持久化/告警/回填/重跑 5——含 alerts 表 P1 告警与防抖断言，真实模型推理 4：命名/分类/摘要/全链路延迟，真实加载 Qwen2.5-0.5B 无 Mock）；本副本全量 170 项：149 passed / 21 skipped（跳过项为 M2-1 模型权重未分发到本副本的用例）/ 0 failed；ruff/mypy 全绿
+
+### M2-3 收尾 · 聚类管线接线（2026-07-25）
+
+- **命名 worker**（`python -m app.worker.naming_worker`，255 行新增）：轮询聚类侧待命名队列 `ClusterService.list_pending_naming`（在线归簇新建微簇与重聚类校正产出的 ctfidf_fallback/keyword_fallback 兜底命名议题），经 `LLMTaskQueue` 异步批处理调用 `TopicAnnotator` 组合标注（命名+分类+摘要），`record_llm_naming` 回填 topics（naming_method=llm 留痕，human_locked_fields 不覆盖），每条判定写 llm_judgements
+- **降级不静默**：LLM 不可用/推理失败率超标 → 议题保持兜底命名留在待命名队列，写 P1 告警（1h 防抖）；worker 每轮先做恢复探针（模型加载 + 一次真实命名推理，max_retries=0 不伪造成功），探针通过则 mark_recovered 并调 `backfill_degraded_topics` 回填降级期议题（写 revision_log，trigger=llm_recovered_backfill）
+- **隔离与冷却**：每议题独立事务（merged_into 议题跳过不报错），单议题失败不影响同批与主链路；单点降级议题 10 分钟重试冷却（`LLM_NAMING_WORKER_RETRY_COOLDOWN_SECONDS=600`），不刷判定留痕
+- **refactor**：`TopicAnnotator.record_judgements` 提取为公共方法（`annotator.py:248-262`），persist_annotation 与命名 worker 共用，每次判定必须留痕（模型名 + prompt_version + 输入/输出快照 + 成败 + 耗时），不复制实现
+- **配置**：`LLMSettings` 新增 `naming_worker_batch_size(20)`/`naming_worker_poll_seconds(30)`/`naming_worker_retry_cooldown_seconds(600)`；`.env.example` 补 `LLM_*` 前缀环境变量示例；`docker-compose.yml` 新增 naming-worker 服务（与 backend 共用镜像，模型权重卷挂载 /models:ro，依赖 db/redis/backend 健康）
+- **测试**：新增 3 项集成测试（`tests/integration/test_naming_worker.py`，151 行）——空队列空转不触碰引擎 / 跨语言文章→真实 mpnet 向量化→在线归簇→真实 Qwen2.5-0.5B 命名/分类/摘要回填+三条判定留痕 / 模型目录缺失（真实加载失败非 Mock）→ctfidf_fallback+P1 告警+失败留痕+第二轮告警防抖；单元 115 项 + 集成 3 项全绿；ruff/mypy 全绿
+- **审核**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M2-3-review.md`），无 BLOCKER/MAJOR，MINOR 4 项（串行三次推理可并行优化/进程内冷却重启丢失/session-scope fixture 严格模式兼容/故障注入 kill BERTopic 与 GDELT 留待 Phase 2 整体验收）
