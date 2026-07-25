@@ -1,0 +1,40 @@
+.degraded-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px var(--as-spacing-sm);
+  border-radius: var(--as-radius-sm);
+  font-size: var(--as-fontSize-xs);
+  line-height: 18px;
+  border: 1px solid transparent;
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* 警示（LLM/聚类降级）：橙 #D97706 */
+.degraded-badge-warn {
+  background: rgba(217, 119, 6, 0.18);
+  border-color: #d97706;
+  color: #fbbf24;
+}
+
+/* 提醒（首发源待核实）：黄 #EAB308 */
+.degraded-badge-caution {
+  background: rgba(234, 179, 8, 0.16);
+  border-color: #eab308;
+  color: #fde047;
+}
+
+/* 信息（快照校正中）：主蓝 */
+.degraded-badge-info {
+  background: rgba(29, 78, 158, 0.25);
+  border-color: var(--as-colors-blue);
+  color: var(--as-colors-blueBright);
+}
+
+/* 弱化（跨语言不可用 / 覆盖不足）：灰 */
+.degraded-badge-mute {
+  background: rgba(100, 124, 158, 0.18);
+  border-color: var(--as-colors-textMuted);
+  color: var(--as-colors-textSecondary);
+}

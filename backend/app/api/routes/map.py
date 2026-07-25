@@ -1,0 +1,105 @@
+"""地图聚合 API（T4.5）：30 国×Top 议题一次性下发，首屏 ≤3s 预算。"""
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.api.deps import ROLE_REGISTERED, get_db, require_role
+from app.core.errors import ok
+from app.models.article import Article
+from app.models.topic import AgendaSnapshot, Topic
+from app.models.user import User
+
+router = APIRouter()
+
+_COUNTRY_NAMES = {
+    "CN": "中国", "US": "美国", "GB": "英国", "JP": "日本", "DE": "德国",
+    "FR": "法国", "KR": "韩国", "IN": "印度", "RU": "俄罗斯", "BR": "巴西",
+    "CA": "加拿大", "AU": "澳大利亚", "IT": "意大利", "ES": "西班牙", "TR": "土耳其",
+    "SA": "沙特阿拉伯", "AE": "阿联酋", "ID": "印度尼西亚", "ZA": "南非", "NG": "尼日利亚",
+    "EG": "埃及", "MX": "墨西哥", "AR": "阿根廷", "PL": "波兰", "SE": "瑞典",
+    "NO": "挪威", "CH": "瑞士", "NL": "荷兰", "BE": "比利时", "VN": "越南",
+}
+
+_MAX_TOP_TOPICS = 5
+_MIN_COVERAGE = 0.7
+
+
+@router.get("/countries")
+def map_countries(
+    date: str | None = Query(None, description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(ROLE_REGISTERED)),
+):
+    target_date = date or datetime.now(UTC).strftime("%Y-%m-%d")
+    window_start = f"{target_date}T00:00:00"
+    window_end = f"{target_date}T23:59:59"
+
+    # 各国今日文章量
+    rows = db.execute(
+        select(
+            Article.country_code,
+            func.count(Article.id),
+        )
+        .where(
+            Article.published_at >= window_start,
+            Article.published_at <= window_end,
+        )
+        .group_by(Article.country_code)
+    ).all()
+    cc_counts: dict[str, int] = {row[0]: int(row[1]) for row in rows}
+
+    # 各国最新快照的 Top 议题
+    snaps = db.scalars(
+        select(AgendaSnapshot).where(
+            AgendaSnapshot.window_start >= window_start,
+            AgendaSnapshot.window_start <= window_end,
+        ).order_by(AgendaSnapshot.salience_rank.asc())
+    ).all()
+
+    by_country: dict[str, list] = {}
+    for snap in snaps:
+        lst = by_country.setdefault(snap.country_code, [])
+        if len(lst) >= _MAX_TOP_TOPICS:
+            continue
+        topic = db.get(Topic, snap.topic_id)
+        lst.append({
+            "topic_id": str(snap.topic_id) if snap.topic_id else None,
+            "name": topic.name if topic else None,
+            "salience_score": float(snap.salience_score or 0),
+            "article_count": snap.article_count,
+        })
+
+    latest_visible = db.scalar(
+        select(Article.visible_at).where(Article.visible_at.is_not(None)).order_by(Article.visible_at.desc()).limit(1)
+    )
+    now = datetime.now(UTC)
+    data_delay_minutes = 0
+    if latest_visible:
+        data_delay_minutes = max(0, int((now - latest_visible).total_seconds() / 60))
+
+    total_countries_with_data = len([c for c in cc_counts if cc_counts[c] > 0])
+    coverage_confidence = total_countries_with_data / max(len(cc_counts), 1)
+
+    items = []
+    for cc in sorted(set(cc_counts) | set(by_country)):
+        article_count = cc_counts.get(cc, 0)
+        items.append({
+            "country_code": cc,
+            "country_name_zh": _COUNTRY_NAMES.get(cc, cc),
+            "article_count_today": article_count,
+            "top_topics": by_country.get(cc, []),
+            "coverage_confidence": round(coverage_confidence, 2),
+            "degraded": coverage_confidence < _MIN_COVERAGE,
+            "data_delay_minutes": data_delay_minutes,
+        })
+
+    return ok({
+        "items": items,
+        "data_delay_minutes": data_delay_minutes,
+        "coverage_confidence": round(coverage_confidence, 2),
+    })
+
+
+__all__ = ["router"]
