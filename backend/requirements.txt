@@ -37,6 +37,11 @@ bertopic>=0.17,<0.18       # UMAP+HDBSCAN+c-TF-IDF 主线聚类
 scikit-learn>=1.4          # Agglomerative 硬阈值对照策略
 jieba>=0.42                # 中文分词（c-TF-IDF/关键词降级匹配）
 
+# 统计佐证（Phase 3 M3-3，T3.10）
+statsmodels>=0.14          # Granger 因果检验（grangercausalitytests）
+scipy>=1.11                # Pearson 相关 + t 分布 survival function
+numpy>=1.26                # 数值序列（bertopic/torch 已传递依赖，显式声明对齐版本）
+
 # 日志
 structlog>=24.1
 
