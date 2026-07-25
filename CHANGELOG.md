@@ -64,9 +64,22 @@
 
 ## Phase 3 · 议程引擎（2026-07-25 起）
 
-> **M3-1 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-1-review.md`）——T3.1-T3.5 五项任务全落地（回声消除折叠/议题生命周期状态机完整版/次日自动归并/议题分裂与误并回滚/动态高频实体黑名单）+ M3-1 收尾 agenda worker 周期任务编排；56 项单元测试真实跑通，集成测试用真实 PG+Redis 无 Mock；Phase 3 完成标准 M3-1 两项关键指标（次日归并正确/误并一键拆分回滚+不可归并名单）代码与测试双重证据齐备。阶段标签 `v0.3.0-m3-1`。
+> **M3-1 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-1-review.md`）。阶段标签 `v0.3.0-m3-1`。
 
-> **M3-2 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-2-review.md`）——T3.6-T3.10 五项任务全落地（媒体首发锚点判定/persons_orgs 实体库与 NER/LLM 首发表述判定器/跟随国序列计算/统计佐证计算）；单元 59 项 + 集成 9 项真实跑通（含真实 Qwen2.5-0.5B 推理）；样本量 <100 硬性拒绝输出统计结论；低置信首发不自动告警；alembic 0004 双向迁移合规。阶段标签 `v0.3.1-m3-2`。
+> **M3-2 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-2-review.md`）。阶段标签 `v0.3.1-m3-2`。
+
+> **M3-3 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-3-review.md`）——T3.11-T3.16 六项任务全落地（AgendaEvent 状态机+事件判定条件 / LLM 终审审查官 / 增量重估+revision_log 留痕 / 置信度自动升降+修正风暴保护 / 人工确认/否决优先 API / AgendaSnapshot 每 15 min 刷新）；78 项单元测试 + 15 项集成测试真实跑通；Phase 3 完成标准 M3-3 三项关键指标（新证据触发自动修正+revision_log 完整留痕 / 终审 <5 不进入自动告警 / 人工否决后机器不再推翻）代码与测试双重证据齐备。阶段标签 `v0.3.2-m3-3`。
+
+### M3-3 事件判定与自我纠错（2026-07-25）
+
+- **T3.11 AgendaEvent 状态机与事件判定条件**（`backend/app/agenda_engine/event.py`）：六态（watching/suspected/confirmed/dismissed/revised/archived）+ 合法转移白名单（dismissed 可重开回 watching；archived 终态）；判定条件 a-d——a 首发源明确（media confidence ∈ medium/high，或 LLM 确认 person 首发）/ b ≥3 国 `AGENDA_FOLLOWER_WINDOW_DAYS`（默认 14 天）内跟随 / c 统计检验显著（xcorr 或 granger p<α；样本不足按不满足计但不阻塞——满足 a/b/d 仍先入 suspected 待证据补足）/ d 议题新兴或升温；`upsert_event` 不重置已 confirmed/archived 事件（人工结论机器不推翻），同 (topic_id, round_no) 幂等；低置信首发（time_source='crawled'）不自动告警
+- **T3.12 LLM 终审审查官**（`final_review.py` + `llm/prompts.py` final-review-v1 + `llm/schemas.py` FinalReviewOutput）：对 suspected 事件评逻辑连贯性 1-10 分（首发源可靠性/跟随链路合理性/统计支撑/更可能的非议程设置解释四维）；score ≥5 且 verdict='completed' → 维持 suspected 进入人工复核队列；score <5 或 verdict='rejected' → 自动降为 watching + final_review.verdict='rejected'（驳回样本作负例积累）；LLM 不可用 → 跳过终审直进人工复核队列（PRD 8.5），final_review.verdict='skipped_unavailable'，不自动告警；event.final_review 字段（score/verdict/model/prompt_version/reviewed_at/reasoning/concerns）留痕
+- **T3.13 增量重估与 revision_log 留痕**（`revision.py`）：`append_revision` 关键不变量代码级断言——不满足①前后值不等②触发证据非空③模型+prompt 版本（机器修正时）的修正禁止落库；`reestimate_origin` 新证据（更早报道/LLM 人物首发/统计变化）触发自动重跑首发源判定与统计佐证；判定变化字段逐个 append_revision（actor='machine'，含 model/prompt_version/trigger_evidence）；status='revised'；`human_locked_fields` 中的字段机器不推翻（人工优先）
+- **T3.14 置信度自动升降**（`confidence.py`）：watching → suspected 满足条件全部升级（origin_type 确定 + origin_confidence ∈ medium/high + 跟随国 ≥1 + 降级时统计显著）；origin_confidence 降 'low' 或 follower 清空撤销回 watching；修正风暴保护——单议题 24h 修正 >`AGENDA_REVISION_STORM_THRESHOLD`（默认 5）次冻结自动修正（human_locked_fields 全字段）转人工复核队列 + alerts P1 告警 + audit_logs 留痕；幂等不重复冻结
+- **T3.15 人工确认/否决优先**（`revision.py` + `api/routes/agenda_events.py`）：`confirm_event` 人工确认推进 suspected → confirmed（confirmed_by/confirmed_at 留痕）；`reject_revision` 人工否决回滚到修正前值 + 该条 revision.rejected=True + 追加新 revision 条目（actor='human', trigger_evidence={'type':'manual_reject', ...}）+ human_locked_fields 增加被锁定字段（机器不再自动推翻该字段）；API——`POST /agenda-events/{id}/confirm`（authorized）/ `POST /agenda-events/{id}/revisions/{seq}/reject`（authorized）/ `GET /agenda-events/{id}/revisions`（registered）；audit_logs 双向留痕（失败也写）；422 (4002)/404 (3001)/401/403 全分支
+- **T3.16 AgendaSnapshot 快照引擎**（`snapshot.py` + `python -m app.worker.snapshot_worker`）：每 `AGENDA_SNAPSHOT_INTERVAL_MINUTES`（默认 15）min 刷新国家×议题显著性得分/排名/top_attributes/network_metrics；显著性得分公式 article_count × (1 + ln(1+议题总文章数)) × time_decay × source_diversity；top_attributes 用 clustering.tokenize.top_keywords + entity_blacklist.filter_blacklisted 过滤；单次 >`AGENDA_SNAPSHOT_TIMEOUT_SECONDS`（默认 300s）跳过剩余国家保留上版；连续 `AGENDA_SNAPSHOT_FAILURE_ALERT_THRESHOLD`（默认 3）次失败写 alerts P1 告警（系统规则"系统-快照刷新监控" + 管理员收件）；UPSERT 幂等（UK country×topic×window×granularity）；sentiment_pos/neu/neg 留 NULL 不伪造（Phase 4 情感分析接入后回填）；top_attributes 标 sentiment_placeholder=true 供前端"数据待计算"标注
+- **配置/部署/文档同步**：`backend/.env.example` 补 AGENDA_SNAPSHOT_* 环境变量；`deploy/docker-compose.yml` 新增 snapshot-worker 服务；`README.md` 补 snapshot_worker 启动命令与 M3-2/M3-3 子章节
+- **测试**：新增 78 项单元（event 18 + final_review 7 + revision 18 + confidence 15 + snapshot 11 + 其他 9）+ 15 项集成（revision 13 + snapshot 2）；ruff/mypy 全绿（120 源文件）；生产代码零 Mock/TODO/占位符
 
 ### M3-2 首发源判定与传播链路（2026-07-25）
 
