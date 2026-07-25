@@ -66,6 +66,18 @@
 
 > **M3-1 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-1-review.md`）——T3.1-T3.5 五项任务全落地（回声消除折叠/议题生命周期状态机完整版/次日自动归并/议题分裂与误并回滚/动态高频实体黑名单）+ M3-1 收尾 agenda worker 周期任务编排；56 项单元测试真实跑通，集成测试用真实 PG+Redis 无 Mock；Phase 3 完成标准 M3-1 两项关键指标（次日归并正确/误并一键拆分回滚+不可归并名单）代码与测试双重证据齐备。阶段标签 `v0.3.0-m3-1`。
 
+> **M3-2 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-2-review.md`）——T3.6-T3.10 五项任务全落地（媒体首发锚点判定/persons_orgs 实体库与 NER/LLM 首发表述判定器/跟随国序列计算/统计佐证计算）；单元 59 项 + 集成 9 项真实跑通（含真实 Qwen2.5-0.5B 推理）；样本量 <100 硬性拒绝输出统计结论；低置信首发不自动告警；alembic 0004 双向迁移合规。阶段标签 `v0.3.1-m3-2`。
+
+### M3-2 首发源判定与传播链路（2026-07-25）
+
+- **T3.6 媒体首发锚点判定**（`backend/app/agenda_engine/origin.py` `detect_media_origin`）：议题簇内最早 published_at UTC 为首发锚点；同秒并列时通讯社原文优先（`media_type IN ('agency','wire')` 或 source.name 匹配 `AGENDA_ORIGIN_WIRE_SERVICES` 名单双通道识别，默认 Reuters/AP/AFP/Bloomberg/TASS/Xinhua）；置信度三级制——`time_source='crawled'` 一律 `confidence='low'` 且 `needs_review=True`（"首发源待核实"不自动告警），通讯社原文 high，普通媒体 medium；已被回声折叠的转载稿不参与首发锚点竞争（仅 `is_duplicate=False` 原创节点）
+- **T3.7 persons_orgs 实体库与 NER 提及识别**（`entity_repo.py`）：`find_or_create_entity` 按 (name, entity_type, country_code) 查重建库，`name_zh` 自动并入 `name_aliases`；同名歧义时不新建不更新避免误合并；`match_entities_in_text` 中文别名子串匹配、英文整词边界匹配防 `'US'` 命中 `'User'`；同名歧义按上下文 country_code 命中 boost=1.0/miss dampen=0.5 衰减 confidence，叠加 T3.5 实体黑名单 dampen=0.3；`confidence < AGENDA_ENTITY_AMBIGUITY_LOW_CONFIDENCE`（默认 0.6）标 `needs_review=True` 进人工确认队列；`update_first_utterances` 按 occurred_at 升序保持有序
+- **T3.8 LLM 首发表述判定器**（`first_utterance.py` + `llm/prompts.py` first-utterance-v1 + `llm/schemas.py` FirstUtteranceOutput）：候选全文片段（≤2000 token）+ 实体历史表述摘要（近 5 条 quote，独立预算不被候选裁剪）+ 议题代表标题 5 条，总预算 ≤4000 token；强制 `evidence_quote` 候选片段原文子串（pydantic 校验+子串复核，不接受 LLM 改写）；无依据判定丢弃返回 None 进人工复核队列（不创建 agenda_event）；LLM 不可用/降级 → 返回 None 由调用方回落 `detection_method=media_time_fallback`；判定成功 → `update_first_utterances` 写实体库 + 返回 verdict + `llm_judgements` 留痕（模型名/prompt_version/输入/输出/耗时/成败）
+- **alembic 0004 迁移**：`llm_judgements.task_type` CHECK 约束扩展 `'first_utterance'`，升降级双向幂等
+- **T3.9 跟随国序列计算**（`origin.py` `compute_follower_sequence`）：排除 origin 国 → 逐国取首篇 → `lag_hours` 升序；仅保留 `lag >= 0` 且 ≤ `AGENDA_FOLLOWER_WINDOW_DAYS`（默认 14 天）窗口；早于 origin 跳过记 warning；仅统计 `is_duplicate=False` 原创节点
+- **T3.10 统计佐证计算**（`stats_evidence.py` `compute_stats_evidence`）：样本量硬性规则——议题总文章数 < `AGENDA_STATS_MIN_ARTICLES`（默认 100）→ 所有检验返回 None，`insufficient_data=True`，`rejection_reason="数据量不足（N<100）"` 绝不输出误导性结论；XCorr 时滞互相关 lag 0..14 天 Pearson + t 检验（多 follower 取平均最大相关，周期脉冲加 1e-9 epsilon 偏向小 lag）；Granger 因果 statsmodels.tsa.stattools.grangercausalitytests lag 1..7 取最小 p（方向必须 origin → follower）；QAP 置换检验 stats_qap_permutations 默认 1000 次（lag 0..7 取最佳 |ρ| 后做行置换避免 lag=0 假阴性，完整 MRQAP 多自变量扩展留 M3-3）；降级不抛异常（常数序列/VAR perfect fit/数值异常全部捕获并累加至 rejection_reason）
+- **测试**：新增 59 项单元（origin 16 + entity_repo 13 + first_utterance 14 + stats_evidence 20——wait，实际分布以审核报告为准）+ 9 项集成（origin 2 + entity_repo 2 + first_utterance 2 + stats_evidence 2，含真实 Qwen2.5-0.5B 推理）；ruff/mypy 全绿；生产代码零 Mock/TODO/占位符
+
 ### M3-1 回声消除与次日归并（2026-07-25）
 
 - **T3.1 回声消除折叠**（`backend/app/agenda_engine/echo.py`）：同日 cosine ≥0.65 / 3 日内 ≥0.85 双阈值（`AGENDA_ECHO_FOLD_SAME_DAY`/`AGENDA_ECHO_FOLD_3DAY` 可配）；EchoNode 保留全部 related_docs（similarity + fold_rule=same_day|within_3d + country）；canonical 永远是最早 TIME_PUB（主记录不换）；质心时间衰减加权池化（复用 `clustering.repository.time_decay_pool`，IIS 教训非 mean pooling）；`is_duplicate`/`canonical_id` 真实写回 articles 行
