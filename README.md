@@ -31,7 +31,7 @@
 
 ## 快速开始
 
-开发中。当前阶段：Phase 2 M2-3 LLM 服务已交付并独立审核通过（标签 `v0.2.0-m2-3`，审核报告 `docs/dev/reviews/M2-3-review.md`）。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
+开发中。当前阶段：Phase 3 M3-1 回声消除与次日归并已交付并独立审核通过（标签 `v0.3.0-m3-1`，审核报告 `docs/dev/reviews/M3-1-review.md`）。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ### 后端（backend/）
 

@@ -62,6 +62,21 @@
 
 > **M2-3 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M2-3-review.md`）——T2.12-T2.17 六项任务全落地，聚类管线接线（待命名队列 → LLM 组合标注 → 回填留痕 + 降级不静默 + 恢复回填）经真实 Qwen2.5-0.5B 推理端到端验证，git 署名合规、文档同步。阶段标签 `v0.2.0-m2-3`。
 
+## Phase 3 · 议程引擎（2026-07-25 起）
+
+> **M3-1 阶段验收**：2026-07-25 独立审核通过（PASS 25/25，报告 `docs/dev/reviews/M3-1-review.md`）——T3.1-T3.5 五项任务全落地（回声消除折叠/议题生命周期状态机完整版/次日自动归并/议题分裂与误并回滚/动态高频实体黑名单）+ M3-1 收尾 agenda worker 周期任务编排；56 项单元测试真实跑通，集成测试用真实 PG+Redis 无 Mock；Phase 3 完成标准 M3-1 两项关键指标（次日归并正确/误并一键拆分回滚+不可归并名单）代码与测试双重证据齐备。阶段标签 `v0.3.0-m3-1`。
+
+### M3-1 回声消除与次日归并（2026-07-25）
+
+- **T3.1 回声消除折叠**（`backend/app/agenda_engine/echo.py`）：同日 cosine ≥0.65 / 3 日内 ≥0.85 双阈值（`AGENDA_ECHO_FOLD_SAME_DAY`/`AGENDA_ECHO_FOLD_3DAY` 可配）；EchoNode 保留全部 related_docs（similarity + fold_rule=same_day|within_3d + country）；canonical 永远是最早 TIME_PUB（主记录不换）；质心时间衰减加权池化（复用 `clustering.repository.time_decay_pool`，IIS 教训非 mean pooling）；`is_duplicate`/`canonical_id` 真实写回 articles 行
+- **T3.2 议题生命周期状态机完整版**（`lifecycle.py`）：nascent/forming/confirmed/evolving/archived 五态；`can_transition` 合法转移白名单穷举（archived 终态）；`advance_for_size` 规模推进只前进不后退（evolving/archived 不被规模驱动）；`sweep_archived` 消亡扫描——连续 `AGENDA_LIFECYCLE_ARCHIVE_DAYS`（默认 7，估算）天无新报道自动归档保留可查；`merged_into` 非空议题由归并流程维护不参与扫描；`human_locked_fields` 非空议题不自动消亡（尊重人工结论）
+- **T3.3 次日自动归并**（`merge.py`）：candidate 集（merged_into IS NULL AND lifecycle_state='nascent' AND first_seen_at ≥ 近 24h）vs 档案集（merged_into IS NULL AND lifecycle_state != 'archived' AND last_seen_at ≥ 近 30 天）跨语言向量比对 ≥`AGENDA_MERGE_SIM`（默认 0.85，估算）并入旧议题；topic_id 复用 + 刷新 last_seen_at + 推进 lifecycle_state；`no_merge_with` 名单先行排除；`human_locked_fields` 含 'merged_into' 的源议题不自动归并（人工优先）；单源议题事务内 flush：c.merged_into=target.id、c.lifecycle_state='evolving'、topic_articles 迁移 assign_method='merge' 保留 weight、target.centroid 按源议题规模加权时间衰减池化（w=|c|）、country_scope/last_seen_at 推进、双方 revision_log 追加（actor='machine', trigger_evidence 含 sim + algorithm='nextday_merge'）、agenda_events topic_id 迁移
+- **T3.4 议题分裂与误并回滚**（`split.py` + `POST /api/v1/topics/{parent_id}/split`）：恢复双方 topic_id 与文章归属（child 文章从 parent 迁回，assign_method 改回 'online' 保留 weight）；双方写入 `no_merge_with` 防再误并；双方 revision_log 追加 actor='human', trigger='manual_split'；agenda_events 迁移回各自议题；parent/child 质心按剩余/自有文章重算（time_decay_pool 不可逆，不能减去向量）；422 (4002) child 非 parent 归并而来/parent 已 archived；404 (3001) parent/child 不存在；audit_logs 双向留痕（failure 也写，action=topic.split）；认证 require_role('authorized')
+- **T3.5 动态高频实体黑名单**（`entity_blacklist.py` + `entity_extract.py`）：jieba.posseg 中文词性标注（ns/nr/nt/nz → LOCATION/PEOPLE/ORG/OTHER）+ 英文连续大写 token 规则（≥2 词合并多词实体，句首虚词剔除）；每 24h 统计近 30 天 articles 实体文档频次（同篇同实体只计 1 次防长文刷量）；Top-50 写 Redis Set `entity:blacklist` TTL 48h + `entity:blacklist:updated_at` 时间戳；Redis 故障保旧值不抛错（黑名单是优化非正确性依赖）
+- **M3-1 收尾 agenda worker**（`python -m app.worker.agenda_worker`）：归并（默认 60min）/消亡扫描（默认 60min）/黑名单刷新（默认 24h）三任务独立调度，启动即首轮全触发；每任务独立 db session + commit/rollback 互不污染；单任务失败记日志下轮重试不阻塞其他任务；`--once/--merge-once/--sweep-once/--blacklist-once` 单发模式
+- **配置/部署/文档同步**：`backend/.env.example` 补 `AGENDA_*` 环境变量；`deploy/docker-compose.yml` 新增 `agenda-worker` 服务（与 backend 共用镜像）；`README.md` 补启动命令与「议程引擎」章节
+- **测试**：新增 56 项单元（echo 10 + lifecycle 31 + merge 8 + entity_blacklist 7）+ 20 项集成（entity_blacklist 5 + merge_split 12 + agenda_worker 3）；单元 171 项全绿；ruff/mypy 全绿
+
 ### M2-1 NLP 基础管线（2026-07-25）
 
 - **T2.1 语言识别**：fastText lid.176 封装（`backend/app/nlp/language.py`），权重 `models/lid.176.bin`；送检文本换行清洗 + 截断 2000 字符；置信度 <0.8 回落源默认语言，`language_confidence` 落模型原始置信度即低置信留痕，原始判定记日志备查
