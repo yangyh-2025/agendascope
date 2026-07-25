@@ -2,6 +2,27 @@
 
 本项目所有显著变更记录于此。格式：按阶段分节，条目对应 git 提交。
 
+---
+
+## Phase 5 · 质量收尾与部署向导（2026-07-25）
+
+> **最终交付**：标签 `v1.0.0`。
+
+### M5-1 回放测试与准确率验收框架
+- **回放测试框架**（`assessment/replay.py`）：ReplayCase/GroundTruth/ReplayArticle 数据模型；replay_cases 按 published_at 升序回放文章流；OriginAccuracy（首发国/源准确率目标 ≥85%）/ MergeAccuracy（归并正确率目标 ≥90%，误并率 ≤5%）/ EventAccuracy（事件误报率目标 ≤20%）三项指标自动评估 + 达标判定 PASS/FAIL
+- **当前状态**：框架就位，案例集从 JSON 文件加载（`load_replay_cases`）；需要 ≥20 个真实历史案例数据回填
+
+### M5-2 安装向导与离线打包
+- **安装向导 API**（`api/routes/setup.py`）：GET /setup/env-check 环境自检 + POST /setup 5 步流程
+- **一键安装脚本**（`scripts/install.sh`）：零编程用户独立部署 ≤10 min
+- **离线安装包**：`docker compose build` + `docker save` 导出镜像 tar
+
+### M5-3 管理后台与安全收尾
+- **系统管理后台 API**（`api/routes/system_admin.py`）：系统概览 / 用户管理 / 许可状态
+- **备份与恢复**（`scripts/backup.sh` + `scripts/restore.sh`）：pg_dump + ES snapshot + Redis BGSAVE；保留 30 天；RTO ≤30 min
+
+---
+
 ## Phase 1 · 基础搭建与采集管线（2026-07-24）
 
 > **阶段验收**：2026-07-24 独立审核复审通过（PASS）——pytest 94 项全绿、ruff/mypy 全绿、种子源 31 国 39 源抽测可达、署名与 git 合规零问题。阶段标签 `v0.1.0-phase1`。
