@@ -31,7 +31,7 @@
 
 ## 快速开始
 
-开发中。当前阶段：Phase 4 前端看板与预警报告已交付（标签 `v0.4.0-phase4`）。各阶段完成后本章节将同步更新安装与运行说明，详见 [`CHANGELOG.md`](CHANGELOG.md)。
+全 5 阶段开发完成（`v1.0.0`）。详见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ### 后端（backend/）
 
