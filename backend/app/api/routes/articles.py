@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROLE_REGISTERED, get_db, require_role
+from app.api.deps import ROLE_REGISTERED, get_db, get_es, require_role
 from app.core.errors import ok
 from app.models.article import Article
 from app.models.user import User
@@ -35,7 +35,7 @@ def list_articles(
     page: int = Query(1, ge=1),
     page_size: int = Query(ES_DEFAULT_SIZE, ge=1, le=ES_MAX_SIZE),
     db: Session = Depends(get_db),
-    es: Elasticsearch | None = None,
+    es: Elasticsearch | None = Depends(get_es),
     user: User = Depends(require_role(ROLE_REGISTERED)),
 ):
     """ES 全文检索文章（标题+正文），版权合规 L1：仅返回标题 + ≤150 字摘录 + 原文链接。"""

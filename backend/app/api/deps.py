@@ -14,6 +14,28 @@ from app.core.session_store import is_access_blacklisted
 from app.db.session import get_db
 from app.models.user import User
 
+_es_client = None
+_es_probed = False
+
+
+def get_es():
+    """Elasticsearch 客户端依赖：不可用/未配置时返回 None，路由走 PG 降级路径。"""
+    global _es_client, _es_probed
+    if _es_probed:
+        return _es_client
+    _es_probed = True
+    try:
+        from elasticsearch import Elasticsearch
+
+        from app.config import get_settings
+
+        client = Elasticsearch(get_settings().elasticsearch_url, request_timeout=5)
+        if client.ping():
+            _es_client = client
+    except Exception:  # ES 不可达属预期降级场景，不抛出
+        _es_client = None
+    return _es_client
+
 ROLE_REGISTERED = "registered"
 ROLE_AUTHORIZED = "authorized"
 ROLE_ADMIN = "admin"
