@@ -4,15 +4,18 @@ from datetime import UTC
 
 from elasticsearch import Elasticsearch
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ROLE_REGISTERED, get_db, get_es, require_role
 from app.core.errors import ok
+from app.core.logging import get_logger
 from app.models.article import Article
 from app.models.user import User
 
 router = APIRouter()
+
+logger = get_logger("api.articles")
 
 _EXCERPT_MAX = 150
 
@@ -90,9 +93,13 @@ def list_articles(
                 body["query"]["bool"]["filter"].append({"terms": {"_id": [str(aid) for aid in article_ids_from_topic]}})
             result = es.search(index=ES_INDEX, body=body)
             ids_from_es = [hit["_id"] for hit in result["hits"]["hits"]]
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 ES 不可用属预期降级场景，但必须留日志
             degraded = True
             degrade_reason = "es_unavailable"
+            logger.warning(
+                "articles_es_search_failed",
+                error=str(exc)[:300], q=q, country_code=country_code,
+            )
 
     # PG 查询（ES 可用时用 ES 的 ID 列表过滤；不可用时全文降级为 ILIKE）
     stmt = select(Article)
@@ -116,9 +123,8 @@ def list_articles(
         stmt = stmt.where(Article.id.in_(article_ids_from_topic))
     stmt = stmt.order_by(Article.published_at.desc())
 
-    total = db.query(Article).count()
-    if ids_from_es is not None:
-        total = len(ids_from_es)
+    # 计数必须带全部过滤条件（修复：此前 total 为全表计数，分页/总数失真）
+    total = int(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
 
     offset = (page - 1) * page_size
     articles = db.scalars(stmt.offset(offset).limit(page_size)).all()
