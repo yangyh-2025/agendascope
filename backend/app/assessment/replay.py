@@ -446,12 +446,19 @@ def replay_cases(
             outcome = _replay_one_case(db, case, embedder, threshold_overrides or {})
         except Exception as exc:
             db.rollback()
-            report.notes.append(f"[ERROR] 案例 {case.case_id} 回放异常: {exc}")
+            # 异常摘要只取首行（完整堆栈进日志），避免报告被多行 traceback 淹没
+            summary = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+            report.notes.append(f"[ERROR] 案例 {case.case_id} 回放异常: {summary}")
             continue
         metrics = evaluate_case_outcome(case, outcome)
         report.case_metrics.append(metrics)
         _accumulate(report, metrics)
 
+    if not report.case_metrics:
+        # 全部案例回放失败 = 无可评估样本：任何指标都不得判 PASS（防零样本静默 PASS）
+        report.notes.append(
+            "[FAIL] 0 个案例完成回放（全部异常）——无可评估样本，全部指标按不达标处理"
+        )
     _finalize(report)
     report.elapsed_seconds = _time.monotonic() - start
     return report
@@ -512,22 +519,27 @@ def _finalize(report: ReplayReport) -> None:
     cl.merge_rate = cl.merged_pairs / cl.total_pairs if cl.total_pairs else 0.0
 
     checks = [
-        ("首发国判定准确率", o.origin_country_accuracy, TARGET_ORIGIN_ACCURACY, ">=",
+        ("首发国判定准确率", o.origin_country_accuracy, TARGET_ORIGIN_ACCURACY, ">=", o.total_cases,
          f"偏差案例（首发国误判）: {', '.join(o.failed_cases) or '无'}"),
-        ("次日归并正确率", mg.merge_accuracy, TARGET_MERGE_ACCURACY, ">=",
+        ("次日归并正确率", mg.merge_accuracy, TARGET_MERGE_ACCURACY, ">=", mg.total_expected_merges,
          f"偏差案例（应并未并/误拆/误并）: {', '.join(mg.failed_cases) or '无'}"),
-        ("议题误并率", mg.false_merge_rate, TARGET_FALSE_MERGE_RATE, "<=",
+        ("议题误并率", mg.false_merge_rate, TARGET_FALSE_MERGE_RATE, "<=", total_separate,
          f"误并 {mg.false_merges}/{total_separate} 对"),
-        ("议题误拆率", mg.false_split_rate, TARGET_FALSE_SPLIT_RATE, "<=",
+        ("议题误拆率", mg.false_split_rate, TARGET_FALSE_SPLIT_RATE, "<=", mg.total_expected_merges,
          f"误拆 {mg.false_splits}/{mg.total_expected_merges} 组"),
-        ("事件误报率", ev.false_positive_rate, TARGET_EVENT_FALSE_POSITIVE, "<=",
+        ("事件误报率", ev.false_positive_rate, TARGET_EVENT_FALSE_POSITIVE, "<=", negative_cases,
          f"误报案例: {', '.join(ev.false_positive_cases) or '无'}；漏报案例: {', '.join(ev.missed_cases) or '无'}"),
-        ("跨语言同事件归并率", cl.merge_rate, TARGET_CROSSLINGUAL_RATE, ">=",
+        ("跨语言同事件归并率", cl.merge_rate, TARGET_CROSSLINGUAL_RATE, ">=", cl.total_pairs,
          f"未归并对所在案例: {', '.join(cl.failed_cases) or '无'}"),
     ]
     all_passed = True
-    for name, value, target, op, detail in checks:
-        ok = value >= target if op == ">=" else value <= target
+    for name, value, target, op, samples, detail in checks:
+        if samples == 0:
+            # 零样本指标不得判 PASS（防"无数据即达标"的假成功）
+            ok = False
+            detail = f"无有效样本（{detail}）"
+        else:
+            ok = value >= target if op == ">=" else value <= target
         if not ok:
             all_passed = False
         report.notes.append(
@@ -690,11 +702,18 @@ def _replay_one_case(
 def render_markdown(report: ReplayReport) -> str:
     """把回放报告渲染为 markdown（M5 回放测试报告正文）。"""
     o, mg, ev, cl = report.origin, report.merge, report.event, report.crosslingual
+    def _mark(ok: bool, samples: int) -> str:
+        if samples == 0:
+            return "FAIL（无样本）"
+        return "PASS" if ok else "FAIL"
+
+    negative_cases = ev.false_positives + ev.true_negatives
+    total_separate = sum(m.separate_pairs for m in report.case_metrics)
     lines = [
         f"# M5 回放测试报告（run_id={report.run_id}）",
         "",
         f"- 运行时间: {report.run_at.isoformat()}",
-        f"- 案例数: {report.cases_run}；文章总数: {report.total_articles}；耗时: {report.elapsed_seconds:.1f}s",
+        f"- 案例数: {report.cases_run}；完成回放: {len(report.case_metrics)}；文章总数: {report.total_articles}；耗时: {report.elapsed_seconds:.1f}s",
         f"- 阈值覆盖: {report.threshold_overrides or '无'}",
         f"- 总体结论: **{'PASS' if report.passed else 'FAIL'}**",
         "",
@@ -702,14 +721,14 @@ def render_markdown(report: ReplayReport) -> str:
         "",
         "| 指标 | 实测 | 目标 | 结论 |",
         "|------|------|------|------|",
-        f"| 首发国判定准确率 | {o.origin_country_accuracy:.1%}（{o.origin_country_correct}/{o.total_cases}） | ≥85% | {'PASS' if o.origin_country_accuracy >= TARGET_ORIGIN_ACCURACY else 'FAIL'} |",
+        f"| 首发国判定准确率 | {o.origin_country_accuracy:.1%}（{o.origin_country_correct}/{o.total_cases}） | ≥85% | {_mark(o.origin_country_accuracy >= TARGET_ORIGIN_ACCURACY, o.total_cases)} |",
         f"| 首发源判定准确率 | {o.origin_source_accuracy:.1%}（{o.origin_source_correct}/{o.total_cases}） | 参考项 | - |",
-        f"| 次日归并正确率 | {mg.merge_accuracy:.1%}（{mg.correct_merges}/{mg.total_expected_merges} 组） | ≥90% | {'PASS' if mg.merge_accuracy >= TARGET_MERGE_ACCURACY else 'FAIL'} |",
-        f"| 议题误并率 | {mg.false_merge_rate:.1%}（{mg.false_merges} 对） | ≤5% | {'PASS' if mg.false_merge_rate <= TARGET_FALSE_MERGE_RATE else 'FAIL'} |",
-        f"| 议题误拆率 | {mg.false_split_rate:.1%}（{mg.false_splits} 组） | ≤5% | {'PASS' if mg.false_split_rate <= TARGET_FALSE_SPLIT_RATE else 'FAIL'} |",
+        f"| 次日归并正确率 | {mg.merge_accuracy:.1%}（{mg.correct_merges}/{mg.total_expected_merges} 组） | ≥90% | {_mark(mg.merge_accuracy >= TARGET_MERGE_ACCURACY, mg.total_expected_merges)} |",
+        f"| 议题误并率 | {mg.false_merge_rate:.1%}（{mg.false_merges} 对） | ≤5% | {_mark(mg.false_merge_rate <= TARGET_FALSE_MERGE_RATE, total_separate)} |",
+        f"| 议题误拆率 | {mg.false_split_rate:.1%}（{mg.false_splits} 组） | ≤5% | {_mark(mg.false_split_rate <= TARGET_FALSE_SPLIT_RATE, mg.total_expected_merges)} |",
         f"| 事件命中率 | {ev.event_recall:.1%}（{ev.detected_events}/{ev.total_expected_events}） | 参考项 | - |",
-        f"| 事件误报率 | {ev.false_positive_rate:.1%}（{ev.false_positives} 例） | ≤20% | {'PASS' if ev.false_positive_rate <= TARGET_EVENT_FALSE_POSITIVE else 'FAIL'} |",
-        f"| 跨语言同事件归并率 | {cl.merge_rate:.1%}（{cl.merged_pairs}/{cl.total_pairs} 对） | ≥70% | {'PASS' if cl.merge_rate >= TARGET_CROSSLINGUAL_RATE else 'FAIL'} |",
+        f"| 事件误报率 | {ev.false_positive_rate:.1%}（{ev.false_positives} 例） | ≤20% | {_mark(ev.false_positive_rate <= TARGET_EVENT_FALSE_POSITIVE, negative_cases)} |",
+        f"| 跨语言同事件归并率 | {cl.merge_rate:.1%}（{cl.merged_pairs}/{cl.total_pairs} 对） | ≥70% | {_mark(cl.merge_rate >= TARGET_CROSSLINGUAL_RATE, cl.total_pairs)} |",
         f"| low 置信首发自动告警 | {o.false_origin_alerts} 次 | 0 | {'PASS' if o.false_origin_alerts == 0 else 'FAIL'} |",
         "",
         "## 逐案例明细",
