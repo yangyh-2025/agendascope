@@ -3,13 +3,17 @@
 事件状态机：watching（观察中）→ suspected（疑似，自动判定，需人工复核）→
 confirmed（确认，人工）/ dismissed（排除，可重开）→ revised（已修正）→ archived（归档）。
 
-事件判定条件（a-d，详细设计 4-开发计划.md T3.11）：
+事件判定条件（a-d，详细设计 4-开发计划.md T3.11 + 4.2 算法 4）：
   a. 首发源明确：origin_type ∈ ('media','person','org') 且 origin_confidence ∈ ('medium','high')
   b. ≥3 国 14 天内跟随（follower_window_days 可配置）
-  c. 统计检验显著（xcorr 或 granger p < 0.05）；样本不足（insufficient_data）按"证据缺省"
-  d. 议题新兴或升温（lifecycle_state ∈ ('nascent','forming','confirmed')）
+  c. 统计检验显著（xcorr 或 granger p < 0.05）——suspected 的必要条件；
+     样本不足（insufficient_data，<100 篇被拒绝输出）不阻塞创建，但标记待补足
+     （EventDecision.stats_pending=True 并写入 stats_evidence.significance_pending）；
+     统计已出结论且明确不显著时，不升级为 suspected
+  d. 议题新兴或升温（lifecycle_state ∈ ('forming','confirmed')）
 
-满足全部 a-d → 创建/更新 AgendaEvent(status='suspected')；任一不满足 → 不创建事件，
+满足 a+b+d 且（c 显著 或 样本不足待补足）→ 创建/更新 AgendaEvent(status='suspected')；
+统计明确不显著或任一其他条件不满足 → 不创建事件，
 但写 agenda_event_candidates 日志（供误判复盘，本版本仅 logger.info 留痕，不建表）。
 
 绝不在 origin_confidence='low'（time_source='crawled'，"首发源待核实"）时创建 suspected 事件
@@ -66,6 +70,7 @@ class EventDecision:
     should_create: bool
     reason: str  # 中文理由（满足 a-d / 缺哪一项）
     conditions: dict[str, bool]  # {'a_origin_clear': True, 'b_followers_enough': False, ...}
+    stats_pending: bool = False  # True：统计样本不足待补足（不阻塞创建，显著性后补）
 
 
 def can_transition_event(current: str, target: str) -> bool:
@@ -82,9 +87,10 @@ def evaluate_conditions(
       a. 首发源明确：media_origin 存在且 confidence ∈ ('medium','high')，
          或 person_origin_entity_id 存在（LLM 已确认首发表述）
       b. ≥3 国 follower_window_days 内跟随（followers 列表长度 ≥ 3，lag_hours ≤ window_days*24）
-      c. 统计显著：stats.xcorr.significant OR stats.granger.significant（样本不足时按不满足计，
-         但不阻塞——议题新兴可仅凭 a/b/d 进 watching，待证据补足再升 suspected）
-      d. 议题新兴或升温：topic.lifecycle_state ∈ ('nascent','forming','confirmed')
+      c. 统计显著：stats.xcorr.significant OR stats.granger.significant。
+         样本不足（stats 为 None 或 insufficient_data）按"待补足"处理（stats_pending=True，
+         不阻塞创建）；统计已出结论且明确不显著 → c 不满足且不创建 suspected
+      d. 议题新兴或升温：topic.lifecycle_state ∈ ('forming','confirmed')
     """
     settings = get_agenda_settings()
     conditions: dict[str, bool] = {}
@@ -102,7 +108,8 @@ def evaluate_conditions(
     valid_followers = [f for f in input.followers if 0 <= f.lag_hours <= max_lag_hours]
     conditions["b_followers_enough"] = len(valid_followers) >= 3
 
-    # c. 统计显著（样本不足不算显著；xcorr 或 granger 任一显著即满足）
+    # c. 统计显著（xcorr 或 granger 任一显著即满足）；样本不足单独标记待补足
+    stats_insufficient = input.stats is None or input.stats.insufficient_data
     stats_sig = False
     if input.stats is not None and not input.stats.insufficient_data:
         stats_sig = bool(
@@ -111,27 +118,40 @@ def evaluate_conditions(
         )
     conditions["c_stats_significant"] = stats_sig
 
-    # d. 议题新兴或升温
+    # d. 议题新兴或升温（详细设计 4.2 算法 4：(forming, confirmed)）
     topic = db.get(Topic, input.topic_id)
     conditions["d_topic_active"] = bool(
         topic is not None
-        and topic.lifecycle_state in ("nascent", "forming", "confirmed")
+        and topic.lifecycle_state in ("forming", "confirmed")
     )
 
-    # 决策：a + b + d 必须；c 可降格处理（样本不足时进 watching 待证据补足）
+    # 决策：a + b + d 必须；c 显著即满足；样本不足（待补足）不阻塞创建；
+    # 统计已出结论且明确不显著时不升级为 suspected
     should = (
         conditions["a_origin_clear"]
         and conditions["b_followers_enough"]
         and conditions["d_topic_active"]
+        and (conditions["c_stats_significant"] or stats_insufficient)
     )
-    if should and not conditions["c_stats_significant"]:
-        reason = "满足 a/b/d：首发源明确+≥3 国跟随+议题活跃；统计样本不足或未见显著性，先入 suspected 待证据补足"
+    stats_pending = should and not conditions["c_stats_significant"]
+    if should and stats_pending:
+        reason = "满足 a/b/d：首发源明确+≥3 国跟随+议题活跃；统计样本不足，先入 suspected 并标记显著性待补足"
     elif should:
         reason = "满足 a/b/c/d：首发源明确+≥3 国跟随+统计显著+议题活跃"
+    elif (
+        conditions["a_origin_clear"]
+        and conditions["b_followers_enough"]
+        and conditions["d_topic_active"]
+        and not stats_insufficient
+    ):
+        reason = "统计检验明确不显著（xcorr/granger 均未达 p<0.05），不升级为 suspected"
     else:
         missing = [k for k, v in conditions.items() if not v]
         reason = f"不满足判定条件：{', '.join(missing)}"
-    return EventDecision(should_create=should, reason=reason, conditions=conditions)
+    return EventDecision(
+        should_create=should, reason=reason, conditions=conditions,
+        stats_pending=stats_pending,
+    )
 
 
 def upsert_event(
@@ -146,7 +166,9 @@ def upsert_event(
 
     - 若该 (topic_id, round_no) 已存在事件：仅当决策条件从 False → True 才升 suspected；
       已 confirmed/archived 的事件不被自动重置（人工结论机器不推翻）
-    - 若不存在：创建 status='suspected'（需人工复核，不自动告警——告警走 T3.12 终审/T4.14 预警引擎）
+    - 若不存在：创建 status='suspected'（需人工复核，不自动告警——告警走 T3.12 终审/T4.14 预警引擎）；
+      decision.stats_pending=True（统计样本不足）时 stats_evidence 写入
+      significance_pending=True 标记，待样本补足重估后消标
     - origin_type/origin_country_code/origin_at 从 media_origin/person_origin 推导
     - 返回创建/更新的事件；决策不满足时返回 None
     """
@@ -217,7 +239,7 @@ def upsert_event(
             }
             for f in input.followers
         ],
-        stats_evidence=_stats_to_dict(input.stats),
+        stats_evidence=_stats_to_dict(input.stats, stats_pending=decision.stats_pending),
         detection_method=input.detection_method,
         revision_log=[],
         human_locked_fields=[],
@@ -232,10 +254,24 @@ def upsert_event(
     return event
 
 
-def _stats_to_dict(stats: StatsEvidence | None) -> dict | None:
+def _stats_to_dict(stats: StatsEvidence | None, *, stats_pending: bool = False) -> dict | None:
+    """stats 序列化；stats_pending=True 时写入 significance_pending 标记（样本不足待补足）。
+
+    stats 为 None 且需要标记待补足时，返回仅含标记的最小 dict（不伪造检验结论）。
+    """
     if stats is None:
+        if stats_pending:
+            return {
+                "sample_size": 0,
+                "insufficient_data": True,
+                "rejection_reason": "统计佐证未计算（样本待补足）",
+                "significance_pending": True,
+                "xcorr": None,
+                "granger": None,
+                "qap": None,
+            }
         return None
-    return {
+    payload = {
         "sample_size": stats.article_count,
         "insufficient_data": stats.insufficient_data,
         "rejection_reason": stats.rejection_reason,
@@ -270,3 +306,6 @@ def _stats_to_dict(stats: StatsEvidence | None) -> dict | None:
             else None
         ),
     }
+    if stats_pending:
+        payload["significance_pending"] = True
+    return payload

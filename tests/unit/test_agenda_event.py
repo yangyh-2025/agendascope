@@ -180,7 +180,7 @@ class TestEvaluateConditions:
         assert decision.conditions["b_followers_enough"] is False
 
     def test_stats_insufficient_data_c_false_but_abd_pass(self, db):
-        """样本不足：c_stats_significant=False；a/b/d 满足仍 should_create（先入 suspected 待证据补足）。"""
+        """样本不足：c_stats_significant=False；a/b/d 满足仍 should_create，并标记显著性待补足。"""
         topic = _make_topic(db)
         input_data = EventDetectionInput(
             topic_id=topic.id,
@@ -190,7 +190,49 @@ class TestEvaluateConditions:
         )
         decision = evaluate_conditions(db, input_data)
         assert decision.conditions["c_stats_significant"] is False
-        assert decision.should_create is True  # a/b/d 满足
+        assert decision.should_create is True  # a/b/d 满足 + 样本不足待补足
+        assert decision.stats_pending is True
+
+    def test_stats_not_significant_blocks_suspected(self, db):
+        """统计已出结论且明确不显著（样本足够、xcorr/granger 均不显著）：不升级 suspected。"""
+        topic = _make_topic(db)
+        input_data = EventDetectionInput(
+            topic_id=topic.id,
+            media_origin=_make_origin(),
+            followers=[_make_follower("US"), _make_follower("GB"), _make_follower("JP")],
+            stats=_make_stats(significant=False, insufficient=False, sample_size=200),
+        )
+        decision = evaluate_conditions(db, input_data)
+        assert decision.conditions["c_stats_significant"] is False
+        assert decision.should_create is False
+        assert decision.stats_pending is False
+        assert "不显著" in decision.reason
+
+    def test_stats_none_treated_as_pending(self, db):
+        """stats 为 None（未计算）：按样本不足待补足处理，不阻塞创建。"""
+        topic = _make_topic(db)
+        input_data = EventDetectionInput(
+            topic_id=topic.id,
+            media_origin=_make_origin(),
+            followers=[_make_follower("US"), _make_follower("GB"), _make_follower("JP")],
+            stats=None,
+        )
+        decision = evaluate_conditions(db, input_data)
+        assert decision.should_create is True
+        assert decision.stats_pending is True
+
+    def test_topic_nascent_blocks_d(self, db):
+        """nascent 孤证微簇不算"新兴"（设计口径仅 forming/confirmed）：d 不满足。"""
+        topic = _make_topic(db, lifecycle_state="nascent")
+        input_data = EventDetectionInput(
+            topic_id=topic.id,
+            media_origin=_make_origin(),
+            followers=[_make_follower("US"), _make_follower("GB"), _make_follower("JP")],
+            stats=_make_stats(significant=True),
+        )
+        decision = evaluate_conditions(db, input_data)
+        assert decision.conditions["d_topic_active"] is False
+        assert decision.should_create is False
 
     def test_topic_archived_blocks_d(self, db):
         topic = _make_topic(db, lifecycle_state="archived")
@@ -227,6 +269,21 @@ class TestUpsertEvent:
         assert event.origin_confidence == "high"
         assert len(event.follower_sequence) == 3
         assert event.stats_evidence["sample_size"] == 200
+
+    def test_stats_pending_marker_written(self, db):
+        """样本不足创建的事件：stats_evidence 落 significance_pending=True 标记。"""
+        topic = _make_topic(db)
+        input_data = EventDetectionInput(
+            topic_id=topic.id,
+            media_origin=_make_origin(),
+            followers=[_make_follower("US"), _make_follower("GB"), _make_follower("JP")],
+            stats=_make_stats(significant=False, insufficient=True, sample_size=50),
+        )
+        decision = evaluate_conditions(db, input_data)
+        event = upsert_event(db, input_data, decision)
+        assert event is not None
+        assert event.stats_evidence["significance_pending"] is True
+        assert event.stats_evidence["insufficient_data"] is True
 
     def test_skip_when_decision_negative(self, db):
         topic = _make_topic(db)
