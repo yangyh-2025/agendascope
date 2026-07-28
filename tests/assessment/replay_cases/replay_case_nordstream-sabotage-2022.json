@@ -1,0 +1,33 @@
+{
+  "case_id": "nordstream-sabotage-2022",
+  "label": "北溪天然气管道爆炸（2022）",
+  "description": "2022年9月26日，丹麦和瑞典地震台站记录到波罗的海北溪1号、2号天然气管道沿线发生水下爆炸，瑞典英文媒体 The Local Sweden 率先报道泄漏与爆炸疑云，随后 Reuters、Bloomberg、TASS、Deutsche Welle、AFP、新华社相继跟进，丹麦与瑞典当局数日后确认为蓄意破坏。标注依据为公开报道时间线：首发为瑞典媒体（2022-09-26）。本案例含俄语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "SE",
+    "origin_source_name": "The Local Sweden",
+    "origin_at": "2022-09-26T17:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "GB", "first_media": "Reuters", "lag_hours": 3},
+      {"country_code": "US", "first_media": "Bloomberg", "lag_hours": 4},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 6},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 8},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 10},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 16}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a4", "d1"]],
+    "cross_language_pairs": [["a4", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Gas leaks detected on Nord Stream pipelines after reported explosions", "content": "Swedish and Danish authorities reported major gas leaks from the Nord Stream pipelines in the Baltic Sea on Monday, after seismologists registered underwater explosions near Bornholm. Denmark's prime minister said the leaks were likely caused by deliberate action. A large exclusion zone has been set up around the leak sites.", "url": "https://www.thelocal.se/20220926/nord-stream-gas-leaks-explosions/", "country_code": "SE", "source_name": "The Local Sweden", "language": "en", "published_at": "2022-09-26T17:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a2", "title": "Nord Stream gas leaks in Baltic Sea blamed on sabotage", "content": "Europe is investigating unexplained leaks in two Russian gas pipelines under the Baltic Sea, with seismologists recording explosions in the area. The pipelines, Nord Stream 1 and 2, were not operating but still contained gas. Several European governments said sabotage was the likely cause.", "url": "https://www.reuters.com/business/energy/nord-stream-leaks-2022-09-26/", "country_code": "GB", "source_name": "Reuters", "language": "en", "published_at": "2022-09-26T20:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "Nord Stream Leaks Spark Sabotage Fears as Gas Bubbles Up in Baltic", "content": "Huge gas leaks from the Nord Stream pipelines sent gas bubbling to the surface of the Baltic Sea on Monday, deepening Europe's energy crisis. Danish and Swedish seismic stations recorded two explosions early in the morning. European natural gas prices jumped as much as 12 percent on the news.", "url": "https://www.bloomberg.com/news/articles/2022-09-26/nord-stream-leaks-baltic-sea", "country_code": "US", "source_name": "Bloomberg", "language": "en", "published_at": "2022-09-26T21:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "На «Северных потоках» зафиксированы утечки газа после взрывов", "content": "На газопроводах «Северный поток» и «Северный поток-2» зафиксированы утечки газа, предшествовавшие им подводные взрывы зарегистрировали сейсмологи Швеции и Дании. В Кремле назвали произошедшее беспрецедентной ситуацией, требующей срочного расследования. «Газпром» сообщил о значительном выбросе газа.", "url": "https://tass.ru/ekonomika/15987654", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2022-09-26T23:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "Nord Stream: Lecks nach Explosionen – Ermittler vermuten Sabotage", "content": "Nach den Explosionen an den Nord-Stream-Pipelines in der Ostsee gehen die Ermittler von gezielten Anschlägen aus. Die Bundesregierung kündigte eine gemeinsame Untersuchung mit Dänemark und Schweden an. Die Lecks liegen in dänischen und schwedischen Wirtschaftszonen vor der Insel Bornholm.", "url": "https://www.dw.com/de/nord-stream-lecks-sabotage/a-63256789", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2022-09-27T01:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a6", "title": "Fuites sur Nord Stream : l'Europe soupçonne un sabotage", "content": "Trois fuites ont été détectées sur les gazoducs Nord Stream 1 et 2 en mer Baltique, après des explosions sous-marines enregistrées par les sismologues. Les autorités danoises et suédoises évoquent des actes délibérés. L'Union européenne a promis une réponse « robuste » à toute attaque contre ses infrastructures énergétiques.", "url": "https://www.afp.com/fr/infos/nord-stream-fuites-sabotage-20220927", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2022-09-27T03:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "北溪天然气管道发生泄漏 欧洲多国怀疑遭蓄意破坏", "content": "丹麦和瑞典当局26日证实，“北溪-1”和“北溪-2”天然气管道在波罗的海海域发生多处泄漏。两国地震台站此前记录到水下爆炸信号。欧洲多国领导人表示泄漏很可能是蓄意破坏所致，相关调查已经启动。", "url": "http://www.news.cn/world/2022-09/27/c_1129034567.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2022-09-27T09:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "d1", "title": "Ryder Cup: Europe takes early lead after opening session", "content": "Team Europe surged to an early lead over the United States after the opening session of the Ryder Cup on Friday. Home supporters packed the grandstands from the first tee. US captain said his team remained confident heading into the afternoon matches.", "url": "https://www.golfchannel.com/news/ryder-cup-2022-opening-session", "country_code": "US", "source_name": "Golf Channel", "language": "en", "published_at": "2022-09-27T12:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "新版国家职业分类大典发布", "content": "人力资源和社会保障部27日发布新版《中华人民共和国职业分类大典》。新版大典首次标注了数字职业，并新增一批新职业信息。人社部表示，这将为职业教育和就业服务提供重要参考。", "url": "https://www.mohrss.gov.cn/SYrlzyhshbzb/dongtaixinwen/202209/occupation-catalog.html", "country_code": "CN", "source_name": "人力资源和社会保障部网站", "language": "zh", "published_at": "2022-09-27T14:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

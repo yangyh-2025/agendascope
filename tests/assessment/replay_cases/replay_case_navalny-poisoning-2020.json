@@ -1,0 +1,33 @@
+{
+  "case_id": "navalny-poisoning-2020",
+  "label": "纳瓦利内中毒事件（2020）",
+  "description": "2020年8月20日，俄罗斯反对派人士纳瓦利内在托木斯克飞往莫斯科的航班上突发重病，飞机紧急备降鄂木斯克，塔斯社率先报道其入院昏迷，随后 AP、Deutsche Welle、AFP、BBC、NHK、人民网相继跟进，后德国政府证实其为诺维乔克类神经毒剂中毒，引发欧盟制裁。标注依据为公开报道时间线：首发为俄罗斯媒体（2020-08-20）。本案例含俄语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "RU",
+    "origin_source_name": "TASS",
+    "origin_at": "2020-08-20T05:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "US", "first_media": "AP", "lag_hours": 5},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 6},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 7},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 8},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 26},
+      {"country_code": "CN", "first_media": "人民网", "lag_hours": 30}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a5", "d2"]],
+    "cross_language_pairs": [["a1", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Навальный госпитализирован в Омске после экстренной посадки самолета", "content": "Алексей Навальный был госпитализирован в Омске после того, как самолет, на котором он летел из Томска в Москву, совершил экстренную посадку. По словам его пресс-секретаря, политик находится без сознания в реанимации. Врачи оценивают его состояние как тяжелое.", "url": "https://tass.ru/proisshestviya/9234567", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2020-08-20T05:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a2", "title": "Russian opposition leader Navalny in coma after suspected poisoning", "content": "Russian opposition leader Alexei Navalny is in a coma and on a ventilator in a Siberian hospital after a suspected poisoning, his spokeswoman said Thursday. His flight made an emergency landing in Omsk after he fell severely ill. Allies said they believe something was put in his tea at the airport.", "url": "https://apnews.com/article/navalny-poisoning-omsk-2020", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2020-08-20T10:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "Kreml-Kritiker Nawalny nach mutmaßlicher Vergiftung im Koma", "content": "Der russische Oppositionspolitiker Alexej Nawalny liegt nach einer mutmaßlichen Vergiftung im Koma. Sein Flugzeug musste in Omsk notlanden, nachdem er schwer erkrankt war. Seine Sprecherin erklärte, er sei bewusstlos und werde künstlich beatmet.", "url": "https://www.dw.com/de/nawalny-vergiftung-omsk/a-54623456", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2020-08-20T11:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "L'opposant russe Alexeï Navalny dans le coma après un empoisonnement présumé", "content": "L'opposant russe Alexeï Navalny est dans le coma après un empoisonnement présumé, a annoncé sa porte-parole. Son avion a dû atterrir d'urgence à Omsk, en Sibérie. Ses proches soupçonnent qu'une substance a été versée dans son thé à l'aéroport de Tomsk.", "url": "https://www.afp.com/fr/infos/navalny-coma-empoisonnement-20200820", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2020-08-20T12:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "Alexei Navalny: Russian opposition leader 'poisoned' and in coma", "content": "Russian opposition figure Alexei Navalny is unconscious in intensive care after a suspected poisoning, his team has said. The 44-year-old fell ill on a flight back to Moscow from Siberia. Germany and France have offered medical assistance as doctors in Omsk run tests.", "url": "https://www.bbc.com/news/world-europe-navalny-poisoning", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2020-08-20T13:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a6", "title": "ロシア野党指導者ナワリヌイ氏 意識不明 毒物混入か", "content": "ロシアの野党指導者アレクセイ・ナワリヌイ氏が搭乗中の旅客機内で体調を崩し、シベリアのオムスクの病院で意識不明の重体となっている。広報担当者は何者かに毒を盛られた可能性を指摘した。欧米各国は経緯の解明を求めている。", "url": "https://www3.nhk.or.jp/news/html/20200821/k1001256789.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2020-08-21T07:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "俄罗斯反对派人士纳瓦利内疑似中毒入院", "content": "俄罗斯反对派人士纳瓦利内20日在乘机途中突发重病，目前在鄂木斯克一家医院接受抢救，处于昏迷状态。其发言人称怀疑他被人下毒。俄罗斯官方表示正在对事件进行调查，目前尚无结论。", "url": "http://world.people.com.cn/n1/2020/0821/c1002-31831234.html", "country_code": "CN", "source_name": "人民网", "language": "zh", "published_at": "2020-08-21T11:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "Wildfires force evacuations across northern California", "content": "Fast-moving wildfires in northern California have forced thousands of residents to evacuate, state officials said Thursday. Firefighters are battling multiple blazes driven by dry lightning storms. The governor declared a state of emergency in several counties.", "url": "https://www.latimes.com/california/story/2020-08-20/wildfires-evacuations", "country_code": "US", "source_name": "Los Angeles Times", "language": "en", "published_at": "2020-08-20T18:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d2", "title": "上半年全国快递业务量同比增长超两成", "content": "国家邮政局数据显示，今年上半年全国快递服务企业业务量同比增长超过20%。农村地区快递网络覆盖率持续提升，农产品上行渠道进一步畅通。业内预计全年业务量将再创历史新高。", "url": "https://finance.sina.com.cn/chanjing/2020-08-21/express-volume-growth.html", "country_code": "CN", "source_name": "新浪财经", "language": "zh", "published_at": "2020-08-21T13:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

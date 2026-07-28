@@ -1,0 +1,35 @@
+{
+  "case_id": "turkey-earthquake-2023",
+  "label": "土耳其-叙利亚大地震（2023）",
+  "description": "2023年2月6日凌晨，土耳其东南部发生7.8级强烈地震，土耳其英文报纸 Hurriyet Daily News 率先报道灾情，AP、半岛电视台（阿语）、BBC、AFP、Deutsche Welle、TASS、新华社在数小时内相继跟进，地震在土耳其和叙利亚造成超过五万人遇难，多国派出救援队。标注依据为公开报道时间线：首发为土耳其媒体（2023-02-06）。本案例含阿拉伯语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "TR",
+    "origin_source_name": "Hurriyet Daily News",
+    "origin_at": "2023-02-06T01:20:00+00:00",
+    "follower_sequence": [
+      {"country_code": "US", "first_media": "AP", "lag_hours": 1},
+      {"country_code": "QA", "first_media": "Al Jazeera Arabic", "lag_hours": 2},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 2},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 3},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 3},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 3},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 4}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a4", "d1"]],
+    "cross_language_pairs": [["a3", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Powerful 7.8-magnitude earthquake hits southeastern Turkey", "content": "A powerful 7.8-magnitude earthquake struck southeastern Turkey in the early hours of Monday, toppling buildings in several cities. The quake was centered near Gaziantep and was felt as far away as Lebanon and Cyprus. Rescue teams are searching for survivors under the rubble as aftershocks continue.", "url": "https://www.hurriyetdailynews.com/earthquake-southeastern-turkey-2023-180123", "country_code": "TR", "source_name": "Hurriyet Daily News", "language": "en", "published_at": "2023-02-06T01:20:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "Major earthquake kills hundreds in Turkey and Syria", "content": "A 7.8-magnitude earthquake struck southern Turkey and northern Syria before dawn on Monday, killing hundreds of people and reducing buildings to rubble. Rescue operations are under way in freezing conditions. The death toll is expected to rise sharply as crews reach remote towns.", "url": "https://apnews.com/article/turkey-syria-earthquake-2023", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2023-02-06T02:20:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "زلزال قوي يضرب جنوب تركيا وشمال سوريا ومئات القتلى", "content": "ضرب زلزال بقوة 7.8 درجة جنوب تركيا وشمال سوريا فجر الاثنين، مما أسفر عن مقتل مئات الأشخاص وانهيار مئات المباني. وتواصل فرق الإنقاذ البحث عن ناجين تحت الأنقاض وسط طقس شديد البرودة. وأعلنت تركيا حالة الطوارئ القصوى وطلبت مساعدة دولية.", "url": "https://www.aljazeera.net/news/2023/2/6/turkey-syria-earthquake", "country_code": "QA", "source_name": "Al Jazeera Arabic", "language": "ar", "published_at": "2023-02-06T03:20:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "Turkey earthquake: hundreds dead as 7.8-magnitude quake hits", "content": "A huge earthquake has killed hundreds of people across Turkey and Syria. The 7.8-magnitude quake struck near the Turkish city of Gaziantep in the early hours, collapsing hundreds of buildings. Turkey has declared a state of emergency and appealed for international assistance.", "url": "https://www.bbc.com/news/world-europe-turkey-earthquake-2023", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2023-02-06T03:20:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a5", "title": "Séisme en Turquie et en Syrie : des centaines de morts, des immeubles effondrés", "content": "Un séisme de magnitude 7,8 a frappé le sud-est de la Turquie et le nord de la Syrie lundi avant l'aube, faisant des centaines de morts. De nombreux immeubles se sont effondrés pendant que les habitants dormaient. Ankara a déclenché l'alerte maximale et demandé l'aide internationale.", "url": "https://www.afp.com/fr/infos/seisme-turquie-syrie-20230206", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2023-02-06T04:20:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "Schweres Erdbeben in der Türkei und Syrien: Hunderte Tote", "content": "Ein Erdbeben der Stärke 7,8 hat den Südosten der Türkei und Nordsyrien erschüttert und Hunderte Menschenleben gefordert. Zahlreiche Gebäude stürzten ein, Rettungsteams suchen unter Trümmern nach Überlebenden. Deutschland bot der Türkei sofortige Hilfe an und entsandte ein Rettungsteam.", "url": "https://www.dw.com/de/erdbeben-tuerkei-syrien/a-64612345", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2023-02-06T04:20:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "Мощное землетрясение в Турции и Сирии унесло сотни жизней", "content": "Землетрясение магнитудой 7,8 произошло на юго-востоке Турции, жертвами стали сотни человек в Турции и Сирии. Разрушены сотни зданий, под завалами остаются люди. Президент России направил соболезнования и предложил помощь в ликвидации последствий.", "url": "https://tass.ru/proisshestviya/16987654", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2023-02-06T04:20:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a8", "title": "土耳其发生7.8级强烈地震 已致数百人遇难", "content": "土耳其东南部6日凌晨发生7.8级强烈地震，震中位于加济安泰普附近，地震已造成土耳其和叙利亚两国数百人遇难、大量建筑倒塌。土耳其政府宣布最高级别紧急状态并请求国际援助。中国救援队已启动应急响应机制。", "url": "http://www.news.cn/world/2023-02/06/c_1129345678.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2023-02-06T05:20:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "d1", "title": "Grammy Awards: Beyoncé breaks record for most wins", "content": "Beyoncé broke the record for the most Grammy wins of all time at Sunday's ceremony in Los Angeles. The singer took home her 32nd award for best dance/electronic album. The show also featured tributes to several music legends.", "url": "https://www.grammy.com/news/beyonce-record-2023-grammys", "country_code": "US", "source_name": "Recording Academy", "language": "en", "published_at": "2023-02-06T05:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国春季学期开学 各地学校有序返校", "content": "全国多地中小学本周迎来春季学期开学，各地学校按照错峰安排组织学生有序返校。教育部门要求做好校园健康监测和教学衔接工作。多地学校还安排了形式多样的开学第一课。", "url": "https://www.moe.gov.cn/jyb_xwfb/s5147/202302/spring-semester.html", "country_code": "CN", "source_name": "教育部网站", "language": "zh", "published_at": "2023-02-06T08:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

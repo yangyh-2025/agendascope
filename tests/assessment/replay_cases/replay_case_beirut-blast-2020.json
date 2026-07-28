@@ -1,0 +1,33 @@
+{
+  "case_id": "beirut-blast-2020",
+  "label": "贝鲁特港大爆炸（2020）",
+  "description": "2020年8月4日，黎巴嫩首都贝鲁特港口区发生剧烈爆炸，造成重大人员伤亡和城市损毁，当地英文报纸 L'Orient Today 率先滚动报道，半岛电视台（阿语）、AP、AFP、TASS、新华社、Deutsche Welle 在数小时内相继跟进，全球媒体连续多日聚焦。标注依据为公开报道时间线：首发为黎巴嫩媒体（2020-08-04）。本案例含阿拉伯语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "LB",
+    "origin_source_name": "L'Orient Today",
+    "origin_at": "2020-08-04T15:10:00+00:00",
+    "follower_sequence": [
+      {"country_code": "QA", "first_media": "Al Jazeera Arabic", "lag_hours": 1},
+      {"country_code": "US", "first_media": "AP", "lag_hours": 2},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 3},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 5},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 6},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 8}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a3", "d2"], ["a2", "d1"]],
+    "cross_language_pairs": [["a2", "a3"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Massive explosion rocks Beirut port area, casualties reported", "content": "A massive explosion ripped through the port of Beirut on Tuesday evening, shattering windows across the Lebanese capital. Hospitals reported dozens of casualties as ambulances rushed to the scene. The blast was heard as far away as Cyprus, residents said.", "url": "https://today.lorientlejour.com/article/beirut-port-explosion-august-2020", "country_code": "LB", "source_name": "L'Orient Today", "language": "en", "published_at": "2020-08-04T15:10:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "انفجار ضخم يهز مرفأ بيروت وسقوط عدد كبير من الضحايا", "content": "هز انفجار ضخم منطقة مرفأ بيروت مساء الثلاثاء، مما أدى إلى سقوط عدد كبير من القتلى والجرحى ودمار واسع في أحياء العاصمة اللبنانية. وأظهرت مقاطع مصورة سحابة دخان هائلة تتصاعد من الميناء. وأعلنت السلطات حالة الطوارئ في المدينة.", "url": "https://www.aljazeera.net/news/2020/8/4/beirut-port-explosion", "country_code": "QA", "source_name": "Al Jazeera Arabic", "language": "ar", "published_at": "2020-08-04T16:10:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a3", "title": "Huge explosion in Beirut port kills dozens, wounds thousands", "content": "A colossal explosion at Beirut's port killed dozens of people and wounded thousands on Tuesday, Lebanese health officials said. The blast devastated entire neighborhoods and overwhelmed hospitals. Authorities said the explosion appeared linked to a large stockpile of ammonium nitrate stored at the port.", "url": "https://apnews.com/article/beirut-explosion-port-2020", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2020-08-04T17:10:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "Beyrouth : une explosion gigantesque au port fait des dizaines de morts", "content": "Une explosion d'une ampleur inédite a ravagé le port de Beyrouth mardi soir, faisant des dizaines de morts et des milliers de blessés selon un bilan provisoire. Les hôpitaux de la capitale libanaise sont saturés. Le gouvernement a décrété un état d'urgence de deux semaines.", "url": "https://www.afp.com/fr/infos/beyrouth-explosion-port-20200804", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2020-08-04T18:10:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "Мощный взрыв в порту Бейрута унес жизни десятков человек", "content": "Мощный взрыв произошел во вторник в порту Бейрута, погибли десятки человек, тысячи получили ранения. По предварительным данным, взорвалась партия аммиачной селитры, конфискованная несколько лет назад. Россия направила в Ливан гуманитарную помощь и врачей.", "url": "https://tass.ru/proisshestviya/9123456", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2020-08-04T20:10:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "黎巴嫩首都贝鲁特发生剧烈爆炸 已致数十人死亡", "content": "黎巴嫩首都贝鲁特港口区4日傍晚发生剧烈爆炸，已造成数十人死亡、数千人受伤。爆炸冲击波摧毁了港口周边大片建筑，贝鲁特市长称这是一场“国家灾难”。黎巴嫩政府已宣布贝鲁特进入为期两周的紧急状态。", "url": "http://www.xinhuanet.com/world/2020-08/04/c_1126325678.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2020-08-04T21:10:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "Gewaltige Explosion in Beirut: Stadt im Ausnahmezustand", "content": "Bei einer gewaltigen Explosion im Hafen von Beirut sind zahlreiche Menschen ums Leben gekommen. Die Detonation zerstörte ganze Straßenzüge und wurde noch in 200 Kilometern Entfernung wahrgenommen. Die libanesische Regierung vermutet gelagertes Ammoniumnitrat als Ursache.", "url": "https://www.dw.com/de/beirut-explosion-hafen/a-54432109", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2020-08-04T23:10:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "NASA astronauts splash down safely after SpaceX mission", "content": "Two NASA astronauts returned to Earth on Sunday with a parachute-assisted splashdown in the Gulf of Mexico aboard a SpaceX Crew Dragon capsule. The landing marked the first crewed water landing by a U.S. spacecraft in 45 years. Both astronauts were reported in good health.", "url": "https://www.space.com/spacex-crew-dragon-splashdown-2020", "country_code": "US", "source_name": "Space.com", "language": "en", "published_at": "2020-08-05T10:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "东京奥运会筹备工作进入冲刺阶段", "content": "东京奥组委本周表示，延期后的东京奥运会各项筹备工作已进入冲刺阶段。组委会正与各方协调简化办赛方案，控制追加成本。多项测试赛计划于今年秋季陆续重启。", "url": "https://sports.qq.com/a/20200805/tokyo-olympics-prep.html", "country_code": "CN", "source_name": "腾讯体育", "language": "zh", "published_at": "2020-08-05T08:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

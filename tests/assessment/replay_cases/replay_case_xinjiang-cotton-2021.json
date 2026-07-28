@@ -1,0 +1,32 @@
+{
+  "case_id": "xinjiang-cotton-2021",
+  "label": "新疆棉/BCI 事件（2021）",
+  "description": "2021年3月24日，H&M 集团官网一份涉及新疆棉花采购的声明经中国社交媒体发酵后引发国际舆论连锁反应，中国官方媒体、欧美通讯社与日韩媒体在两周内相继跟进报道，构成典型跨国议程设置事件。标注依据为公开报道时间线：首发为 H&M 声明（2021-03-24），随后人民网、Reuters、BBC、AFP、Deutsche Welle、NHK 等按先后顺序跟进。本案例含中文-英文、中文-法文跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "CH",
+    "origin_source_name": "H&M Group",
+    "origin_at": "2021-03-24T10:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "CN", "first_media": "人民网", "lag_hours": 6},
+      {"country_code": "GB", "first_media": "Reuters", "lag_hours": 8},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 26},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 30},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 40}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a3", "d1"]],
+    "cross_language_pairs": [["a2", "a3"], ["a2", "a5"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "H&M Group statement on due diligence and cotton sourcing policy", "content": "H&M Group published a statement on its website saying it was deeply concerned by reports from civil society organizations regarding cotton production in Xinjiang. The company said it would reduce its sourcing footprint in the region while conducting due diligence. The statement was dated March 24, 2021 and was later removed from the Chinese internet.", "url": "https://hmgroup.com/news/statement-on-cotton-sourcing-march-2021/", "country_code": "CH", "source_name": "H&M Group", "language": "en", "published_at": "2021-03-24T10:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a2", "title": "H&M涉疆声明引发中国消费者强烈反应", "content": "3月24日，H&M集团发布的一份涉及新疆棉花采购的声明在中国互联网引发广泛关注。人民网评论指出，所谓新疆存在“强迫劳动”纯属捏造，新疆棉花产业早已实现高度机械化。多家电商平台随后下架了相关品牌商品。", "url": "http://world.people.com.cn/n1/2021/0324/c1002-32059876.html", "country_code": "CN", "source_name": "人民网", "language": "zh", "published_at": "2021-03-24T16:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "China state media and netizens lash out at H&M over Xinjiang statement", "content": "Swedish retailer H&M faced a wave of criticism in China on Wednesday after an old statement on Xinjiang cotton resurfaced on social media. Chinese state broadcaster CCTV accused the company of spreading lies, and several e-commerce platforms removed H&M products from search results.", "url": "https://www.reuters.com/world/china/china-state-media-hm-xinjiang-2021-03-24/", "country_code": "GB", "source_name": "Reuters", "language": "en", "published_at": "2021-03-24T18:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "H&M and Nike face China backlash over Xinjiang cotton stance", "content": "Western clothing brands including H&M and Nike are facing a consumer boycott in China over statements they made about cotton sourced from Xinjiang. Chinese celebrities cut ties with the brands as state media condemned what they called disinformation about forced labour.", "url": "https://www.bbc.com/news/business-xinjiang-cotton-hm-nike", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2021-03-24T20:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a5", "title": "Coton du Xinjiang : H&M sous le feu des critiques en Chine", "content": "La marque suédoise H&M est vivement critiquée en Chine après la réapparition d'une déclaration sur le coton du Xinjiang. Les médias d'État chinois ont accusé l'entreprise de diffuser de fausses informations, et plusieurs plateformes de commerce en ligne ont retiré ses produits.", "url": "https://www.afp.com/fr/infos/coton-xinjiang-hm-chine-20210325", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2021-03-25T12:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "China: Konsumenten boykottieren H&M wegen Xinjiang-Erklärung", "content": "Der schwedische Modekonzern H&M steht in China massiv in der Kritik, nachdem eine Erklärung zu Baumwolle aus Xinjiang wieder aufgetaucht war. Staatliche Medien warfen dem Unternehmen Desinformation vor, und chinesische Prominente beendeten Werbeverträge mit westlichen Marken.", "url": "https://www.dw.com/de/china-boykott-hm-xinjiang/a-57000321", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2021-03-25T16:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "中国 H&Mなどへの反発拡大 新疆綿めぐる声明で", "content": "中国でスウェーデンの衣料品大手H&Mへの反発が広がっている。新疆ウイグル自治区産の綿花をめぐる同社の声明がSNSで再び拡散され、国営メディアが批判を展開した。オンライン通販各社は同社の商品を取り扱わない措置を取った。", "url": "https://www3.nhk.or.jp/news/html/20210326/k1001294555.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2021-03-26T02:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "UEFA confirms Champions League final venues for upcoming seasons", "content": "UEFA announced on Thursday the host stadiums for the next three Champions League finals. The governing body said the decisions followed an evaluation of infrastructure and security plans. Fans welcomed the return to large-capacity venues.", "url": "https://www.espn.com/soccer/uefa-champions-league-final-venues-2021", "country_code": "US", "source_name": "ESPN", "language": "en", "published_at": "2021-03-25T09:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "新款折叠屏手机正式发布 起售价9999元", "content": "某国产手机品牌周四晚间举行春季发布会，正式推出新一代折叠屏旗舰手机。新机采用自研铰链技术，整机重量进一步降低，起售价为9999元。发布会还公布了新款平板电脑和智能手表。", "url": "https://tech.sina.com.cn/mobile/2021-03-25/doc-folding-phone-launch.html", "country_code": "CN", "source_name": "新浪科技", "language": "zh", "published_at": "2021-03-25T11:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

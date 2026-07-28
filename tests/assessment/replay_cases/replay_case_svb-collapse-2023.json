@@ -1,0 +1,33 @@
+{
+  "case_id": "svb-collapse-2023",
+  "label": "硅谷银行倒闭（2023）",
+  "description": "2023年3月10日，美国硅谷银行（SVB）因挤兑被加州监管机构接管，成为2008年以来美国最大银行倒闭案，CNBC 率先报道接管消息，随后 Financial Times、Handelsblatt、Les Echos、财新、日经、印度经济时报相继跟进，全球金融市场剧烈波动。标注依据为公开报道时间线：首发为美国媒体（2023-03-10）。本案例含德语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "US",
+    "origin_source_name": "CNBC",
+    "origin_at": "2023-03-10T16:30:00+00:00",
+    "follower_sequence": [
+      {"country_code": "GB", "first_media": "Financial Times", "lag_hours": 3},
+      {"country_code": "DE", "first_media": "Handelsblatt", "lag_hours": 8},
+      {"country_code": "FR", "first_media": "Les Echos", "lag_hours": 9},
+      {"country_code": "CN", "first_media": "财新传媒", "lag_hours": 10},
+      {"country_code": "JP", "first_media": "日本経済新聞", "lag_hours": 12},
+      {"country_code": "IN", "first_media": "The Economic Times", "lag_hours": 14}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a3", "d1"]],
+    "cross_language_pairs": [["a3", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Silicon Valley Bank shut down by regulators in biggest U.S. bank failure since 2008", "content": "California regulators shut down Silicon Valley Bank on Friday and appointed the FDIC as receiver, in the largest U.S. bank failure since the global financial crisis. The collapse followed a run on deposits after the bank disclosed losses and a plan to raise capital. The FDIC said insured depositors will have access to their funds by Monday.", "url": "https://www.cnbc.com/2023/03/10/silicon-valley-bank-shut-down-regulators.html", "country_code": "US", "source_name": "CNBC", "language": "en", "published_at": "2023-03-10T16:30:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a2", "title": "Silicon Valley Bank collapses in largest US bank failure since financial crisis", "content": "Silicon Valley Bank was seized by US regulators on Friday after a rapid bank run toppled the tech sector's favourite lender. The failure sent shockwaves through global markets, with bank shares sliding in Europe and Asia. The US Treasury said it was monitoring the situation closely.", "url": "https://www.ft.com/content/svb-collapse-2023-03-10", "country_code": "GB", "source_name": "Financial Times", "language": "en", "published_at": "2023-03-10T19:30:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "Silicon Valley Bank pleite: Größter US-Bankenzusammenbruch seit 2008", "content": "Die kalifornische Finanzaufsicht hat die Silicon Valley Bank geschlossen – der größte Bankenzusammenbruch in den USA seit der Finanzkrise 2008. Zuvor hatten Anleger massenhaft Geld abgezogen, nachdem die Bank Verluste und eine Kapitalerhöhung angekündigt hatte. Deutsche Bankaktien gerieten unter Druck.", "url": "https://www.handelsblatt.com/finanzen/svb-pleite-bankenzusammenbruch/29012345.html", "country_code": "DE", "source_name": "Handelsblatt", "language": "de", "published_at": "2023-03-11T00:30:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a4", "title": "Faillite de la Silicon Valley Bank : les marchés financiers sous tension", "content": "La Silicon Valley Bank, banque de référence des start-up américaines, a été fermée par les autorités californiennes après une ruée des déposants. Il s'agit de la plus grosse faillite bancaire aux États-Unis depuis 2008. Les banques européennes ont fortement reculé en Bourse dans son sillage.", "url": "https://www.lesechos.fr/finance-marches/banque-assurances/faillite-svb-2023-03-11", "country_code": "FR", "source_name": "Les Echos", "language": "fr", "published_at": "2023-03-11T01:30:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a5", "title": "硅谷银行被加州监管机构接管 储户挤兑致流动性枯竭", "content": "美国加州金融保护与创新局10日宣布关闭硅谷银行，并指定联邦存款保险公司接管。此前该行因出售债券确认巨额亏损并宣布增发融资，引发储户大规模挤兑。这是2008年金融危机以来美国最大的银行倒闭事件。", "url": "https://www.caixin.com/2023-03-11/svb-collapse-analysis.html", "country_code": "CN", "source_name": "财新传媒", "language": "zh", "published_at": "2023-03-11T02:30:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a6", "title": "米シリコンバレー銀行が破綻 2008年以来最大規模", "content": "米カリフォルニア州の規制当局は10日、新興企業向け融資で知られるシリコンバレー銀行を閉鎖したと発表した。2008年の金融危機以来最大の銀行破綻となる。預金の急速な流出が経営を行き詰まらせた。週明けの東京市場でも銀行株への影響が警戒されている。", "url": "https://www.nikkei.com/article/DGXZQOUB10SVB2023/", "country_code": "JP", "source_name": "日本経済新聞", "language": "ja", "published_at": "2023-03-11T04:30:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a7", "title": "SVB collapse: Indian startups scramble to secure deposits", "content": "The collapse of Silicon Valley Bank has rattled India's startup ecosystem, where hundreds of venture-backed firms held accounts with the lender. Founders spent the weekend assessing their exposure and exploring options to move funds. Industry bodies urged the government to help affected startups meet payroll.", "url": "https://economictimes.indiatimes.com/tech/startups/svb-collapse-india-impact/articleshow/98543210.cms", "country_code": "IN", "source_name": "The Economic Times", "language": "en", "published_at": "2023-03-11T06:30:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "Oscars 2023: full list of nominees announced", "content": "The Academy of Motion Picture Arts and Sciences announced the nominations for the 95th Oscars on Friday. The ceremony will take place in Los Angeles next month. Several international productions feature prominently in the best picture race.", "url": "https://www.oscars.org/news/95th-nominations-2023", "country_code": "US", "source_name": "Academy of Motion Picture Arts and Sciences", "language": "en", "published_at": "2023-03-10T20:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国两会：代表委员热议乡村振兴", "content": "正在北京召开的全国两会上，多位代表委员围绕乡村振兴建言献策。有代表建议加大对农村电商和冷链物流的支持力度，畅通农产品上行渠道。相关提案已提交大会秘书处。", "url": "https://www.gov.cn/xinwen/2023-03/11/content_two-sessions.htm", "country_code": "CN", "source_name": "中国政府网", "language": "zh", "published_at": "2023-03-11T08:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

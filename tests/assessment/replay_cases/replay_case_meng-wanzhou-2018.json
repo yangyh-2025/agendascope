@@ -1,0 +1,33 @@
+{
+  "case_id": "meng-wanzhou-2018",
+  "label": "孟晚舟被捕事件（2018）",
+  "description": "2018年12月1日华为 CFO 孟晚舟在温哥华转机时被加拿大当局拘押，12月5日加拿大《环球邮报》率先披露，随后美国、中国、英国、法国、俄罗斯、日本媒体相继跟进，引发持续数年的跨国报道浪潮。标注依据为公开报道时间线：首发为加拿大媒体（2018-12-05），新华社、AP、BBC、AFP、TASS、NHK 按先后顺序跟进。本案例含中文-英文跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "CA",
+    "origin_source_name": "The Globe and Mail",
+    "origin_at": "2018-12-05T22:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "US", "first_media": "AP", "lag_hours": 2},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 6},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 8},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 12},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 14},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 20}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a4", "d1"]],
+    "cross_language_pairs": [["a4", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Huawei CFO Meng Wanzhou arrested in Vancouver, faces extradition to U.S.", "content": "Canadian authorities have arrested Meng Wanzhou, the chief financial officer of Huawei Technologies, in Vancouver at the request of the United States. Meng, the daughter of Huawei founder Ren Zhengfei, was detained on December 1 while changing planes and faces extradition. A bail hearing has been set for Friday.", "url": "https://www.theglobeandmail.com/canada/article-huawei-cfo-arrested-vancouver-extradition/", "country_code": "CA", "source_name": "The Globe and Mail", "language": "en", "published_at": "2018-12-05T22:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "U.S. seeks extradition of Huawei executive arrested in Canada", "content": "The United States is seeking the extradition of Huawei executive Meng Wanzhou after her arrest in Vancouver, American officials confirmed late Wednesday. The case is linked to alleged violations of U.S. sanctions against Iran. The arrest threatens to escalate trade tensions between Washington and Beijing.", "url": "https://apnews.com/article/huawei-meng-wanzhou-extradition-2018", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2018-12-06T00:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "Huawei CFO Meng Wanzhou arrested in Canada", "content": "The daughter of the founder of Chinese telecoms giant Huawei has been arrested in Canada and faces extradition to the United States. Meng Wanzhou was detained in Vancouver on Saturday, the same day Donald Trump and Xi Jinping met at the G20 summit. China has demanded her immediate release.", "url": "https://www.bbc.com/news/business-huawei-meng-arrested", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2018-12-06T04:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "中方就华为公司CFO孟晚舟被拘押提出严正交涉", "content": "中国外交部发言人6日表示，中方已就加拿大警方应美方要求拘押华为公司首席财务官孟晚舟一事向加方和美方提出严正交涉。中方要求立即释放被拘押人员，切实保障当事人的合法正当权益。中国驻加拿大使馆已向加方提出严正交涉。", "url": "http://www.xinhuanet.com/world/2018-12/06/c_1123826543.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2018-12-06T06:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "La directrice financière de Huawei arrêtée au Canada", "content": "Meng Wanzhou, directrice financière du géant chinois des télécoms Huawei, a été arrêtée à Vancouver à la demande des États-Unis. Pékin a exigé sa libération immédiate, dénonçant une violation des droits de l'intéressée. L'affaire intervient en pleine trêve commerciale entre Washington et Pékin.", "url": "https://www.afp.com/fr/infos/huawei-meng-arrestation-canada-20181206", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2018-12-06T10:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "ファーウェイ副会長 カナダで逮捕 米要請で", "content": "中国通信機器大手ファーウェイの孟晩舟副会長兼CFOがカナダ・バンクーバーで逮捕された。米国当局の要請に基づくもので、対イラン制裁違反の疑いが取り沙汰されている。中国政府は即時釈放を求めており、米中貿易交渉への影響が懸念される。", "url": "https://www3.nhk.or.jp/news/html/20181206/k1001173456.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2018-12-06T12:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "В Канаде задержана финансовый директор Huawei Мэн Ваньчжоу", "content": "Финансовый директор компании Huawei Мэн Ваньчжоу была задержана в Ванкувере по запросу США. Китайское посольство в Канаде потребовало немедленного освобождения топ-менеджера. В Москве задержание назвали давлением на китайский бизнес.", "url": "https://tass.ru/ekonomika/5876543", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2018-12-06T18:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "d1", "title": "Markets rally as Fed signals patience on rate hikes", "content": "U.S. stocks rose sharply on Thursday after Federal Reserve officials signaled a patient approach to further interest rate increases. The Dow Jones Industrial Average gained more than 300 points. Analysts said the comments eased fears of an overly aggressive tightening cycle.", "url": "https://www.cnbc.com/2018/12/06/markets-fed-patience-rate-hikes.html", "country_code": "US", "source_name": "CNBC", "language": "en", "published_at": "2018-12-06T15:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "中超联赛收官战：冠军悬念保留到最后一轮", "content": "中超联赛最后一轮比赛将于周末打响，积分榜前两名球队仅差一分，冠军悬念保留到最后一刻。两队主帅在赛前发布会上均表示将全力争胜。足协确认本赛季颁奖仪式将在赛后立即举行。", "url": "https://sports.sina.com.cn/china/j/2018-12-06/doc-csl-final-round.html", "country_code": "CN", "source_name": "新浪体育", "language": "zh", "published_at": "2018-12-06T20:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "case_id": "pandora-papers-2021",
+  "label": "潘多拉文件曝光（2021）",
+  "description": "2021年10月3日，总部位于华盛顿的国际调查记者同盟（ICIJ）发布“潘多拉文件”，基于近1200万份泄露文件揭露多国现任与前任领导人、政要和富豪的离岸资产安排。BBC、Le Monde、Süddeutsche Zeitung、El País 等协作媒体同步发布，亚洲媒体随后跟进。标注依据为 ICIJ 公开发布时间线（2021-10-03）。本案例含法语-英语、西班牙语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "US",
+    "origin_source_name": "ICIJ",
+    "origin_at": "2021-10-03T16:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 1},
+      {"country_code": "FR", "first_media": "Le Monde", "lag_hours": 1},
+      {"country_code": "DE", "first_media": "Süddeutsche Zeitung", "lag_hours": 2},
+      {"country_code": "ES", "first_media": "El País", "lag_hours": 2},
+      {"country_code": "JP", "first_media": "The Asahi Shimbun", "lag_hours": 12},
+      {"country_code": "CN", "first_media": "财新传媒", "lag_hours": 24}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a3", "d1"]],
+    "cross_language_pairs": [["a3", "a2"], ["a5", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Pandora Papers: offshore holdings of world leaders and billionaires exposed", "content": "The International Consortium of Investigative Journalists on Sunday released the Pandora Papers, a trove of nearly 12 million leaked documents exposing the offshore dealings of more than 35 current and former world leaders. The files reveal how politicians and billionaires use secretive trusts and shell companies. More than 600 journalists from 150 media outlets participated in the investigation.", "url": "https://www.icij.org/investigations/pandora-papers/global-investigation-2021/", "country_code": "US", "source_name": "ICIJ", "language": "en", "published_at": "2021-10-03T16:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a2", "title": "Pandora Papers: secret wealth and dealings of world leaders exposed", "content": "The secret offshore dealings of world leaders, politicians and billionaires have been exposed in one of the biggest ever leaks of financial documents. The Pandora Papers reveal how the King of Jordan secretly amassed a property empire and how donors to Britain's ruling party benefited from offshore arrangements. The leak involves 11.9 million documents from offshore service providers.", "url": "https://www.bbc.com/news/world-pandora-papers-leak", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2021-10-03T17:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a3", "title": "Pandora Papers : les secrets offshore des puissants révélés", "content": "Une enquête internationale menée par l'ICIJ révèle les montages offshore de chefs d'État, de ministres et de milliardaires à travers le monde. Les Pandora Papers s'appuient sur près de 12 millions de documents fuités. Plusieurs personnalités françaises figurent dans les fichiers analysés par Le Monde et ses partenaires.", "url": "https://www.lemonde.fr/international/article/2021/10/03/pandora-papers-enquete_6097123_3210.html", "country_code": "FR", "source_name": "Le Monde", "language": "fr", "published_at": "2021-10-03T17:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a4", "title": "Pandora Papers: Geheime Offshore-Geschäfte von Weltführern enthüllt", "content": "Ein internationales Recherchenetzwerk hat die geheimen Offshore-Geschäfte zahlreicher Staats- und Regierungschefs aufgedeckt. Die Pandora Papers beruhen auf fast zwölf Millionen vertraulichen Dokumenten. Die Enthüllungen zeigen, wie Superreiche und Politiker Briefkastenfirmen zur Vermögensverschleierung nutzen.", "url": "https://www.sueddeutsche.de/wirtschaft/pandora-papers-offshore-1.5432109", "country_code": "DE", "source_name": "Süddeutsche Zeitung", "language": "de", "published_at": "2021-10-03T18:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a5", "title": "Papeles de Pandora: la mayor filtración sobre paraísos fiscales", "content": "Los Papeles de Pandora destapan los negocios opacos en paraísos fiscales de 35 líderes mundiales y cientos de multimillonarios. La filtración, de casi 12 millones de documentos, ha sido analizada por más de 600 periodistas. La investigación revela propiedades y sociedades ocultas en decenas de jurisdicciones.", "url": "https://elpais.com/internacional/2021-10-03/papeles-de-pandora-filtracion.html", "country_code": "ES", "source_name": "El País", "language": "es", "published_at": "2021-10-03T18:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a6", "title": "パンドラ文書 各国首脳らの資産隠し実態が判明", "content": "国際調査報道ジャーナリスト連合（ICIJ）は3日、各国の首脳経験者や富豪のオフショア資産を記録した「パンドラ文書」を公表した。流出文書は約1200万件に上り、秘密信託やペーパーカンパニーを使った資産管理の実態が浮かび上がった。日本に関係する人物名も含まれているという。", "url": "https://www.asahi.com/articles/ASPB4PANDORA2021.html", "country_code": "JP", "source_name": "The Asahi Shimbun", "language": "ja", "published_at": "2021-10-04T04:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a7", "title": "“潘多拉文件”曝光多国政要离岸资产", "content": "国际调查记者同盟10月3日发布“潘多拉文件”，披露30多位现任和前任国家领导人通过离岸公司隐匿资产的安排。泄露文件近1200万份，来自全球14家离岸服务商。多国政府已表示将对文件中涉及的本国人员展开调查。", "url": "https://www.caixin.com/2021-10-04/pandora-papers-report.html", "country_code": "CN", "source_name": "财新传媒", "language": "zh", "published_at": "2021-10-04T16:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "Nobel Prize in medicine awarded for discoveries of touch receptors", "content": "The Nobel Prize in physiology or medicine was awarded on Monday to two scientists for their discoveries of receptors for temperature and touch. The laureates' work explains how heat, cold and mechanical force trigger nerve impulses. The award was announced in Stockholm.", "url": "https://www.nobelprize.org/prizes/medicine/2021/press-release/", "country_code": "SE", "source_name": "Nobel Prize", "language": "en", "published_at": "2021-10-04T10:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "国庆假期全国发送旅客超4亿人次", "content": "交通运输部数据显示，国庆假期全国铁路、公路、水路、民航预计发送旅客总量超过4亿人次。各地交通部门加强运力调配和安全检查，假期返程高峰整体平稳有序。", "url": "https://www.mot.gov.cn/jiaotongyaowen/202110/golden-week-travel.html", "country_code": "CN", "source_name": "交通运输部网站", "language": "zh", "published_at": "2021-10-04T18:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

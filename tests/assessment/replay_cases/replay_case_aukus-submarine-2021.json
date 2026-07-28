@@ -1,0 +1,33 @@
+{
+  "case_id": "aukus-submarine-2021",
+  "label": "AUKUS 核潜艇协议（2021）",
+  "description": "2021年9月15日，美国政治媒体 Politico 率先披露美英澳三国将宣布新的安全伙伴关系 AUKUS，随后美英澳三国领导人正式宣布澳大利亚将获得核潜艇技术，法国因失去与澳方的常规潜艇合同而召回驻美澳大使。澳大利亚、英国、法国、中国、德国、俄罗斯媒体相继跟进。标注依据为公开报道时间线：首发为美国媒体（2021-09-15）。",
+  "ground_truth": {
+    "origin_country": "US",
+    "origin_source_name": "Politico",
+    "origin_at": "2021-09-15T12:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "AU", "first_media": "The Sydney Morning Herald", "lag_hours": 3},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 4},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 6},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 12},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 20},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 24}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a5", "d1"]],
+    "cross_language_pairs": []
+  },
+  "articles": [
+    {"article_id": "a1", "title": "U.S., U.K. and Australia to announce new security pact focused on Indo-Pacific", "content": "The United States, Britain and Australia are set to announce a new trilateral security partnership aimed at countering China in the Indo-Pacific, officials familiar with the plan said Wednesday. The pact, known as AUKUS, will include sharing of nuclear submarine technology with Australia. A joint announcement by the three leaders is expected within hours.", "url": "https://www.politico.com/news/2021/09/15/aukus-security-pact-announcement", "country_code": "US", "source_name": "Politico", "language": "en", "published_at": "2021-09-15T12:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a2", "title": "Australia to acquire nuclear-powered submarines under historic AUKUS pact", "content": "Australia will acquire nuclear-powered submarines for the first time under a landmark security partnership with the United States and Britain, Prime Minister Scott Morrison announced. The decision means Australia is scrapping a 90-billion-dollar conventional submarine deal with France. The first submarines are expected to be built in Adelaide.", "url": "https://www.smh.com.au/politics/federal/aukus-nuclear-submarines-20210915.html", "country_code": "AU", "source_name": "The Sydney Morning Herald", "language": "en", "published_at": "2021-09-15T15:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "Aukus: UK, US and Australia launch pact to counter China", "content": "The UK, US and Australia have announced a historic security pact in the Asia-Pacific, in what's seen as an effort to counter China. The Aukus alliance will let Australia build nuclear-powered submarines for the first time, using technology provided by the US. China has criticised the deal as extremely irresponsible.", "url": "https://www.bbc.com/news/world-aukus-pact-2021", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2021-09-15T16:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "Aukus : la France dénonce un « coup dans le dos » après la perte du contrat des sous-marins", "content": "La France a vivement dénoncé mercredi l'annonce du partenariat Aukus entre les États-Unis, le Royaume-Uni et l'Australie, qui entraîne l'annulation d'un méga-contrat de sous-marins français avec Canberra. Le ministre des Affaires étrangères a évoqué un « coup dans le dos ». Paris a convoqué une réunion de crise.", "url": "https://www.afp.com/fr/infos/aukus-france-sous-marins-20210915", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2021-09-15T18:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "外交部：美英澳核潜艇合作严重破坏地区和平稳定", "content": "中国外交部发言人16日表示，美英澳三国宣布开展核潜艇合作，严重破坏地区和平稳定，加剧军备竞赛，损害国际核不扩散努力。中方敦促三国摒弃冷战思维和狭隘地缘政治观念。发言人指出，中方将密切关注事态发展。", "url": "http://www.news.cn/politics/2021-09/16/c_1127876543.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2021-09-16T00:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "Aukus-Bündnis: Frankreich verärgert über geplatzten U-Boot-Deal", "content": "Das neue Sicherheitsbündnis Aukus zwischen den USA, Großbritannien und Australien sorgt für diplomatische Spannungen. Frankreich verliert dadurch einen milliardenschweren U-Boot-Auftrag aus Australien und spricht von einem Vertrauensbruch. Die EU kündigte an, die Auswirkungen auf ihre Indopazifik-Strategie zu prüfen.", "url": "https://www.dw.com/de/aukus-frankreich-uboot-deal/a-59212345", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2021-09-16T08:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "В Москве прокомментировали создание альянса AUKUS", "content": "В Кремле заявили, что внимательно следят за созданием нового партнерства AUKUS между США, Великобританией и Австралией. Российские официальные лица призвали к оценке сделки с точки зрения режима нераспространения. Ранее Австралия объявила об отказе от контракта с Францией на подводные лодки.", "url": "https://tass.ru/politika/12456789", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2021-09-16T12:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "d1", "title": "Apple iPhone 13 preorders open with record carrier subsidies", "content": "Preorders for Apple's iPhone 13 lineup opened Wednesday with major carriers offering aggressive trade-in deals. Analysts expect the new models to drive a strong upgrade cycle through the holiday quarter. Deliveries begin next week.", "url": "https://www.cnet.com/tech/mobile/iphone-13-preorder-deals-2021/", "country_code": "US", "source_name": "CNET", "language": "en", "published_at": "2021-09-15T20:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国秋粮收购工作会议召开", "content": "国家粮食和物资储备局16日召开全国秋粮收购工作会议，部署秋粮收购各项工作。会议要求各地落实收购资金，优化为农服务，守住农民“种粮卖得出”底线。今年秋粮丰收已成定局。", "url": "https://www.gov.cn/xinwen/2021-09/16/content_autumn-grain.htm", "country_code": "CN", "source_name": "中国政府网", "language": "zh", "published_at": "2021-09-16T10:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

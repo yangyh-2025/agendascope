@@ -1,0 +1,33 @@
+{
+  "case_id": "fukushima-water-2023",
+  "label": "福岛核处理水排海（2023）",
+  "description": "2023年8月24日，日本东京电力公司开始向太平洋排放福岛第一核电站处理水，NHK 率先滚动直播报道，新华社、AP、BBC、AFP、TASS、Deutsche Welle 在数小时内相继跟进，中国随即宣布全面暂停进口日本水产品，引发东亚地区持续关注。标注依据为公开报道时间线：首发为日本媒体（2023-08-24）。本案例含日语-中文、日语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "JP",
+    "origin_source_name": "NHK",
+    "origin_at": "2023-08-24T04:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 1},
+      {"country_code": "US", "first_media": "AP", "lag_hours": 3},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 4},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 5},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 6},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 8}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a3", "d1"]],
+    "cross_language_pairs": [["a1", "a2"], ["a1", "a3"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "福島第一原発 処理水の海洋放出を開始", "content": "東京電力は24日午後1時すぎ、福島第一原子力発電所の処理水の海洋放出を開始した。放出は薄めた処理水を海底トンネルを通じて行い、初回は17日間かける計画。政府と東電はモニタリング体制を強化するとしている。", "url": "https://www3.nhk.or.jp/news/html/20230824/k1001417890.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2023-08-24T04:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a2", "title": "日本启动福岛核污染水排海 中方表示坚决反对", "content": "日本政府24日无视国际社会强烈质疑和反对，单方面强行启动福岛核事故污染水排海。中国外交部发言人发表谈话，表示坚决反对和强烈谴责，已向日方提出严正交涉。中国海关总署宣布自当日起全面暂停进口原产地为日本的水产品。", "url": "http://www.news.cn/world/2023-08/24/c_1129823456.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2023-08-24T05:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "Japan begins releasing treated Fukushima wastewater into the Pacific", "content": "Japan on Thursday started releasing treated radioactive wastewater from the wrecked Fukushima nuclear plant into the Pacific Ocean. The discharge, expected to take decades, has drawn protests from neighboring countries and local fishing communities. The plant operator and the UN nuclear watchdog say the release meets international safety standards.", "url": "https://apnews.com/article/fukushima-wastewater-release-2023", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2023-08-24T07:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "Fukushima: Japan starts releasing treated water into ocean", "content": "Japan has begun releasing more than a million tonnes of treated water from the damaged Fukushima nuclear plant into the Pacific. The move comes 12 years after the tsunami-triggered meltdown. China has responded by banning all seafood imports from Japan, calling the discharge selfish and irresponsible.", "url": "https://www.bbc.com/news/world-asia-fukushima-water-release", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2023-08-24T08:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a5", "title": "Fukushima : le Japon commence à rejeter l'eau traitée dans le Pacifique", "content": "Le Japon a commencé jeudi à rejeter dans l'océan Pacifique l'eau traitée de la centrale accidentée de Fukushima. L'opération, qui doit durer des décennies, suscite l'opposition des pêcheurs locaux et de plusieurs pays voisins. Pékin a annoncé la suspension de toutes les importations de produits de la mer japonais.", "url": "https://www.afp.com/fr/infos/fukushima-rejet-eau-20230824", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2023-08-24T09:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "Япония начала сброс очищенной воды с АЭС «Фукусима-1» в океан", "content": "Япония приступила к сбросу в Тихий океан очищенной воды с аварийной АЭС «Фукусима-1». Оператор станции заявляет, что вода соответствует международным нормам безопасности. Китай в ответ полностью приостановил импорт японских морепродуктов.", "url": "https://tass.ru/mezhdunarodnaya-panorama/18543210", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2023-08-24T10:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "Japan leitet Aufbereitungswasser aus Fukushima ins Meer", "content": "Japan hat begonnen, aufbereitetes Kühlwasser aus dem havarierten Atomkraftwerk Fukushima in den Pazifik zu leiten. Die Internationale Atomenergiebehörde hält das Vorgehen für sicher, doch die Anrainerstaaten reagieren empört. China verhängte einen Importstopp für japanische Fischereiprodukte.", "url": "https://www.dw.com/de/fukushima-wasser-pazifik/a-66612345", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2023-08-24T12:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "Tropical storm approaches Florida Gulf Coast", "content": "A tropical storm gathering strength in the Gulf of Mexico is expected to make landfall on Florida's west coast this weekend, forecasters said Thursday. State officials urged residents in low-lying areas to prepare evacuation plans. The National Hurricane Center warned of dangerous storm surge.", "url": "https://www.weather.com/storms/hurricane/news/2023-08-24-tropical-storm-florida", "country_code": "US", "source_name": "The Weather Channel", "language": "en", "published_at": "2023-08-24T15:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国秋粮长势总体正常 丰收有基础", "content": "农业农村部最新农情调度显示，当前全国秋粮长势总体正常，丰收有基础。各地正加强田间管理，做好病虫害防控和防灾减灾工作。今年秋粮面积预计稳中有增。", "url": "https://www.moa.gov.cn/xw/zwdt/202308/autumn-grain.html", "country_code": "CN", "source_name": "农业农村部网站", "language": "zh", "published_at": "2023-08-24T16:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

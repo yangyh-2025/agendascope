@@ -1,0 +1,35 @@
+{
+  "case_id": "suez-evergiven-2021",
+  "label": "苏伊士运河长赐号搁浅事件（2021）",
+  "description": "2021年3月23日，集装箱船“长赐号”（Ever Given）在苏伊士运河搁浅导致航道完全堵塞，埃及英文媒体 Ahram Online 率先报道，随后 Reuters、Bloomberg、AFP、新华社、TASS、NHK、印度媒体相继跟进，全球航运与大宗商品市场持续震荡六天。标注依据为公开报道时间线：首发为埃及媒体（2021-03-23）。本案例含中文-英文跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "EG",
+    "origin_source_name": "Ahram Online",
+    "origin_at": "2021-03-23T08:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "GB", "first_media": "Reuters", "lag_hours": 3},
+      {"country_code": "US", "first_media": "Bloomberg", "lag_hours": 4},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 6},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 8},
+      {"country_code": "RU", "first_media": "TASS", "lag_hours": 10},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 12},
+      {"country_code": "IN", "first_media": "The Times of India", "lag_hours": 14}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a5", "d1"]],
+    "cross_language_pairs": [["a5", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Giant container ship runs aground in Suez Canal, blocking traffic", "content": "A 400-metre container ship ran aground in the Suez Canal early Tuesday, blocking one of the world's busiest shipping lanes in both directions. The Suez Canal Authority said tugboats were working to refloat the Panama-flagged Ever Given. Dozens of vessels are waiting at both ends of the canal.", "url": "https://english.ahram.org.eg/NewsContent/suez-canal-ever-given-aground-march-2021.aspx", "country_code": "EG", "source_name": "Ahram Online", "language": "en", "published_at": "2021-03-23T08:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a2", "title": "Container ship blocks Suez Canal, disrupting global trade", "content": "A giant container ship has run aground in Egypt's Suez Canal, halting traffic through a waterway that handles about 12 percent of global trade. Shipping data shows a growing tailback of oil tankers and bulk carriers. Refloating efforts are under way but could take days, salvage experts said.", "url": "https://www.reuters.com/world/middle-east/suez-canal-ever-given-2021-03-23/", "country_code": "GB", "source_name": "Reuters", "language": "en", "published_at": "2021-03-23T11:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "Suez Canal Blocked After Giant Ship Runs Aground", "content": "The Ever Given, one of the world's largest container ships, became wedged sideways across the Suez Canal on Tuesday, snarling supply chains already strained by the pandemic. Oil prices jumped as analysts weighed the impact on crude shipments from the Gulf. Ship-tracking maps showed a logjam forming in the Red Sea.", "url": "https://www.bloomberg.com/news/articles/2021-03-23/suez-canal-blocked-ever-given", "country_code": "US", "source_name": "Bloomberg", "language": "en", "published_at": "2021-03-23T12:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "Un porte-conteneurs géant bloque le canal de Suez", "content": "Le porte-conteneurs Ever Given s'est échoué mardi dans le canal de Suez, bloquant ce passage stratégique pour le commerce mondial. L'autorité du canal a indiqué que des remorqueurs tentaient de renflouer le navire. Des dizaines de bateaux sont à l'arrêt des deux côtés du canal.", "url": "https://www.afp.com/fr/infos/canal-suez-ever-given-echoue-20210323", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2021-03-23T14:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "苏伊士运河因货轮搁浅双向断航", "content": "埃及苏伊士运河管理局23日证实，一艘名为“长赐”号的大型集装箱船在运河内搁浅，导致运河双向航道中断。管理局已派出多艘拖船实施救援，数十艘货轮在运河两端排队等待通行。搁浅原因初步判断为强风和沙尘天气。", "url": "http://www.xinhuanet.com/world/2021-03/23/c_1127245678.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2021-03-23T16:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "Контейнеровоз Ever Given сел на мель в Суэцком канале", "content": "Крупный контейнеровоз Ever Given сел на мель в Суэцком канале, перекрыв движение судов в обоих направлениях. Администрация канала сообщила, что работы по снятию судна с мели могут занять несколько дней. На фоне блокировки канала мировые цены на нефть выросли.", "url": "https://tass.ru/ekonomika/10987654", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2021-03-23T18:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "スエズ運河で大型コンテナ船座礁 通行不能に", "content": "エジプトのスエズ運河で23日、大型コンテナ船「エバーギブン」が座礁し、運河が両方向とも通行不能となった。運河庁はタグボートによる離礁作業を進めているが、長期化の可能性も指摘されている。日本の海運会社が運航に関わる船舶も待機を余儀なくされている。", "url": "https://www3.nhk.or.jp/news/html/20210323/k1001295678.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2021-03-23T20:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a8", "title": "Suez Canal blockage: Indian exporters fear delays to Europe shipments", "content": "Indian exporters are bracing for delays after a giant container ship blocked the Suez Canal, a key route for trade between Asia and Europe. Freight rates on the India-Europe corridor are expected to rise if the disruption persists. Industry bodies said they are monitoring the situation closely.", "url": "https://timesofindia.indiatimes.com/business/india-business/suez-canal-blockage-india-impact/articleshow/81654321.cms", "country_code": "IN", "source_name": "The Times of India", "language": "en", "published_at": "2021-03-23T22:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "NBA trade deadline: contending teams make final moves", "content": "Several NBA playoff contenders completed last-minute deals ahead of Thursday's trade deadline. League executives described this year's market as unusually active. The trades will become official after players pass physicals.", "url": "https://www.espn.com/nba/story/trade-deadline-2021-recap", "country_code": "US", "source_name": "ESPN", "language": "en", "published_at": "2021-03-24T09:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "国产大型客机完成高原试飞验证", "content": "国产大型客机本周在高原机场顺利完成试飞验证科目，标志着该机型向商业运营迈出关键一步。试飞团队表示，飞机在高原低氧环境下各项系统表现稳定。后续还将开展严寒和高温环境测试。", "url": "https://news.cnr.cn/native/gd/20210324/aircraft-plateau-test.shtml", "country_code": "CN", "source_name": "央广网", "language": "zh", "published_at": "2021-03-24T10:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

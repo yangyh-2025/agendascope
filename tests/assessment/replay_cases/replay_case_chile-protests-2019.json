@@ -1,0 +1,33 @@
+{
+  "case_id": "chile-protests-2019",
+  "label": "智利社会抗议（2019）",
+  "description": "2019年10月18日，智利首都圣地亚哥因地铁票价上涨爆发大规模抗议并演变为全国性社会运动，智利《La Tercera》率先滚动报道地铁纵火与骚乱，西班牙《El País》、AP、BBC、AFP、新华社、Deutsche Welle 相继跟进，总统宣布紧急状态并最终同意修宪公投。标注依据为公开报道时间线：首发为智利媒体（2019-10-18）。本案例含西班牙语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "CL",
+    "origin_source_name": "La Tercera",
+    "origin_at": "2019-10-18T21:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "ES", "first_media": "El País", "lag_hours": 6},
+      {"country_code": "US", "first_media": "AP", "lag_hours": 8},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 10},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 12},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 20},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 24}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a3", "d1"]],
+    "cross_language_pairs": [["a1", "a3"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Metro de Santiago suspende servicios tras jornada de evasiones y destrozos", "content": "El Metro de Santiago suspendió este viernes el servicio en varias líneas tras una jornada de evasiones masivas y ataques a estaciones, en protesta por el alza del pasaje. El presidente Sebastián Piñera evalúa decretar estado de emergencia en la capital. Carabineros reportó decenas de detenidos y estaciones incendiadas.", "url": "https://www.latercera.com/nacional/noticia/metro-santiago-suspende-protestas-octubre-2019/", "country_code": "CL", "source_name": "La Tercera", "language": "es", "published_at": "2019-10-18T21:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "Chile declara el estado de emergencia en Santiago por las protestas del metro", "content": "El Gobierno de Chile decretó la madrugada del sábado el estado de emergencia en Santiago tras una noche de disturbios, incendios en estaciones de metro y saqueos. Las protestas comenzaron por la subida del precio del transporte y derivaron en una crisis social de gran alcance. Es la primera vez desde el retorno de la democracia que se toma esta medida por disturbios.", "url": "https://elpais.com/internacional/2019/10/19/actualidad/chile-estado-emergencia-santiago.html", "country_code": "ES", "source_name": "El País", "language": "es", "published_at": "2019-10-19T03:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "Chile declares state of emergency as Santiago metro protests turn violent", "content": "Chile's president declared a state of emergency in Santiago early Saturday after protests over a subway fare hike erupted into violence, with stations set on fire and stores looted. The military has been deployed to the streets of the capital. At least eight people died in related incidents over the weekend, officials said.", "url": "https://apnews.com/article/chile-protests-state-emergency-2019", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2019-10-19T05:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "Chile protests: state of emergency declared in Santiago", "content": "A state of emergency has been declared in the Chilean capital Santiago after protests against a rise in metro fares turned violent. Subway stations were torched and supermarkets looted in some of the worst unrest the city has seen in decades. President Sebastián Piñera said order would be restored by the armed forces.", "url": "https://www.bbc.com/news/world-latin-america-chile-protests", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2019-10-19T07:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a5", "title": "Chili : état d'urgence à Santiago après des émeutes contre la hausse du métro", "content": "Le gouvernement chilien a décrété l'état d'urgence à Santiago après une nuit de violences liées à la hausse du prix du ticket de métro. Des stations ont été incendiées et des magasins pillés. L'armée a été déployée dans la capitale pour la première fois depuis la fin de la dictature, hors catastrophes naturelles.", "url": "https://www.afp.com/fr/infos/chili-etat-urgence-santiago-20191019", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2019-10-19T09:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "智利首都因地铁涨价爆发骚乱 政府宣布进入紧急状态", "content": "智利首都圣地亚哥近日因地铁票价上涨爆发大规模抗议并演变为骚乱，多个地铁站遭纵火，部分商店被抢。智利总统皮涅拉19日凌晨宣布圣地亚哥进入紧急状态，军方已接管首都治安。这是智利恢复民主制度以来首次因社会骚乱实施紧急状态。", "url": "http://www.xinhuanet.com/world/2019-10/19/c_1125123456.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2019-10-19T17:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "Chile: Ausnahmezustand nach gewaltsamen Protesten in Santiago", "content": "Nach gewaltsamen Protesten gegen eine Fahrpreiserhöhung der Metro hat Chile den Ausnahmezustand über der Hauptstadt Santiago verhängt. Mehrere U-Bahn-Stationen wurden in Brand gesetzt, es gab Plünderungen und zahlreiche Festnahmen. Die Proteste richten sich inzwischen auch gegen die hohe soziale Ungleichheit im Land.", "url": "https://www.dw.com/de/chile-ausnahmezustand-santiago/a-50912345", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2019-10-19T21:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "Rugby World Cup: England advances to semifinals in Japan", "content": "England booked its place in the Rugby World Cup semifinals with a convincing quarterfinal win in Oita on Saturday. The team scored four tries in a dominant second-half performance. The semifinal lineup is now complete after a dramatic weekend of matches.", "url": "https://www.rugbyworldcup.com/news/england-semifinal-2019", "country_code": "JP", "source_name": "Rugby World Cup", "language": "en", "published_at": "2019-10-19T12:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国冬小麦播种进度过八成", "content": "农业农村部农情调度显示，全国冬小麦播种已过八成，进度总体快于去年同期。主产区土壤墒情适宜，有利于小麦出苗。各地正组织农技人员深入田间指导播后管理。", "url": "https://www.moa.gov.cn/xw/zwdt/201910/winter-wheat-sowing.html", "country_code": "CN", "source_name": "农业农村部网站", "language": "zh", "published_at": "2019-10-20T08:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

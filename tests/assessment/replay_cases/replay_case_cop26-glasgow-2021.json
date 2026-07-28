@@ -1,0 +1,33 @@
+{
+  "case_id": "cop26-glasgow-2021",
+  "label": "COP26 格拉斯哥气候大会（2021）",
+  "description": "2021年10月31日，第26届联合国气候变化大会（COP26）在英国格拉斯哥开幕，英国《卫报》率先推出开幕日报道，纽约时报、Deutsche Welle、Le Monde、El País、新华社、NHK 相继跟进，两周会期内全球媒体持续聚焦减排承诺与气候资金议题，最终通过《格拉斯哥气候公约》。标注依据为公开报道时间线：首发为英国媒体（2021-10-31）。本案例含法语-英语、西班牙语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "GB",
+    "origin_source_name": "The Guardian",
+    "origin_at": "2021-10-31T08:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "US", "first_media": "The New York Times", "lag_hours": 4},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 5},
+      {"country_code": "FR", "first_media": "Le Monde", "lag_hours": 6},
+      {"country_code": "ES", "first_media": "El País", "lag_hours": 7},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 8},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 12}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a4", "d1"]],
+    "cross_language_pairs": [["a4", "a2"], ["a5", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Cop26 opens in Glasgow with leaders urged to act on climate crisis", "content": "The Cop26 climate summit opens in Glasgow on Sunday, with almost 200 countries gathering for two weeks of negotiations described as the last best chance to keep 1.5C within reach. The UN secretary general warned that the world is digging its own grave by failing to cut emissions. Protests are expected across the host city.", "url": "https://www.theguardian.com/environment/2021/oct/31/cop26-opens-glasgow", "country_code": "GB", "source_name": "The Guardian", "language": "en", "published_at": "2021-10-31T08:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "COP26 Summit Begins as U.N. Warns of Climate Catastrophe", "content": "World leaders began arriving in Glasgow on Sunday for a United Nations climate summit that will test whether countries can agree on deeper emissions cuts. The talks come after a year of extreme weather on every continent. Vulnerable island nations are demanding more finance for adaptation and loss and damage.", "url": "https://www.nytimes.com/2021/10/31/climate/cop26-glasgow-opens.html", "country_code": "US", "source_name": "The New York Times", "language": "en", "published_at": "2021-10-31T12:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "COP26 in Glasgow: Klimagipfel startet unter massivem Druck", "content": "In Glasgow hat der UN-Klimagipfel COP26 begonnen. Knapp 200 Staaten verhandeln zwei Wochen lang über schärfere Klimaziele und die Finanzierung von Anpassungsmaßnahmen. Umweltverbände fordern ein klares Ausstiegsdatum aus der Kohle, Kritiker zweifeln am Durchsetzungswillen der Industrienationen.", "url": "https://www.dw.com/de/cop26-glasgow-start/a-59678901", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2021-10-31T13:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "La COP26 s'ouvre à Glasgow, sommée d'agir contre le réchauffement", "content": "La 26e conférence climat de l'ONU s'est ouverte dimanche à Glasgow en présence de dirigeants de près de 200 pays. L'objectif est de maintenir à portée de main la cible de 1,5 °C de réchauffement fixée par l'accord de Paris. Les pays en développement réclament le versement des 100 milliards de dollars promis.", "url": "https://www.lemonde.fr/climat/article/2021/10/31/la-cop26-s-ouvre-a-glasgow_6100567_1652612.html", "country_code": "FR", "source_name": "Le Monde", "language": "fr", "published_at": "2021-10-31T14:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a5", "title": "La COP26 arranca en Glasgow con la presión de evitar el colapso climático", "content": "La cumbre del clima de Glasgow comenzó este domingo con la advertencia de la ONU de que el mundo avanza hacia un calentamiento catastrófico. Cerca de 200 países negociarán durante dos semanas nuevos compromisos de reducción de emisiones. Los países insulares reclaman financiación para pérdidas y daños.", "url": "https://elpais.com/clima-y-medio-ambiente/2021-10-31/la-cop26-arranca-en-glasgow.html", "country_code": "ES", "source_name": "El País", "language": "es", "published_at": "2021-10-31T15:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a6", "title": "联合国气候变化格拉斯哥大会开幕", "content": "《联合国气候变化框架公约》第26次缔约方大会10月31日在英国格拉斯哥开幕。大会主席呼吁各方加大行动力度，兑现《巴黎协定》承诺。中方表示，将以实际行动推动构建公平合理、合作共赢的全球环境治理体系。", "url": "http://www.news.cn/world/2021-10/31/c_1128012345.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2021-10-31T16:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "COP26 グラスゴーで開幕 1.5度目標の達成が焦点", "content": "国連の気候変動会議COP26が31日、イギリスのグラスゴーで開幕した。気温上昇を1.5度に抑える目標の達成に向け、各国の削減目標の引き上げが焦点となる。島しょ国は海面上昇への危機感を訴え、先進国に資金支援の拡充を求めている。", "url": "https://www3.nhk.or.jp/news/html/20211031/k1001332456.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2021-10-31T20:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "Premier League: Manchester derby ends in goalless draw", "content": "Sunday's Manchester derby finished in a goalless draw at Old Trafford, leaving both clubs frustrated in the title race. The home side dominated possession but failed to convert their chances. Both managers praised their defensive organization after the match.", "url": "https://www.skysports.com/football/news/man-utd-man-city-2021-10-31", "country_code": "GB", "source_name": "Sky Sports", "language": "en", "published_at": "2021-10-31T18:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国粮食库存总量处于历史高位", "content": "国家粮食和物资储备局相关负责人表示，当前我国粮食库存总量处于历史高位，小麦和稻谷两大口粮品种库存充足。秋粮收购工作正有序展开，市场价格总体平稳。", "url": "https://www.gov.cn/xinwen/2021-10/31/content_grain-reserve.htm", "country_code": "CN", "source_name": "中国政府网", "language": "zh", "published_at": "2021-10-31T22:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

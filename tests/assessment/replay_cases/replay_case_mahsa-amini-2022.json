@@ -1,0 +1,33 @@
+{
+  "case_id": "mahsa-amini-2022",
+  "label": "玛莎·阿米尼事件（2022）",
+  "description": "2022年9月16日，22岁伊朗女子玛莎·阿米尼在被道德警察拘押期间死亡，伊朗英文报纸 Tehran Times 率先报道死讯，随后半岛电视台（阿语）、BBC、AP、AFP、Deutsche Welle、人民网相继跟进，伊朗多地爆发持续数月的抗议，引发国际社会广泛谴责。标注依据为公开报道时间线：首发为伊朗媒体（2022-09-16）。本案例含阿拉伯语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "IR",
+    "origin_source_name": "Tehran Times",
+    "origin_at": "2022-09-16T14:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "QA", "first_media": "Al Jazeera Arabic", "lag_hours": 8},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 10},
+      {"country_code": "US", "first_media": "AP", "lag_hours": 12},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 14},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 18},
+      {"country_code": "CN", "first_media": "人民网", "lag_hours": 36}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a3", "d2"], ["a2", "d1"]],
+    "cross_language_pairs": [["a2", "a3"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Young woman dies in Tehran after detention by morality police", "content": "Mahsa Amini, a 22-year-old woman detained by Iran's morality police earlier this week for allegedly violating hijab rules, has died in hospital, officials confirmed on Friday. Police said she suffered a heart attack while in custody. Her family rejected the claim, saying she was healthy before her arrest.", "url": "https://www.tehrantimes.com/news/mahsa-amini-death-morality-police-2022", "country_code": "IR", "source_name": "Tehran Times", "language": "en", "published_at": "2022-09-16T14:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "وفاة الشابة مهسا أميني بعد احتجازها لدى شرطة الأخلاق في إيران", "content": "توفيت الشابة الإيرانية مهسا أميني البالغة 22 عاما في مستشفى بطهران بعد أيام من احتجازها لدى شرطة الأخلاق. وقالت الشرطة إنها أصيبت بنوبة قلبية أثناء الاحتجاز، لكن عائلتها شككت في هذا الرواية. واندلعت احتجاجات غاضبة في مدينتها سقز وفي العاصمة طهران.", "url": "https://www.aljazeera.net/news/2022/9/16/mahsa-amini-death-iran", "country_code": "QA", "source_name": "Al Jazeera Arabic", "language": "ar", "published_at": "2022-09-16T22:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a3", "title": "Mahsa Amini: Woman dies after arrest by Iran's morality police", "content": "A young Iranian woman has died after being arrested by the morality police for allegedly breaking strict hijab rules. Protests erupted in Tehran and in Mahsa Amini's home province of Kurdistan following news of her death. The UN has called for an independent investigation into the circumstances.", "url": "https://www.bbc.com/news/world-middle-east-mahsa-amini", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2022-09-17T00:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "Death of woman in Iran police custody sparks protests", "content": "The death of 22-year-old Mahsa Amini in the custody of Iran's morality police has sparked protests in several Iranian cities, witnesses and local media reported. Security forces dispersed crowds outside the hospital where she died. Rights groups say she was beaten in detention, a claim police deny.", "url": "https://apnews.com/article/iran-mahsa-amini-protests-2022", "country_code": "US", "source_name": "AP", "language": "en", "published_at": "2022-09-17T02:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "Iran : la mort de Mahsa Amini après son arrestation suscite des manifestations", "content": "La mort de Mahsa Amini, une jeune femme de 22 ans décédée après son arrestation par la police des mœurs en Iran, a provoqué des manifestations dans plusieurs villes du pays. Des vidéos montrent des femmes retirant leur voile en signe de protestation. L'ONU a réclamé une enquête indépendante.", "url": "https://www.afp.com/fr/infos/iran-mahsa-amini-manifestations-20220917", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2022-09-17T04:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "Iran: Tod von Jina Mahsa Amini löst Protestwelle aus", "content": "Der Tod der 22-jährigen Jina Mahsa Amini nach ihrer Festnahme durch die iranische Sittenpolizei hat eine Protestwelle ausgelöst. In mehreren Städten gingen Menschen auf die Straße, Frauen zogen demonstrativ ihre Kopftücher aus. Bundesaußenministerin Baerbock forderte eine lückenlose Aufklärung.", "url": "https://www.dw.com/de/iran-mahsa-amini-proteste/a-63145678", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2022-09-17T08:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "伊朗女子被道德警察拘押期间死亡引发抗议", "content": "伊朗一名22岁女子日前因“头巾佩戴不当”被道德警察拘押，随后在医院不治身亡，事件引发伊朗多个城市出现抗议活动。伊朗警方称该女子因心脏病发作死亡，其家属对此说法表示质疑。联合国方面呼吁展开独立调查。", "url": "http://world.people.com.cn/n1/2022/0918/c1002-32531234.html", "country_code": "CN", "source_name": "人民网", "language": "zh", "published_at": "2022-09-18T02:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "James Webb telescope captures stunning new image of Neptune", "content": "NASA released the clearest view of Neptune's rings in more than 30 years, captured by the James Webb Space Telescope. The infrared image shows the ice giant and its fainter dust bands in unprecedented detail. Astronomers say the observations will improve models of the outer solar system.", "url": "https://www.nasa.gov/feature/webb-neptune-rings-2022", "country_code": "US", "source_name": "NASA", "language": "en", "published_at": "2022-09-17T12:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "中国队夺得世界女排锦标赛开门红", "content": "中国女排17日在世界女排锦标赛小组赛首战中直落三局战胜对手，取得开门红。主教练赛后表示，队伍在发球和拦网环节发挥了训练水平。下一轮比赛将于两天后进行。", "url": "https://sports.sina.com.cn/others/volleyball/2022-09-17/china-women-volleyball.html", "country_code": "CN", "source_name": "新浪体育", "language": "zh", "published_at": "2022-09-18T06:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

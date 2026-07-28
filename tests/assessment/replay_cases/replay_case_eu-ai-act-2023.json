@@ -1,0 +1,33 @@
+{
+  "case_id": "eu-ai-act-2023",
+  "label": "欧盟《人工智能法案》达成政治协议（2023）",
+  "description": "2023年12月8日深夜，欧盟委员会、欧洲议会与欧盟理事会就全球首部综合性人工智能立法《人工智能法案》达成政治协议，Politico Europe 率先披露谈判结果，Le Monde、Handelsblatt、TechCrunch、El País、财新、日经相继跟进，全球科技监管议题随之升温。标注依据为公开报道时间线：首发为比利时（欧盟机构所在地）媒体（2023-12-08）。本案例含法语-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "BE",
+    "origin_source_name": "Politico Europe",
+    "origin_at": "2023-12-08T20:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "FR", "first_media": "Le Monde", "lag_hours": 4},
+      {"country_code": "DE", "first_media": "Handelsblatt", "lag_hours": 5},
+      {"country_code": "US", "first_media": "TechCrunch", "lag_hours": 6},
+      {"country_code": "ES", "first_media": "El País", "lag_hours": 10},
+      {"country_code": "CN", "first_media": "财新传媒", "lag_hours": 20},
+      {"country_code": "JP", "first_media": "日本経済新聞", "lag_hours": 24}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a4", "d1"]],
+    "cross_language_pairs": [["a2", "a4"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "EU strikes deal on landmark AI Act after marathon talks", "content": "European Union negotiators reached a political agreement on the AI Act late Friday after nearly 38 hours of talks in Brussels. The legislation is the world's first comprehensive law regulating artificial intelligence, with bans on certain uses and strict rules for high-risk systems. Details on foundation models were among the last sticking points.", "url": "https://www.politico.eu/article/eu-ai-act-deal-brussels-2023/", "country_code": "BE", "source_name": "Politico Europe", "language": "en", "published_at": "2023-12-08T20:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a2", "title": "Intelligence artificielle : l'Union européenne scelle un accord historique", "content": "Les institutions européennes sont parvenues vendredi soir à un accord politique sur le règlement encadrant l'intelligence artificielle, le premier du genre au monde. Le texte interdit certaines pratiques comme la notation sociale et impose des obligations aux modèles dits « à risque systémique ». Les amendes peuvent atteindre 7 % du chiffre d'affaires mondial.", "url": "https://www.lemonde.fr/pixels/article/2023/12/08/accord-historique-regulation-ia_6204567_4408996.html", "country_code": "FR", "source_name": "Le Monde", "language": "fr", "published_at": "2023-12-09T00:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "EU einigt sich auf KI-Gesetz: Weltweit erste umfassende Regulierung", "content": "Nach marathonlangen Verhandlungen haben sich EU-Parlament, Kommission und Mitgliedstaaten auf das Gesetz zur Künstlichen Intelligenz geeinigt. Das KI-Gesetz verbietet bestimmte Anwendungen und sieht strenge Auflagen für Hochrisiko-Systeme vor. Die Industrie warnt vor Innovationshemmnissen, Verbraucherschützer begrüßen die Einigung.", "url": "https://www.handelsblatt.com/technik/ki/eu-ki-gesetz-einigung-2023/29567890.html", "country_code": "DE", "source_name": "Handelsblatt", "language": "de", "published_at": "2023-12-09T01:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a4", "title": "EU reaches provisional agreement on the AI Act, the world's first comprehensive AI law", "content": "The European Union clinched a deal on its AI Act in the early hours of Saturday, setting global precedent for how artificial intelligence is regulated. The law introduces tiered obligations based on risk and specific rules for general-purpose AI models like those behind chatbots. Formal votes in parliament and council are expected early next year.", "url": "https://techcrunch.com/2023/12/09/eu-ai-act-agreement/", "country_code": "US", "source_name": "TechCrunch", "language": "en", "published_at": "2023-12-09T02:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a5", "title": "La UE cierra el primer acuerdo mundial para regular la inteligencia artificial", "content": "La Unión Europea alcanzó en la madrugada del sábado un acuerdo político sobre la Ley de Inteligencia Artificial, pionera a nivel mundial. La norma prohíbe usos considerados inaceptables y regula los sistemas de alto riesgo y los modelos de uso general. España, que ocupa la presidencia del Consejo, celebró el pacto como un hito histórico.", "url": "https://elpais.com/tecnologia/2023-12-09/la-ue-cierra-acuerdo-ley-ia.html", "country_code": "ES", "source_name": "El País", "language": "es", "published_at": "2023-12-09T06:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a6", "title": "欧盟就《人工智能法案》达成协议 全球首部综合性AI立法落地", "content": "经过马拉松式谈判，欧盟三大机构12月8日就《人工智能法案》达成政治协议，这是全球首部针对人工智能的综合性立法。法案按风险分级实施监管，禁止社会评分等不可接受用途，并对通用大模型设定透明度义务。法案预计于2024年正式生效，分阶段实施。", "url": "https://www.caixin.com/2023-12-09/eu-ai-act-report.html", "country_code": "CN", "source_name": "财新传媒", "language": "zh", "published_at": "2023-12-09T16:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a7", "title": "EU AI規制法案で政治合意 世界初の包括的ルール", "content": "EUの欧州委員会、欧州議会、理事会は8日、人工知能を包括的に規制するAI法案について政治合意した。リスクに応じた段階的な規制を導入し、社会的信用スコアリングなどを禁止する。日本企業を含め欧州市場でAIを展開する企業への影響が注目される。", "url": "https://www.nikkei.com/article/DGXZQOGR09AIACT2023/", "country_code": "JP", "source_name": "日本経済新聞", "language": "ja", "published_at": "2023-12-09T20:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "NHL: overtime thriller headlines Saturday night hockey", "content": "Saturday night's NHL slate was headlined by an overtime thriller in Toronto, decided by a breakaway goal in the final minute. The win snapped the home team's three-game losing streak. League scoring leaders all found the scoresheet across the night's games.", "url": "https://www.nhl.com/news/overtime-thriller-toronto-2023-12-09", "country_code": "CA", "source_name": "NHL", "language": "en", "published_at": "2023-12-09T04:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国冬季公路养护工作全面展开", "content": "交通运输部部署各地全面展开冬季公路养护工作，重点加强桥梁隧道检查和除雪防滑物资储备。北方地区已启动恶劣天气应急预案，保障干线公路安全畅通。", "url": "https://www.mot.gov.cn/jiaotongyaowen/202312/winter-road-maintenance.html", "country_code": "CN", "source_name": "交通运输部网站", "language": "zh", "published_at": "2023-12-09T22:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

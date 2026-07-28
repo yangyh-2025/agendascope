@@ -1,0 +1,30 @@
+{
+  "case_id": "neg-crawled-rumor-resignation-2022",
+  "label": "负例：爬取低置信博客传闻引发的多国报道（2022）",
+  "description": "2022年6月10日，一个英国政治类个人博客声称某内阁大臣即将辞职，该消息来源时间戳由爬取获得（time_source=crawled，低置信度），随后主流媒体和多国媒体对辞职传闻及官方否认进行了报道。虽然报道覆盖超过3个国家，但首发源的时间置信度不足（a 条件不满足），不应自动判定为议程设置事件。文章报道同一事件，应归入同一议题。",
+  "ground_truth": {
+    "origin_country": "GB",
+    "origin_source_name": "Westminster Insider Blog",
+    "origin_at": "2022-06-10T09:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "US", "first_media": "CNN", "lag_hours": 8},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 10},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 12},
+      {"country_code": "CN", "first_media": "环球时报", "lag_hours": 20}
+    ],
+    "should_be_agenda_event": false,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a2", "d2"], ["a3", "d1"]],
+    "cross_language_pairs": []
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Exclusive: senior cabinet minister poised to resign, sources claim", "content": "A senior cabinet minister is preparing to resign within days, two unnamed sources have told this blog. The alleged departure is said to be linked to disagreements over economic policy. Downing Street has not responded to requests for comment at the time of publication.", "url": "https://westminsterinsider.blog/2022/06/10/cabinet-minister-resignation-rumor/", "country_code": "GB", "source_name": "Westminster Insider Blog", "language": "en", "published_at": "2022-06-10T09:00:00+00:00", "source_media_type": "online", "time_source": "crawled"},
+    {"article_id": "a2", "title": "Downing Street denies cabinet resignation rumours", "content": "Downing Street has denied rumours circulating online that a senior cabinet minister is about to resign. A spokesperson said the prime minister retains full confidence in his top team. The speculation began with an unverified post on a political blog.", "url": "https://www.bbc.com/news/uk-politics-cabinet-rumour-denial", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2022-06-10T15:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a3", "title": "UK government dismisses resignation rumor sparked by anonymous blog post", "content": "The British government on Friday dismissed as baseless an online rumor that a senior cabinet minister was about to quit. The rumor, which originated on an anonymous political blog, spread widely on social media before being denied. Analysts noted the episode highlights how quickly unverified claims can move markets and newsrooms.", "url": "https://www.cnn.com/2022/06/10/uk/cabinet-resignation-rumor/index.html", "country_code": "US", "source_name": "CNN", "language": "en", "published_at": "2022-06-10T17:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "Londres dément la rumeur de démission d'un ministre", "content": "Le gouvernement britannique a démenti vendredi une rumeur de démission d'un ministre de premier plan, alimentée par un blog politique anonyme. Downing Street a affirmé que le Premier ministre conservait toute confiance en son équipe. La rumeur s'était propagée rapidement sur les réseaux sociaux.", "url": "https://www.afp.com/fr/infos/londres-rumeur-demission-20220610", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2022-06-10T19:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a5", "title": "London dementiert Rücktrittsgerücht um Kabinettsmitglied", "content": "Die britische Regierung hat ein im Internet kursierendes Gerücht über den bevorstehenden Rücktritt eines ranghohen Ministers dementiert. Auslöser war ein anonymer Blogbeitrag ohne überprüfbare Quellen. Politikbeobachter warnten vor der Reichweite unbestätigter Meldungen.", "url": "https://www.dw.com/de/london-ruecktrittsgeruecht/a-62123456", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2022-06-10T21:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a6", "title": "英政府否认内阁大臣辞职传闻 称源自匿名博客不实消息", "content": "英国政府10日否认了有关一名内阁高级大臣即将辞职的网络传闻。首相府发言人表示，相关消息源自匿名政治博客的不实报道。多家英国主流媒体随后核实并澄清了这一传闻。", "url": "https://world.huanqiu.com/article/uk-cabinet-rumor-denial-2022-06-11", "country_code": "CN", "source_name": "环球时报", "language": "zh", "published_at": "2022-06-11T05:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "d1", "title": "French Open: teenager reaches first Grand Slam final", "content": "A 19-year-old qualifier reached her first Grand Slam final at the French Open on Friday after a three-set semifinal victory. She is the youngest finalist at Roland Garros in more than two decades. The championship match is scheduled for Saturday.", "url": "https://www.rolandgarros.com/en-us/teen-finalist-2022", "country_code": "FR", "source_name": "Roland Garros", "language": "en", "published_at": "2022-06-10T22:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国夏粮收购进展顺利 进度快于常年", "content": "国家粮食和物资储备局消息，今年夏粮收购进展总体顺利，收购进度快于常年水平。主产区小麦品质普遍较好，市场价格保持平稳。各类收购主体入市积极性较高。", "url": "https://www.gov.cn/xinwen/2022-06/11/content_summer-grain.htm", "country_code": "CN", "source_name": "中国政府网", "language": "zh", "published_at": "2022-06-11T08:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "case_id": "tiktok-ban-2020",
+  "label": "美国 TikTok 禁令争议（2020）",
+  "description": "2020年8月1日，《华尔街日报》率先报道特朗普表示将在美国禁用 TikTok，随后印度、英国、中国、法国、德国、日本媒体相继跟进，8月6日特朗普签署行政令，TikTok 出售谈判与法院诉讼持续数月，成为全球数据安全与平台治理议题的标志性事件。标注依据为公开报道时间线：首发为美国媒体（2020-08-01）。本案例含中文-英文跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "US",
+    "origin_source_name": "The Wall Street Journal",
+    "origin_at": "2020-08-01T02:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "IN", "first_media": "The Times of India", "lag_hours": 4},
+      {"country_code": "GB", "first_media": "BBC", "lag_hours": 5},
+      {"country_code": "CN", "first_media": "环球时报", "lag_hours": 6},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 7},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 8},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 10}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a3", "d2"], ["a2", "d1"]],
+    "cross_language_pairs": [["a4", "a2"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Trump says he will ban TikTok in the U.S. as soon as Saturday", "content": "President Trump told reporters aboard Air Force One that he plans to ban the Chinese-owned video app TikTok in the United States as soon as Saturday. The president said he could use emergency economic powers or an executive order. Microsoft has emerged as a potential buyer of TikTok's U.S. operations.", "url": "https://www.wsj.com/articles/trump-tiktok-ban-announcement-2020-08-01", "country_code": "US", "source_name": "The Wall Street Journal", "language": "en", "published_at": "2020-08-01T02:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "After India, US moves to ban TikTok: what it means for the app's future", "content": "President Trump's announcement that he will ban TikTok in the United States comes weeks after India blocked the app along with dozens of other Chinese services. Indian users had made TikTok one of the country's most downloaded apps before the June ban. Analysts say a US ban would be a far bigger blow to parent company ByteDance.", "url": "https://timesofindia.indiatimes.com/business/international-business/us-tiktok-ban-trump/articleshow/77287654.cms", "country_code": "IN", "source_name": "The Times of India", "language": "en", "published_at": "2020-08-01T06:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a3", "title": "TikTok: Trump says he will ban Chinese video app in the US", "content": "President Donald Trump has said he will ban the Chinese-owned video-sharing app TikTok in the US. He told reporters he could sign an executive order as early as Saturday. The app, which has an estimated 80 million active US users, has faced growing scrutiny over its handling of user data.", "url": "https://www.bbc.com/news/technology-trump-tiktok-ban", "country_code": "GB", "source_name": "BBC", "language": "en", "published_at": "2020-08-01T07:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "美方威胁禁用TikTok 外交部：美方泛化国家安全概念", "content": "针对美国总统特朗普表示将禁止TikTok在美运营，中国外交部发言人8月1日回应称，美方在拿不出任何证据的情况下泛化国家安全概念，滥用国家力量，无理打压非美国企业。发言人敦促美方停止将经贸问题政治化。字节跳动表示始终致力于保护用户数据安全。", "url": "https://world.huanqiu.com/article/tiktok-ban-response-2020-08-01", "country_code": "CN", "source_name": "环球时报", "language": "zh", "published_at": "2020-08-01T08:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a5", "title": "TikTok : Donald Trump annonce vouloir interdire l'application aux États-Unis", "content": "Le président américain Donald Trump a annoncé son intention d'interdire l'application TikTok aux États-Unis, invoquant des risques pour la sécurité nationale. Microsoft serait en négociations pour racheter les activités américaines de la plateforme. L'application revendique 800 millions d'utilisateurs actifs dans le monde.", "url": "https://www.afp.com/fr/infos/tiktok-trump-interdiction-20200801", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2020-08-01T09:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "Trump will TikTok in den USA verbieten", "content": "US-Präsident Donald Trump hat ein Verbot der chinesischen Video-App TikTok in den Vereinigten Staaten angekündigt. Er verwies auf Sicherheitsbedenken im Umgang mit Nutzerdaten. Microsoft soll an einer Übernahme des US-Geschäfts interessiert sein, die Verhandlungen laufen unter Zeitdruck.", "url": "https://www.dw.com/de/trump-tiktok-verbot/a-54398765", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2020-08-01T10:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a7", "title": "トランプ大統領 TikTokを禁止する方針表明", "content": "アメリカのトランプ大統領は、中国企業が運営する動画投稿アプリTikTokを国内で禁止する方針を表明した。利用者の情報が中国側に渡る懸念が理由としている。日本でも若者を中心に人気が高く、今後の対応が注目される。", "url": "https://www3.nhk.or.jp/news/html/20200801/k1001254321.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2020-08-01T12:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "MLB season resumes with expanded playoffs format", "content": "Major League Baseball's shortened season continued this weekend with teams adjusting to new health protocols and an expanded playoff format. Several games were postponed earlier in the week after positive tests. League officials said the schedule remains on track overall.", "url": "https://www.mlb.com/news/season-update-august-2020", "country_code": "US", "source_name": "MLB", "language": "en", "published_at": "2020-08-01T16:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "国产新能源汽车7月销量同比转正", "content": "乘联会数据显示，7月国内新能源乘用车销量同比增长实现转正，为今年以来首次。多款新上市车型贡献主要增量，充电桩等配套设施建设也在加快。业内预计下半年市场将保持回升态势。", "url": "https://auto.sina.com.cn/news/2020-08-01/nev-sales-july.html", "country_code": "CN", "source_name": "新浪汽车", "language": "zh", "published_at": "2020-08-01T18:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "case_id": "russia-ukraine-invasion-2022",
+  "label": "俄乌战争全面爆发（2022）",
+  "description": "2022年2月24日凌晨，俄罗斯宣布在乌克兰开展“特别军事行动”，塔斯社率先发布消息，随后乌克兰 Kyiv Independent、Reuters、CNN、新华社、AFP、Deutsche Welle、NHK 在数小时内相继跟进，全球媒体进入持续滚动报道状态。标注依据为公开报道时间线：首发为俄罗斯媒体（2022-02-24）。本案例含俄语-英语、中文-英语跨语言同事件报道对。",
+  "ground_truth": {
+    "origin_country": "RU",
+    "origin_source_name": "TASS",
+    "origin_at": "2022-02-24T03:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "UA", "first_media": "Kyiv Independent", "lag_hours": 1},
+      {"country_code": "GB", "first_media": "Reuters", "lag_hours": 1},
+      {"country_code": "US", "first_media": "CNN", "lag_hours": 2},
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 3},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 3},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 4},
+      {"country_code": "JP", "first_media": "NHK", "lag_hours": 6}
+    ],
+    "should_be_agenda_event": true,
+    "expected_article_groups": [["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"]],
+    "expected_separate_pairs": [["a1", "d1"], ["a3", "d2"], ["a5", "d1"]],
+    "cross_language_pairs": [["a1", "a3"], ["a5", "a3"]]
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Путин объявил о начале специальной военной операции на Украине", "content": "Президент России Владимир Путин в обращении к нации объявил о начале специальной военной операции на Украине. Он заявил, что целью операции является демилитаризация страны. В Киеве и других городах Украины прогремели взрывы.", "url": "https://tass.ru/politika/13765432", "country_code": "RU", "source_name": "TASS", "language": "ru", "published_at": "2022-02-24T03:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a2", "title": "Explosions heard in Kyiv as Russia launches military operation", "content": "Explosions were heard in Kyiv and several other Ukrainian cities in the early hours of Thursday after Russia announced a military operation against Ukraine. President Zelensky declared martial law and urged citizens to stay calm. Air raid sirens sounded across the capital.", "url": "https://kyivindependent.com/explosions-kyiv-russia-invasion-feb-24/", "country_code": "UA", "source_name": "Kyiv Independent", "language": "en", "published_at": "2022-02-24T04:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "a3", "title": "Russia launches full-scale invasion of Ukraine", "content": "Russia has launched a full-scale invasion of Ukraine, with missile strikes reported across the country and ground forces crossing the border from multiple directions. Ukraine's government said it was fighting to defend its territory. World leaders condemned the attack and promised severe sanctions.", "url": "https://www.reuters.com/world/europe/russia-invades-ukraine-2022-02-24/", "country_code": "GB", "source_name": "Reuters", "language": "en", "published_at": "2022-02-24T04:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a4", "title": "Russia invades Ukraine: explosions rock major cities", "content": "Russian forces attacked Ukraine early Thursday in what Western officials described as the largest military assault in Europe since World War II. Explosions were reported in Kyiv, Kharkiv and Odesa. Thousands of residents fled toward the western border as airspace over Ukraine was closed.", "url": "https://www.cnn.com/2022/02/24/europe/russia-ukraine-invasion-intl/index.html", "country_code": "US", "source_name": "CNN", "language": "en", "published_at": "2022-02-24T05:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a5", "title": "俄罗斯宣布在乌克兰开展特别军事行动", "content": "俄罗斯总统普京24日清晨发表电视讲话，宣布在乌克兰顿巴斯地区开展特别军事行动。乌克兰首都基辅等多地传出爆炸声，乌政府宣布全国进入战时状态。联合国安理会召开紧急会议讨论局势。", "url": "http://www.xinhuanet.com/world/2022-02/24/c_1128412345.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2022-02-24T06:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a6", "title": "La Russie lance une invasion de l'Ukraine, explosions à Kiev", "content": "La Russie a lancé jeudi une invasion de l'Ukraine, avec des frappes de missiles sur plusieurs villes et l'entrée de troupes au sol. Le président ukrainien a proclamé la loi martiale. L'Union européenne et les États-Unis ont annoncé la préparation de sanctions sans précédent.", "url": "https://www.afp.com/fr/infos/russie-ukraine-invasion-20220224", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2022-02-24T06:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a7", "title": "Russland beginnt Großangriff auf die Ukraine", "content": "Russland hat in der Nacht zum Donnerstag einen Großangriff auf die Ukraine begonnen. In Kiew und weiteren Städten waren Explosionen zu hören, das ukrainische Militär meldete Gefechte an mehreren Frontabschnitten. Bundeskanzler Scholz sprach von einem dunklen Tag für Europa.", "url": "https://www.dw.com/de/russland-angriff-ukraine/a-60912345", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2022-02-24T07:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a8", "title": "ロシア ウクライナに軍事侵攻 首都キーウで爆発音", "content": "ロシアのプーチン大統領は24日、ウクライナ東部での特別軍事作戦を開始すると発表した。首都キーウなど各地で爆発音が確認され、ウクライナ政府は戒厳令を宣言した。日本政府は強く非難し、追加制裁の検討に入った。", "url": "https://www3.nhk.or.jp/news/html/20220224/k1001349876.html", "country_code": "JP", "source_name": "NHK", "language": "ja", "published_at": "2022-02-24T09:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "d1", "title": "Winter Paralympics: full schedule released for Beijing Games", "content": "Organizers of the Beijing Winter Paralympics released the full competition schedule on Thursday. The Games will feature six sports across three venue clusters. Ticket allocation for domestic spectators was also announced.", "url": "https://www.paralympic.org/beijing-2022/schedule-release", "country_code": "GB", "source_name": "International Paralympic Committee", "language": "en", "published_at": "2022-02-24T12:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "全国春耕备耕工作陆续展开", "content": "随着气温回升，全国春耕备耕工作自南向北陆续展开。农业农村部要求各地落实粮食播种面积，保障农资供应。中央财政已提前下达多项支农补贴资金。", "url": "https://www.agri.cn/V20/ZX/gqgg/202202/spring-ploughing.html", "country_code": "CN", "source_name": "中国农业信息网", "language": "zh", "published_at": "2022-02-24T14:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}

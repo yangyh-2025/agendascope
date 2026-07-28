@@ -1,0 +1,30 @@
+{
+  "case_id": "neg-independent-regional-floods-2023",
+  "label": "负例：多国同日各自报道本国独立洪灾（2023）",
+  "description": "2023年7月中旬北半球多地出现强降雨，美国佛蒙特州、中国重庆、德国巴伐利亚、西班牙萨拉戈萨、法国里昂在同一天分别发生彼此独立的区域性洪涝灾害，各国媒体均只报道本国灾情。虽然表面上多国在相近时间报道“洪水”，但事件彼此独立、无首发-跟随的传播关系，属于多国独立自发报道，不应判定为议程设置事件，也不应合并为同一议题。标注方法：五篇事件文章分别对应五个不同国家的独立灾害，任意两篇事件文章之间均登记为 expected_separate_pairs。",
+  "ground_truth": {
+    "origin_country": "US",
+    "origin_source_name": "USA Today",
+    "origin_at": "2023-07-15T06:00:00+00:00",
+    "follower_sequence": [
+      {"country_code": "CN", "first_media": "新华社", "lag_hours": 1},
+      {"country_code": "DE", "first_media": "Deutsche Welle", "lag_hours": 2},
+      {"country_code": "ES", "first_media": "El País", "lag_hours": 3},
+      {"country_code": "FR", "first_media": "AFP", "lag_hours": 4}
+    ],
+    "should_be_agenda_event": false,
+    "expected_article_groups": [],
+    "expected_separate_pairs": [["a1", "a2"], ["a1", "a3"], ["a1", "a4"], ["a1", "a5"], ["a2", "a3"], ["a2", "a4"], ["a2", "a5"], ["a3", "a4"], ["a3", "a5"], ["a4", "a5"], ["a1", "d1"], ["a2", "d2"]],
+    "cross_language_pairs": []
+  },
+  "articles": [
+    {"article_id": "a1", "title": "Flash floods inundate downtown Montpelier after record rainfall in Vermont", "content": "Record overnight rainfall triggered flash flooding across central Vermont on Friday, inundating downtown Montpelier and forcing dozens of rescues. The National Weather Service said some rivers crested at their highest levels in decades. The governor declared a state of emergency for several counties.", "url": "https://www.usatoday.com/story/news/nation/2023/07/15/vermont-flash-floods-montpelier/", "country_code": "US", "source_name": "USA Today", "language": "en", "published_at": "2023-07-15T06:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a2", "title": "重庆多地遭遇强降雨 部分中小河流水位上涨", "content": "重庆市多个区县15日遭遇强降雨天气，部分中小河流水位明显上涨，个别低洼路段出现积水。当地气象部门发布暴雨橙色预警，防汛部门已启动应急响应。暂无人员伤亡报告。", "url": "http://www.cq.xinhuanet.com/2023-07/15/chongqing-rainfall.htm", "country_code": "CN", "source_name": "新华社", "language": "zh", "published_at": "2023-07-15T07:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "a3", "title": "Unwetter in Bayern: Hochwasser nach Starkregen in mehreren Landkreisen", "content": "Heftige Regenfälle haben in der Nacht zum Freitag in mehreren bayerischen Landkreisen zu Hochwasser geführt. Keller liefen voll, Straßen wurden überflutet, die Feuerwehr rückte zu hunderten Einsätzen aus. Der Deutsche Wetterdienst warnt vor weiteren Schauern am Wochenende.", "url": "https://www.dw.com/de/unwetter-bayern-hochwasser-2023/a-66234567", "country_code": "DE", "source_name": "Deutsche Welle", "language": "de", "published_at": "2023-07-15T08:00:00+00:00", "source_media_type": "broadcast", "time_source": "feed"},
+    {"article_id": "a4", "title": "Las lluvias torrenciales anegan barrios de Zaragoza y cortan carreteras", "content": "Las lluvias torrenciales registradas esta madrugada han anegado varios barrios de Zaragoza y han obligado a cortar carreteras comarcales. Los bomberos rescataron a una decena de personas atrapadas en sus vehículos. La Agencia Estatal de Meteorología mantiene el aviso naranja en la provincia.", "url": "https://elpais.com/espana/2023-07-15/lluvias-zaragoza-inundaciones.html", "country_code": "ES", "source_name": "El País", "language": "es", "published_at": "2023-07-15T09:00:00+00:00", "source_media_type": "newspaper", "time_source": "feed"},
+    {"article_id": "a5", "title": "Lyon : des quartiers inondés après des orages violents dans la nuit", "content": "De violents orages ont frappé la métropole de Lyon dans la nuit de jeudi à vendredi, provoquant des inondations dans plusieurs quartiers et des coupures d'électricité. Le tunnel de la Croix-Rousse a été fermé à la circulation en raison d'une accumulation d'eau. Météo-France maintient le département en vigilance orange.", "url": "https://www.afp.com/fr/infos/lyon-inondations-orages-20230715", "country_code": "FR", "source_name": "AFP", "language": "fr", "published_at": "2023-07-15T10:00:00+00:00", "source_media_type": "agency", "time_source": "feed"},
+    {"article_id": "d1", "title": "Wimbledon: men's singles final set after dramatic semifinals", "content": "The Wimbledon men's singles final lineup was confirmed on Friday after two dramatic semifinal matches on Centre Court. The tournament has drawn record crowds this fortnight. Sunday's final will be broadcast in more than 200 territories.", "url": "https://www.wimbledon.com/en_GB/news/mens-final-2023-semifinals.html", "country_code": "GB", "source_name": "Wimbledon", "language": "en", "published_at": "2023-07-15T14:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d2", "title": "上半年我国造船三大指标全面增长", "content": "工业和信息化部数据显示，今年上半年我国造船完工量、新接订单量、手持订单量三大指标全面增长，国际市场份额继续保持领先。多家船企订单已排至2027年以后。", "url": "https://www.miit.gov.cn/gxsj/tjfx/202307/shipbuilding-indicators.html", "country_code": "CN", "source_name": "工业和信息化部网站", "language": "zh", "published_at": "2023-07-15T16:00:00+00:00", "source_media_type": "online", "time_source": "feed"},
+    {"article_id": "d3", "title": "Louvre announces major renovation plan for eastern wing", "content": "The Louvre museum in Paris announced a multi-year renovation plan for its eastern wing on Friday. The project will expand gallery space for Renaissance collections and upgrade climate control systems. Parts of the wing will close to visitors from next spring.", "url": "https://www.louvre.fr/en/explore/eastern-wing-renovation-2023", "country_code": "FR", "source_name": "Musée du Louvre", "language": "en", "published_at": "2023-07-15T18:00:00+00:00", "source_media_type": "online", "time_source": "feed"}
+  ]
+}
