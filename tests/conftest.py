@@ -27,6 +27,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key")
 os.environ.setdefault("COLLECTOR_INTERNAL_TOKEN", "test-internal-token")
 os.environ.setdefault("SEED_ADMIN_USERNAME", "admin")
 os.environ.setdefault("SEED_ADMIN_PASSWORD", "Admin12345")
+os.environ.setdefault("LICENSE_SECRET_KEY", "test-license-secret")
 
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
@@ -85,6 +86,7 @@ def db(migrated_db):
     session = SessionLocal()
     with migrated_db.connect() as conn:
         for table in (
+            "system_license", "setup_state",
             "subscription_deliveries", "subscriptions", "report_exports",
             "alerts", "alert_rules", "topic_articles", "agenda_snapshots", "topics",
             "collection_jobs", "articles", "sources", "users",
