@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.core.security import hash_password
+from app.core.security import check_password_policy, hash_password
 from app.models.alert import AlertRule
 from app.models.user import User
 
@@ -16,6 +16,11 @@ def ensure_admin(db: Session) -> User:
     user = db.scalar(select(User).where(User.username == settings.seed_admin_username))
     if user is not None:
         return user
+    # 密码创建路径统一过服务端策略（T1.7）：弱初始密码直接拒绝，不静默落库
+    if not check_password_policy(settings.seed_admin_password):
+        raise ValueError(
+            "SEED_ADMIN_PASSWORD 不符合密码策略（至少 10 位且包含大小写字母与数字），请修改配置后重试"
+        )
     user = User(
         username=settings.seed_admin_username,
         password_hash=hash_password(settings.seed_admin_password),

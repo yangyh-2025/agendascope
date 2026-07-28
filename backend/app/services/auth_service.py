@@ -7,15 +7,18 @@ from app.config import get_settings
 from app.core.errors import (
     CODE_ACCOUNT_DISABLED,
     CODE_BAD_CREDENTIALS,
+    CODE_PARAM_INVALID,
     CODE_RATE_LIMITED,
     CODE_UNAUTHORIZED,
     BizError,
 )
 from app.core.security import (
     TOKEN_TYPE_REFRESH,
+    check_password_policy,
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.core.session_store import (
@@ -103,3 +106,19 @@ class AuthService:
         payload = decode_token(refresh_token, TOKEN_TYPE_REFRESH)
         revoke_refresh_session(payload["sub"], payload["jti"])
         blacklist_access_token(access_jti, access_exp)
+
+    def change_password(self, user: User, old_password: str, new_password: str) -> None:
+        """修改密码（T1.7 密码策略闭环）：
+
+        旧密码校验 → 新密码过 check_password_policy（≥10 字符含大小写+数字）→
+        落库并清除 must_change_password → 吊销该用户全部 refresh 会话，强制重新登录。
+        """
+        if not verify_password(old_password, user.password_hash):
+            raise BizError(CODE_BAD_CREDENTIALS, "原密码错误")
+        if not check_password_policy(new_password):
+            raise BizError(CODE_PARAM_INVALID, "新密码不符合策略：至少 10 位且包含大小写字母与数字")
+        user.password_hash = hash_password(new_password)
+        user.must_change_password = False
+        self.db.flush()
+        revoke_all_user_sessions(str(user.id))
+        self.db.commit()

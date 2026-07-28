@@ -9,6 +9,7 @@ from sqlalchemy import text
 
 from app.api.deps import get_db
 from app.core.errors import BizError, ok
+from app.core.security import check_password_policy, hash_password
 from app.db.session import get_session_factory
 from app.services.seed_service import ensure_admin
 
@@ -97,9 +98,14 @@ def setup_step(body: SetupStepInput, request: Request):
         elif body.step == 4:
             if not body.admin_username or not body.admin_password:
                 raise BizError(1001, "管理员用户名与密码必填")
-            if len(body.admin_password) < 10:
-                raise BizError(1001, "密码必须 ≥10 字符")
+            # 密码创建/重置路径统一过服务端策略（T1.7）
+            if not check_password_policy(body.admin_password):
+                raise BizError(1001, "密码不符合策略：至少 10 位且包含大小写字母与数字")
             admin = ensure_admin(db)
+            # 安装向导录入的密码真实生效：重置 admin 密码并解除强制改密标记
+            admin.password_hash = hash_password(body.admin_password)
+            admin.must_change_password = False
+            db.commit()
             return ok({"step": 4, "message": "管理员账号已就绪", "admin_id": str(admin.id)})
         elif body.step == 5:
             return ok({

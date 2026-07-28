@@ -8,7 +8,13 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.errors import CODE_ACCOUNT_DISABLED, CODE_FORBIDDEN, CODE_UNAUTHORIZED, BizError
+from app.core.errors import (
+    CODE_ACCOUNT_DISABLED,
+    CODE_FORBIDDEN,
+    CODE_PASSWORD_CHANGE_REQUIRED,
+    CODE_UNAUTHORIZED,
+    BizError,
+)
 from app.core.security import TOKEN_TYPE_ACCESS, decode_token
 from app.core.session_store import is_access_blacklisted
 from app.db.session import get_db
@@ -43,6 +49,13 @@ _ROLE_LEVEL = {ROLE_REGISTERED: 1, ROLE_AUTHORIZED: 2, ROLE_ADMIN: 3}
 
 _bearer = HTTPBearer(auto_error=False)
 
+# must_change_password 强制改密闭环（T1.7）：除以下路径外，业务接口一律拒绝（2005）
+_PASSWORD_CHANGE_ALLOWED_PATHS = frozenset({
+    "/api/v1/auth/me",
+    "/api/v1/auth/logout",
+    "/api/v1/auth/change-password",
+})
+
 
 def get_current_user(
     request: Request,
@@ -63,6 +76,11 @@ def get_current_user(
         raise BizError(CODE_UNAUTHORIZED, "用户不存在或已删除")
     if user.status != "active":
         raise BizError(CODE_ACCOUNT_DISABLED, "账号已被禁用，请联系管理员")
+    if user.must_change_password and request.url.path not in _PASSWORD_CHANGE_ALLOWED_PATHS:
+        raise BizError(
+            CODE_PASSWORD_CHANGE_REQUIRED,
+            "初始密码尚未修改，请先调用 /auth/change-password 完成改密",
+        )
     request.state.user = user
     return user
 

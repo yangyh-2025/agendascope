@@ -8,7 +8,7 @@ from app.core.security import TOKEN_TYPE_ACCESS, decode_token
 from app.db.session import get_db
 from app.models.user import User
 from app.repositories.audit_repo import write_audit
-from app.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest
+from app.schemas.auth import ChangePasswordRequest, LoginRequest, LogoutRequest, RefreshRequest
 from app.services.auth_service import AuthService
 
 router = APIRouter()
@@ -76,6 +76,22 @@ def me(user: User = Depends(get_current_user)):
         "role": user.role,
         "locale": user.locale,
         "timezone": user.timezone,
+        "must_change_password": user.must_change_password,
         "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     })
+
+
+@router.post("/change-password")
+def change_password(
+    body: ChangePasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """修改密码：旧密码校验 + 服务端密码策略强制 + 吊销全部 refresh 会话强制重登。"""
+    AuthService(db).change_password(user, body.old_password, body.new_password)
+    write_audit(db, "auth.change_password", user=user, ip=_client_ip(request),
+                user_agent=request.headers.get("user-agent", ""))
+    db.commit()
+    return ok({"must_change_password": False}, "密码已更新，请使用新密码重新登录")
