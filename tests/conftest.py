@@ -149,7 +149,15 @@ def auth_headers(client, admin_user, db):
     resp = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Admin12345"})
     assert resp.status_code == 200, resp.text
     token = resp.json()["data"]["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"}
+    # 初始管理员 must_change_password=True：先走改密闭环，业务接口才放行（T1.7）
+    chg = client.post(
+        "/api/v1/auth/change-password",
+        json={"old_password": "Admin12345", "new_password": "AdminNew123"},
+        headers=headers,
+    )
+    assert chg.status_code == 200, chg.text
+    return headers
 
 
 def make_source(db, **overrides) -> "object":
