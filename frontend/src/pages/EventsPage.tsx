@@ -1,7 +1,7 @@
 /** 议程设置事件列表页（T4.9）。 */
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { request } from "../api/client";
+import { request, ApiError } from "../api/client";
 import { COUNTRIES, AGENDA_EVENT_STATUS_LABEL } from "../api/meta";
 import "./EventsPage.css";
 
@@ -16,8 +16,10 @@ export default function EventsPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
   const [origin, setOrigin] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(() => {
+    setError(null);
     const qs = new URLSearchParams();
     if (status) qs.set("status", status);
     if (origin) qs.set("origin_country_code", origin);
@@ -25,7 +27,9 @@ export default function EventsPage() {
     qs.set("page_size", "20");
     request<{ items: EventItem[]; total: number }>(`/api/v1/agenda-events?${qs}`).then((r) => {
       setItems(r.items); setTotal(r.total);
-    }).catch(console.error);
+    }).catch((err) => {
+      setError(err instanceof ApiError ? err.message : "事件列表加载失败，请稍后重试");
+    });
   }, [status, origin, page]);
 
   useEffect(() => { fetch(); }, [fetch]);
@@ -43,6 +47,7 @@ export default function EventsPage() {
           {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
         </select>
       </div>
+      {error && <p className="page-error" role="alert">{error}</p>}
       <div className="event-list">
         {items.map((ev) => (
           <div key={ev.id} className="event-card" onClick={() => nav(`/events/${ev.id}`)}>

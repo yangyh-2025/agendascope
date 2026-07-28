@@ -28,7 +28,9 @@ export interface TopicListItem {
   salience_rank: number;
   rank_delta: number | null;
   article_count_24h: number;
-  media_count: number;
+  /** 后端列表当前下发 article_count（总文章数）；24h 口径为可选增强。 */
+  article_count?: number;
+  media_count?: number;
   country_scope: string[];
   sentiment: SentimentShare;
   lifecycle_state: LifecycleState;

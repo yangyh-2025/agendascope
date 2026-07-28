@@ -18,6 +18,8 @@
 .lifecycle-tag.archived { background: #374151; color: #9CA3AF; }
 .country-scope { color: #64748B; }
 .agenda-event-tag { background: #7f1d1d; color: #C8102E; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+.page-error { color: #C8102E; padding: 12px 0; }
+.list-degraded-row { margin: 0 0 12px; }
 .pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 24px; }
 .pagination button { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
 .pagination button:disabled { opacity: 0.4; cursor: default; }

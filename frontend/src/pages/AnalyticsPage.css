@@ -11,3 +11,4 @@
 .stat-row { display: flex; justify-content: space-between; padding: 4px 0; color: #94A3B8; font-size: 0.85rem; }
 .stat-row b { color: #E2E8F0; }
 .stat-row b.low { color: #D97706; }
+.page-error { color: #C8102E; padding: 12px 0; }

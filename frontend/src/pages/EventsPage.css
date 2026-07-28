@@ -8,3 +8,4 @@
 .event-origin { color: #E2E8F0; font-size: 0.9rem; }
 .event-ts { color: #64748B; font-size: 0.75rem; margin-top: 4px; }
 .event-score { color: #60A5FA; font-size: 0.85rem; white-space: nowrap; }
+.page-error { color: #C8102E; padding: 12px 0; }
