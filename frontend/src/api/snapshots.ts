@@ -1,11 +1,12 @@
 /**
  * 议题显著性快照与跨国对比 API（详细设计 1.4 / 1.11）。
  *
- * 说明：
- * - 任务口径要求优先调 /api/v1/snapshots/topics/{id} 与 /api/v1/snapshots/compare；
- *   若后端尚未提供该路由（404/3001），自动回退到 /api/v1/topics/{id}/timeline 与
- *   /api/v1/topics/compare，保证前端在过渡期内仍可工作。
- * - 三层显著性视图与跨国对比三栏视图共用同一份数据。
+ * 契约对齐后端 snapshots 路由：
+ * - GET /api/v1/snapshots/topics/{id}?countries=CN,US&days=7
+ *   响应 {topic_id, topic_name, timeline: {CC: [{window_start, article_count, salience_score, salience_rank}]}}
+ *   本模块将其规整为 TopicSnapshot[]；路由不可用时回退 /topics/{id}/timeline 逐国拉取。
+ * - GET /api/v1/snapshots/compare?countries=..&days=7[&topic_id=..]
+ *   响应 {countries, days, per_country, disclaimer}（后端无 /topics/compare，不做错误回退）。
  */
 import { ApiError, request } from "./client";
 
@@ -13,7 +14,8 @@ export interface SnapshotPoint {
   window_start: string;
   article_count: number;
   salience_score: number;
-  sentiment: { pos: number; neu: number; neg: number };
+  salience_rank?: number | null;
+  sentiment?: { pos: number; neu: number; neg: number };
 }
 
 export interface TopicSnapshot {
@@ -23,30 +25,21 @@ export interface TopicSnapshot {
   points: SnapshotPoint[];
 }
 
-export interface CompareStatsEvidence {
-  best_lag_days?: number | null;
-  xcorr_r?: number | null;
-  xcorr_p?: number | null;
-  granger?: Record<string, { p: number; significant: boolean }> | null;
-  direction?: string | null;
-  sample_size?: number | null;
-}
-
-export interface CompareSeriesItem {
+/** 后端 /snapshots/compare 的 per_country 元素。 */
+export interface CompareCountryPanel {
   country_code: string;
-  points: Array<{
-    window_start: string;
-    salience_score: number;
-    sentiment_neg: number;
-  }>;
+  salience_curve: { window_start: string; score: number; article_count: number }[];
+  total_articles: number;
+  top_topic_id: string | null;
+  top_topic_name: string | null;
+  coverage: "normal" | "low";
 }
 
 export interface TopicCompareResult {
-  topic_id: string;
   countries: string[];
-  cross_language_note?: string;
-  series: CompareSeriesItem[];
-  intermedia?: CompareStatsEvidence | null;
+  days: number;
+  per_country: CompareCountryPanel[];
+  disclaimer: string;
 }
 
 function isSnapshotUnavailable(err: unknown): boolean {
@@ -54,6 +47,15 @@ function isSnapshotUnavailable(err: unknown): boolean {
   if (!(err instanceof ApiError)) return false;
   if (err.status === 404) return true;
   return err.code === 3001;
+}
+
+interface SnapshotsTimelineResponse {
+  topic_id: string;
+  topic_name: string;
+  timeline: Record<
+    string,
+    { window_start: string; article_count: number; salience_score: number; salience_rank: number | null }[]
+  >;
 }
 
 /** 获取议题在指定国家集合上的显著性快照。优先 snapshots 路由，回退 topics/timeline。 */
@@ -67,59 +69,57 @@ export async function fetchTopicSnapshots(
     days: String(days),
   });
   try {
-    return await request<TopicSnapshot[]>(
+    const data = await request<SnapshotsTimelineResponse>(
       `/api/v1/snapshots/topics/${encodeURIComponent(topicId)}?${qs.toString()}`,
     );
+    return Object.entries(data.timeline ?? {}).map(([cc, points]) => ({
+      topic_id: data.topic_id,
+      country_code: cc,
+      granularity: "hour",
+      points: points.map((p) => ({
+        window_start: p.window_start,
+        article_count: p.article_count,
+        salience_score: p.salience_score,
+        salience_rank: p.salience_rank,
+      })),
+    }));
   } catch (err) {
     if (!isSnapshotUnavailable(err)) throw err;
   }
-  // 回退：逐国调 topics/{id}/timeline
-  const to = new Date();
-  const from = new Date(to.getTime() - days * 24 * 3600 * 1000);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  // 回退：逐国调 topics/{id}/timeline（后端该路由天然存在）
   const fallback = await Promise.all(
     countries.map(async (c) => {
       const q = new URLSearchParams({
         country_code: c,
-        from: fmt(from),
-        to: fmt(to),
+        days: String(days),
         granularity: "day",
       });
-      const data = await request<TopicSnapshot>(
-        `/api/v1/topics/${encodeURIComponent(topicId)}/timeline?${q.toString()}`,
-      );
-      return { ...data, country_code: data.country_code || c };
+      const data = await request<{
+        topic_id: string;
+        country_code: string | null;
+        points: SnapshotPoint[];
+      }>(`/api/v1/topics/${encodeURIComponent(topicId)}/timeline?${q.toString()}`);
+      return {
+        topic_id: data.topic_id,
+        country_code: data.country_code || c,
+        granularity: "day",
+        points: data.points,
+      };
     }),
   );
   return fallback;
 }
 
-/** 获取议题跨国对比结果（含统计佐证）。优先 snapshots/compare，回退 topics/compare。 */
+/** 获取议题/全局跨国对比结果（含“统计关联≠因果”声明）。直接对接 /snapshots/compare。 */
 export async function fetchTopicCompare(
-  topicId: string,
   countries: string[],
   days: number,
+  topicId?: string,
 ): Promise<TopicCompareResult> {
   const qs = new URLSearchParams({
-    topic_id: topicId,
     countries: countries.join(","),
     days: String(days),
   });
-  try {
-    return await request<TopicCompareResult>(
-      `/api/v1/snapshots/compare?${qs.toString()}`,
-    );
-  } catch (err) {
-    if (!isSnapshotUnavailable(err)) throw err;
-  }
-  const to = new Date();
-  const from = new Date(to.getTime() - days * 24 * 3600 * 1000);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const q = new URLSearchParams({
-    topic_id: topicId,
-    countries: countries.join(","),
-    from: fmt(from),
-    to: fmt(to),
-  });
-  return request<TopicCompareResult>(`/api/v1/topics/compare?${q.toString()}`);
+  if (topicId) qs.set("topic_id", topicId);
+  return request<TopicCompareResult>(`/api/v1/snapshots/compare?${qs.toString()}`);
 }

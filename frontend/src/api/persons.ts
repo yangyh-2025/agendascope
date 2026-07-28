@@ -3,6 +3,18 @@ import { request } from "./client";
 
 export type EntityType = "person" | "thinktank" | "intl_org" | "gov_body";
 
+export interface FirstUtterance {
+  quote: string;
+  quote_zh?: string | null;
+  topic_id: string | null;
+  topic_name?: string | null;
+  first_seen_at: string;
+  article_id: string | null;
+  confidence: string;
+  media_follow_count: number;
+  linked_event_id?: string | null;
+}
+
 export interface PersonOrgListItem {
   id: string;
   entity_type: EntityType;
@@ -11,8 +23,11 @@ export interface PersonOrgListItem {
   country_code: string;
   role_title: string | null;
   monitored: boolean;
-  utterance_count: number;
-  latest_utterance_at: string | null;
+  /** 发起信号（新表述）列表，后端列表项直接下发。 */
+  first_utterances?: FirstUtterance[];
+  utterance_count?: number;
+  latest_utterance_at?: string | null;
+  created_at?: string;
 }
 
 export interface PersonOrgListPage {
@@ -42,18 +57,6 @@ export function listPersonsOrgs(
   qs.set("page", String(params.page ?? 1));
   qs.set("page_size", String(params.page_size ?? 20));
   return request<PersonOrgListPage>(`/api/v1/persons-orgs?${qs.toString()}`);
-}
-
-export interface FirstUtterance {
-  quote: string;
-  quote_zh?: string | null;
-  topic_id: string | null;
-  topic_name?: string | null;
-  first_seen_at: string;
-  article_id: string | null;
-  confidence: string;
-  media_follow_count: number;
-  linked_event_id?: string | null;
 }
 
 export interface PersonOrgDetail {
