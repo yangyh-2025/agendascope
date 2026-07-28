@@ -59,6 +59,7 @@ class Alert(Base):
     status: Mapped[str] = mapped_column(String(12), nullable=False, default="unread")
     suppressed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     notify_result: Mapped[dict | None] = mapped_column(JSONB)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (

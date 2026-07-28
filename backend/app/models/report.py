@@ -21,7 +21,7 @@ class ReportExport(Base):
     format: Mapped[str] = mapped_column(String(10), nullable=False)
     scope: Mapped[dict] = mapped_column(JSONB, nullable=False)
     locale: Mapped[str] = mapped_column(String(10), nullable=False, default="zh-CN")
-    status: Mapped[str] = mapped_column(String(12), nullable=False, default="processing")
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="pending")
     file_path: Mapped[str | None] = mapped_column(String(500))
     file_size: Mapped[int | None] = mapped_column(BigInteger)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
@@ -33,5 +33,5 @@ class ReportExport(Base):
     __table_args__ = (
         CheckConstraint("template IN ('topic_deep','compare_brief','periodic_weekly')", name="ck_exports_template"),
         CheckConstraint("format IN ('pdf','docx','markdown','csv')", name="ck_exports_format"),
-        CheckConstraint("status IN ('processing','done','failed')", name="ck_exports_status"),
+        CheckConstraint("status IN ('pending','processing','done','failed')", name="ck_exports_status"),
     )
