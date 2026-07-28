@@ -1,6 +1,8 @@
-"""audit_logs 写入（只增不改）。"""
+"""audit_logs 写入（只增不改）与查询（T1.10 本地留存可导出）。"""
 import ipaddress
+from datetime import datetime
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditLog
@@ -38,3 +40,33 @@ def write_audit(
     )
     db.add(entry)
     db.flush()
+
+
+def query_audit_logs(
+    db: Session,
+    *,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    actor: str | None = None,
+    action: str | None = None,
+    result: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[AuditLog], int]:
+    """审计日志查询：按时间窗/操作人/动作/结果过滤 + 分页（按时间倒序）。返回 (items, total)。"""
+    stmt = select(AuditLog)
+    if start is not None:
+        stmt = stmt.where(AuditLog.at >= start)
+    if end is not None:
+        stmt = stmt.where(AuditLog.at <= end)
+    if actor:
+        stmt = stmt.where(AuditLog.username == actor)
+    if action:
+        stmt = stmt.where(AuditLog.action == action)
+    if result:
+        stmt = stmt.where(AuditLog.result == result)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    items = db.scalars(
+        stmt.order_by(AuditLog.at.desc()).offset((page - 1) * page_size).limit(page_size)
+    ).all()
+    return list(items), total
