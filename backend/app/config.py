@@ -1,7 +1,18 @@
-"""配置管理（pydantic-settings，.env 与代码分离）。"""
+"""配置管理（pydantic-settings，.env 与代码分离）。
+
+启动防护：app_env 非 dev/test 时，若 JWT 密钥 / DB 口令 / 内部 token / 初始管理员密码
+仍为仓库默认值，Settings 实例化直接失败（拒绝启动），避免弱默认配置上生产。
+"""
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEV_ENVS = ("dev", "test")
+_DEFAULT_JWT_SECRET = "change-me-to-a-long-random-string"
+_DEFAULT_INTERNAL_TOKEN = "change-me-internal-collector-token"
+_DEFAULT_DB_PASSWORD = "agenda_dev_pwd"
+_DEFAULT_SEED_ADMIN_PASSWORD = "Admin12345"
 
 
 class Settings(BaseSettings):
@@ -20,12 +31,15 @@ class Settings(BaseSettings):
     redis_stream_url: str = "redis://localhost:6379/1"
     elasticsearch_url: str = "http://localhost:9200"
 
-    jwt_secret_key: str = "change-me-to-a-long-random-string"
+    jwt_secret_key: str = _DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
     refresh_token_expire_minutes: int = 720
 
-    collector_internal_token: str = "change-me-internal-collector-token"
+    collector_internal_token: str = _DEFAULT_INTERNAL_TOKEN
+
+    # 离线/在线模式开关（T1.2）：开启后禁止 GDELT 等外联通道，调度器跳过一切外部拉取与巡检探测
+    offline_mode: bool = False
 
     scheduler_enabled: bool = True
     scheduler_tick_seconds: int = 30
@@ -50,13 +64,38 @@ class Settings(BaseSettings):
 
     source_fail_rate_alert_threshold: float = 0.10
     source_fail_rate_window_hours: int = 24
+    # 源健康巡检（T1.23）：24h 采集成功率低于该阈值主动告警；国家覆盖率低于阈值触发 P0 告警
+    source_success_rate_alert_threshold: float = 0.95
+    country_coverage_alert_threshold: float = 0.70
 
-    login_rate_limit_per_minute: int = 10
+    login_rate_limit_per_minute: int = 5  # T1.8：5 次/分钟/IP
     login_lock_threshold: int = 5
     login_lock_minutes: int = 15
 
     seed_admin_username: str = "admin"
-    seed_admin_password: str = "Admin12345"
+    seed_admin_password: str = _DEFAULT_SEED_ADMIN_PASSWORD
+
+    @model_validator(mode="after")
+    def _reject_weak_defaults_outside_dev(self) -> "Settings":
+        """非 dev/test 环境拒绝弱默认配置启动（等保基线）。"""
+        if self.app_env in _DEV_ENVS:
+            return self
+        problems: list[str] = []
+        if self.jwt_secret_key == _DEFAULT_JWT_SECRET or self.jwt_secret_key.startswith("change-me"):
+            problems.append("JWT_SECRET_KEY 仍为默认值")
+        if _DEFAULT_DB_PASSWORD in self.database_url:
+            problems.append("DATABASE_URL 仍使用默认口令 agenda_dev_pwd")
+        if self.collector_internal_token == _DEFAULT_INTERNAL_TOKEN or self.collector_internal_token.startswith("change-me"):
+            problems.append("COLLECTOR_INTERNAL_TOKEN 仍为默认值")
+        if self.seed_admin_password == _DEFAULT_SEED_ADMIN_PASSWORD:
+            problems.append("SEED_ADMIN_PASSWORD 仍为默认值 Admin12345")
+        if problems:
+            raise ValueError(
+                f"当前环境 APP_ENV={self.app_env} 检测到弱默认配置，拒绝启动："
+                + "；".join(problems)
+                + "。请在 .env 中替换为强随机值后重启。"
+            )
+        return self
 
 
 @lru_cache
