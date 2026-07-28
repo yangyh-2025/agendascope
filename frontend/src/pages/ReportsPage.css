@@ -1,7 +1,30 @@
 .reports-page { padding: 24px; }
 .reports-page h1 { color: #E2E8F0; margin-bottom: 16px; }
-.report-form { display: flex; flex-direction: column; gap: 12px; max-width: 480px; }
+.report-form { display: flex; flex-direction: column; gap: 12px; max-width: 520px; }
+.report-form label { display: flex; flex-direction: column; gap: 4px; color: #9DB2D0; font-size: 0.85rem; }
 .report-form select, .report-form input { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 8px 12px; border-radius: 4px; }
 .report-form button { background: #1D4E9E; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer; }
+.report-form button:disabled { opacity: 0.5; cursor: default; }
+.time-range { display: flex; gap: 12px; }
+.time-range label { flex: 1; }
+.country-picker { display: flex; flex-direction: column; gap: 6px; }
+.picker-label { color: #9DB2D0; font-size: 0.85rem; }
+.country-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.country-chip { background: #1e3a5f; color: #9DB2D0; border: 1px solid #2a4a70; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+.country-chip.active { background: #1D4E9E; color: #F0F4FA; border-color: #3D74C4; }
 .watermark-hint { color: #64748B; font-size: 0.8rem; }
 .status-msg { color: #60A5FA; font-size: 0.85rem; }
+.page-error { color: #C8102E; font-size: 0.9rem; }
+.export-list-title { color: #E2E8F0; font-size: 1.1rem; margin: 32px 0 12px; }
+.export-table { width: 100%; border-collapse: collapse; }
+.export-table th, .export-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #1e3a5f; color: #E2E8F0; font-size: 0.9rem; }
+.export-table th { color: #9DB2D0; font-weight: 500; }
+.export-empty { color: #64748B; text-align: center; }
+.export-status { padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+.export-status-pending { background: #1e3a5f; color: #9DB2D0; }
+.export-status-processing { background: #1D4E9E; color: #F0F4FA; }
+.export-status-done { background: #14532d; color: #2FA96B; }
+.export-status-failed { background: #7A0A1E; color: #F0F4FA; }
+.export-error { color: #C8102E; font-size: 0.8rem; margin-left: 8px; }
+.download-link { color: #3D74C4; }
+.download-pending { color: #64748B; }
