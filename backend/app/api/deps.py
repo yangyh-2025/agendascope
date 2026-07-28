@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import (
     CODE_ACCOUNT_DISABLED,
     CODE_FORBIDDEN,
+    CODE_LICENSE_EXPIRED,
     CODE_PASSWORD_CHANGE_REQUIRED,
     CODE_UNAUTHORIZED,
     BizError,
@@ -94,3 +95,17 @@ def require_role(min_role: str):
         return user
 
     return checker
+
+
+def require_license_active(db: Session = Depends(get_db)) -> None:
+    """许可到期只读门禁（T5.10）：企业许可到期后业务写接口挂载此依赖拒绝写操作。
+
+    无许可记录（社区版）或未到期一律放行；到期仅拒绝写，读接口与数据全部保留。
+    接线：在业务写路由加 `Depends(require_license_active)`。
+    """
+    from datetime import UTC, datetime
+
+    from app.services.license_service import get_current_license, is_write_allowed
+
+    if not is_write_allowed(get_current_license(db), datetime.now(UTC)):
+        raise BizError(CODE_LICENSE_EXPIRED, "许可已到期，系统进入只读模式（数据保留，写操作暂不可用）")
