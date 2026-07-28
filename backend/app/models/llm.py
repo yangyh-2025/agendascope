@@ -1,6 +1,6 @@
 """llm_judgements 表：LLM 判定留痕（T2.17，详细设计 3.2 关键不变量③）。
 
-每次 LLM 判定（议题命名/分类/摘要，后续里程碑的终审/首发判定同表扩展）
+每次 LLM 判定（议题命名/分类/摘要、首发表述判定、事件终审）
 记录模型名 + prompt_version + 输入/输出快照 + 成败 + 耗时，支持：
 - 前端「该判定由哪个模型/哪版 prompt 产出」可标注可否决；
 - 换 prompt 后对历史判定批量重跑对比（rerun 行以 input_payload.rerun_of 关联基线）。
@@ -36,7 +36,7 @@ class LLMJudgement(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "task_type IN ('topic_naming','topic_category','topic_summary','first_utterance')",
+            "task_type IN ('topic_naming','topic_category','topic_summary','first_utterance','final_review')",
             name="ck_llm_judgements_task_type",
         ),
     )
