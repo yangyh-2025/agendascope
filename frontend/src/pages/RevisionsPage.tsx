@@ -48,8 +48,8 @@ export default function RevisionsPage() {
   }, [loadEvents]);
 
   const loadRevisions = useCallback((eventId: string) => {
-    listAgendaEventRevisions(eventId, { page: 1, page_size: 50 })
-      .then((r) => setRevisions((prev) => ({ ...prev, [eventId]: r.items })))
+    listAgendaEventRevisions(eventId)
+      .then((r) => setRevisions((prev) => ({ ...prev, [eventId]: r.revisions })))
       .catch((err) => setError(errMsg(err, "修正记录加载失败")));
   }, []);
 

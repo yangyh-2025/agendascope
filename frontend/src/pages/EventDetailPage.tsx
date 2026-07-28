@@ -51,7 +51,7 @@ export default function EventDetailPage() {
         try {
           const chain = await getAgendaEventChain(id);
           if (!cancelled && chain.edges.length > 0) {
-            setEdges(chain.edges.map((e) => ({ from: e.from, to: e.to, lag_hours: e.lag_hours })));
+            setEdges(chain.edges.map((e) => ({ from: e.from_country, to: e.to_country, lag_hours: e.lag_hours })));
             return;
           }
         } catch {
@@ -276,7 +276,7 @@ export default function EventDetailPage() {
               {event.follower_sequence.map((f) => (
                 <tr key={f.country_code}>
                   <td>{countryLabel(f.country_code)}</td>
-                  <td>{f.first_media}</td>
+                  <td>{f.first_media ?? f.first_media_name ?? "—"}</td>
                   <td>{f.lag_hours.toFixed(1)}</td>
                 </tr>
               ))}

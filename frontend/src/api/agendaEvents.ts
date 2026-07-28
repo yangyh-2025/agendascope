@@ -68,8 +68,11 @@ export function listAgendaEvents(
 
 export interface FollowerStep {
   country_code: string;
-  first_media: string;
-  first_article_id: string;
+  first_media?: string;
+  /** 后端 follower_sequence 元素实际键名为 first_media_name。 */
+  first_media_name?: string;
+  first_article_id?: string;
+  first_published_at?: string;
   lag_hours: number;
 }
 
@@ -131,28 +134,31 @@ export function getAgendaEvent(id: string): Promise<AgendaEventDetail> {
   return request<AgendaEventDetail>(`/api/v1/agenda-events/${encodeURIComponent(id)}`);
 }
 
-export interface AgendaEventChainNode {
-  id: string;
-  type: string;
-  origin: boolean;
-  first_at: string;
-  article_count: number;
-  media_count: number;
-  medias: string[];
+export interface AgendaEventChainFollower {
+  country: string;
+  first_media: string | null;
+  first_article_id: string | null;
+  first_published_at: string | null;
+  lag_hours: number;
 }
 
 export interface AgendaEventChainEdge {
-  from: string;
-  to: string;
+  from_country: string;
+  to_country: string;
   lag_hours: number;
 }
 
 export interface AgendaEventChain {
   event_id: string;
-  nodes: AgendaEventChainNode[];
+  topic_id: string;
+  origin: {
+    country: string;
+    media: { id: string; name: string } | null;
+    published_at: string | null;
+    confidence: string;
+  };
+  follower_sequence: AgendaEventChainFollower[];
   edges: AgendaEventChainEdge[];
-  replay: { at: string; countries: string[] }[];
-  aggregated: boolean;
 }
 
 export function getAgendaEventChain(id: string): Promise<AgendaEventChain> {
@@ -161,22 +167,20 @@ export function getAgendaEventChain(id: string): Promise<AgendaEventChain> {
   );
 }
 
-export interface AgendaEventRevisionsPage {
-  total: number;
-  page: number;
-  page_size: number;
-  items: RevisionLogItem[];
+export interface AgendaEventRevisionsResult {
+  event_id: string;
+  topic_id: string;
+  status: string;
+  confidence: string;
+  human_locked_fields: string[];
+  revisions: RevisionLogItem[];
 }
 
 export function listAgendaEventRevisions(
   id: string,
-  params: { page?: number; page_size?: number } = {},
-): Promise<AgendaEventRevisionsPage> {
-  const qs = new URLSearchParams();
-  qs.set("page", String(params.page ?? 1));
-  qs.set("page_size", String(params.page_size ?? 20));
-  return request<AgendaEventRevisionsPage>(
-    `/api/v1/agenda-events/${encodeURIComponent(id)}/revisions?${qs.toString()}`,
+): Promise<AgendaEventRevisionsResult> {
+  return request<AgendaEventRevisionsResult>(
+    `/api/v1/agenda-events/${encodeURIComponent(id)}/revisions`,
   );
 }
 
