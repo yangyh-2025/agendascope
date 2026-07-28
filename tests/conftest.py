@@ -85,6 +85,7 @@ def db(migrated_db):
     session = SessionLocal()
     with migrated_db.connect() as conn:
         for table in (
+            "subscription_deliveries", "subscriptions", "report_exports",
             "alerts", "alert_rules", "topic_articles", "agenda_snapshots", "topics",
             "collection_jobs", "articles", "sources", "users",
             "persons_orgs", "llm_judgements",
