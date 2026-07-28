@@ -45,6 +45,10 @@ numpy>=1.26                # 数值序列（bertopic/torch 已传递依赖，显
 # 日志
 structlog>=24.1
 
+# 报告导出（Phase 4 M4-3，T4.17）
+reportlab>=4.2        # PDF 生成（内置 STSong-Light CID 字体支持中文水印/正文）
+python-docx>=1.1      # Word 生成
+
 # LLM 本地推理（M2-3）
 # CPU 环境安装 torch 建议: pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
