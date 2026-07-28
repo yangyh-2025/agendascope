@@ -10,6 +10,8 @@
 - TEMP_FAIL 且 next_run_at 到期的任务优先重跑（退避重试，should_crawl 统一裁决）
 - 每轮结束推进源健康状态机并检查源失败率告警
 - GDELT 兜底按 gdelt_interval_seconds 独立节奏拉取
+- 源健康巡检（T1.23）：每日全量 + 每小时重点源，真实探测可达性并触发成功率/覆盖率告警
+- 离线模式（offline_mode，T1.2）：禁止 GDELT 等外联通道，跳过一切外部拉取与巡检探测
 """
 import asyncio
 import concurrent.futures
@@ -40,6 +42,8 @@ class CollectorScheduler:
         self.settings = get_settings()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         self._last_gdelt_at: datetime | None = None
+        self._last_daily_inspection_at: datetime | None = None
+        self._last_hourly_inspection_at: datetime | None = None
         self._stopped = asyncio.Event()
 
     def stop(self) -> None:
@@ -59,12 +63,17 @@ class CollectorScheduler:
     # ---------- 同步执行区（线程池内） ----------
 
     def tick(self) -> None:
+        if self.settings.offline_mode:
+            # 离线模式（T1.2）：禁止一切外联——源拉取、GDELT 兜底、健康巡检探测全部跳过
+            logger.debug("offline_mode_skip_tick")
+            return
         db = get_session_factory()()
         try:
             self._dispatch_retries(db)
             self._dispatch_due_sources(db)
             if self.settings.gdelt_enabled:
                 self._dispatch_gdelt(db)
+            self._maybe_dispatch_inspections()
         finally:
             db.close()
 
@@ -115,6 +124,36 @@ class CollectorScheduler:
             return
         self._last_gdelt_at = now
         self.executor.submit(self._run_gdelt)
+
+    # ---------- 源健康巡检（T1.23） ----------
+
+    def _maybe_dispatch_inspections(self) -> None:
+        """每日全量巡检 + 每小时重点源巡检；日检当日覆盖重点源，避免同 tick 重复探测。"""
+        now = datetime.now(UTC)
+        if self._last_daily_inspection_at is None or now - self._last_daily_inspection_at >= timedelta(hours=24):
+            self._last_daily_inspection_at = now
+            self._last_hourly_inspection_at = now
+            self.executor.submit(self._run_inspection, "daily")
+            return
+        if self._last_hourly_inspection_at is None or now - self._last_hourly_inspection_at >= timedelta(hours=1):
+            self._last_hourly_inspection_at = now
+            self.executor.submit(self._run_inspection, "hourly")
+
+    def _run_inspection(self, kind: str) -> None:
+        set_trace_id(new_trace_id())
+        db = get_session_factory()()
+        try:
+            from app.collector.health_check import SourceHealthInspector
+
+            inspector = SourceHealthInspector(db, get_cache_redis())
+            stats = inspector.run_daily() if kind == "daily" else inspector.run_hourly()
+            db.commit()
+            logger.info("health_inspection_done", kind=kind, **stats)
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            logger.error("health_inspection_error", kind=kind, exc_info=exc)
+        finally:
+            db.close()
 
     def _run_job(self, source_id, job_id) -> None:
         set_trace_id(new_trace_id())

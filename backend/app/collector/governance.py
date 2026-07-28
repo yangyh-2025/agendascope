@@ -64,6 +64,24 @@ def should_crawl(status: str, next_run_at: datetime | None, now: datetime) -> bo
     return next_run_at is None or next_run_at <= now
 
 
+def write_system_alert(db: Session, redis_client, payload: dict,
+                       debounce_key: str | None = None, debounce_seconds: int = 3600) -> bool:
+    """系统级主动告警统一写入点（US-03）：防抖 + 挂系统内置规则 + 写 alerts 表。返回是否真正触发。"""
+    if redis_client is not None and debounce_key:
+        if redis_client.exists(debounce_key):
+            return False
+        redis_client.setex(debounce_key, debounce_seconds, "1")
+
+    from app.models.alert import Alert
+    from app.services.seed_service import ensure_admin, ensure_system_rules
+
+    admin = ensure_admin(db)
+    rule = ensure_system_rules(db, admin)
+    db.add(Alert(rule_id=rule.id, user_id=admin.id, payload=payload))
+    db.flush()
+    return True
+
+
 class Governance:
     """采集治理：collection_jobs 六态流转 + 防重 + 源健康状态机 + 失败率告警。"""
 
@@ -212,20 +230,8 @@ class Governance:
         rate = self.source_fail_rate(source.id)
         if rate <= self.settings.source_fail_rate_alert_threshold:
             return False
-        if self.redis is not None:
-            debounce_key = f"alert:source_fail:{source.id}"
-            if self.redis.exists(debounce_key):
-                return False
-            self.redis.setex(debounce_key, 3600, "1")
-
-        from app.models.alert import Alert
-        from app.services.seed_service import ensure_admin, ensure_system_rules
-
-        admin = ensure_admin(self.db)
-        rule = ensure_system_rules(self.db, admin)
-        self.db.add(Alert(
-            rule_id=rule.id,
-            user_id=admin.id,
+        triggered = write_system_alert(
+            self.db, self.redis,
             payload={
                 "kind": "source_fail_rate",
                 "source_id": str(source.id),
@@ -235,13 +241,15 @@ class Governance:
                 "threshold": self.settings.source_fail_rate_alert_threshold,
                 "window_hours": self.settings.source_fail_rate_window_hours,
             },
-        ))
-        self.db.flush()
-        logger.warning(
-            "source_fail_rate_alert", source_id=str(source.id), rate=round(rate, 4),
-            threshold=self.settings.source_fail_rate_alert_threshold,
+            debounce_key=f"alert:source_fail:{source.id}",
+            debounce_seconds=3600,
         )
-        return True
+        if triggered:
+            logger.warning(
+                "source_fail_rate_alert", source_id=str(source.id), rate=round(rate, 4),
+                threshold=self.settings.source_fail_rate_alert_threshold,
+            )
+        return triggered
 
 
 class TaskUrlFilter:
