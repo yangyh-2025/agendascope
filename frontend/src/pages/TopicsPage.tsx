@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { listTopics, TopicListItem, TopicSort } from "../api/topics";
+import { listTopics, LifecycleState, TopicListItem, TopicSort } from "../api/topics";
 import { COUNTRIES, TOPIC_CATEGORIES, LIFECYCLE_LABEL } from "../api/meta";
 import DegradedBadge from "../components/DegradedBadge";
 import { degradedKindsOf } from "../components/degraded";
@@ -28,7 +28,7 @@ export default function TopicsPage() {
 
   const fetch = useCallback(() => {
     setError(null);
-    listTopics({ country_code: country || undefined, lifecycle_state: (lifecycle || undefined) as any, topic_category: category || undefined, sort, page, page_size: 20 }).then((r) => {
+    listTopics({ country_code: country || undefined, lifecycle_state: (lifecycle || undefined) as LifecycleState | undefined, topic_category: category || undefined, sort, page, page_size: 20 }).then((r) => {
       setItems(r.items); setTotal(r.total); setListDegraded(Boolean(r.degraded));
     }).catch((err) => {
       setError(err instanceof ApiError ? err.message : "议题列表加载失败，请稍后重试");

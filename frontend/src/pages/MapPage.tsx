@@ -20,7 +20,7 @@ interface CountryItem {
 type MapData = { items: CountryItem[]; data_delay_minutes: number; coverage_confidence: number };
 
 /** 覆盖率置信度三档（T4.13）：高 ≥0.85 / 中 0.7–0.85 / 低 <0.7。 */
-export function coverageTier(confidence: number): { label: string; className: string } {
+function coverageTier(confidence: number): { label: string; className: string } {
   if (confidence >= 0.85) return { label: "高", className: "coverage-tier coverage-high" };
   if (confidence >= 0.7) return { label: "中", className: "coverage-tier coverage-mid" };
   return { label: "低", className: "coverage-tier coverage-low" };

@@ -53,6 +53,8 @@ export interface AlertRulePayload {
   condition_extra?: ConditionExtra[] | null;
   notify_channels: NotifyChannel[];
   webhook_url?: string | null;
+  /** 仅更新时使用（启停）。 */
+  enabled?: boolean;
 }
 
 export function createAlertRule(payload: AlertRulePayload) {

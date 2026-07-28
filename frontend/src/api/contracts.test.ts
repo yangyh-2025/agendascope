@@ -45,7 +45,7 @@ describe("API 路由契约", () => {
     expect(calls[0].url).toBe("/api/v1/alert-rules");
     expect(calls[0].init?.method).toBe("POST");
 
-    await updateAlertRule("r1", { enabled: false } as never);
+    await updateAlertRule("r1", { enabled: false });
     expect(calls[1].url).toBe("/api/v1/alert-rules/r1");
     expect(calls[1].init?.method).toBe("PATCH");
   });

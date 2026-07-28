@@ -102,7 +102,7 @@ export default function AlertRulesPage() {
   };
 
   const toggleEnabled = (rule: AlertRule) => {
-    updateAlertRule(rule.id, { enabled: !rule.enabled } as never)
+    updateAlertRule(rule.id, { enabled: !rule.enabled })
       .then(load)
       .catch((err) => setError(errMsg(err, "启停失败")));
   };
