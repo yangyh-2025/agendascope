@@ -75,6 +75,19 @@ class Settings(BaseSettings):
     seed_admin_username: str = "admin"
     seed_admin_password: str = _DEFAULT_SEED_ADMIN_PASSWORD
 
+    # 企业许可（T5.10）：HMAC-SHA256 验签密钥，部署方/厂商持有；留空则无法录入授权码
+    license_secret_key: str = ""
+
+    # 应用日志文件输出（T5.10 日志查看/诊断包）：留空仅 stdout；配置后启用滚动文件
+    log_file_path: str = ""
+    log_file_max_mb: int = 10
+    log_file_backup_count: int = 5
+
+    # 磁盘超阈值自动清理（T5.10）：>85% 时清理 90 天前原始 HTML/缓冲文件并告警
+    disk_cleanup_threshold_percent: float = 85.0
+    raw_html_retention_days: int = 90
+    raw_html_dir: str = "data/raw_html"
+
     @model_validator(mode="after")
     def _reject_weak_defaults_outside_dev(self) -> "Settings":
         """非 dev/test 环境拒绝弱默认配置启动（等保基线）。"""
