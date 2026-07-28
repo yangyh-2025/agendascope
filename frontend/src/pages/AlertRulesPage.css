@@ -1,0 +1,31 @@
+.alert-rules-page { padding: 24px; max-width: 960px; }
+.alert-rules-page h1 { color: #E2E8F0; margin-bottom: 16px; }
+.rule-builder { background: #0f1f3d; border: 1px solid #1e3a5f; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.rule-builder h2 { color: #E2E8F0; font-size: 1.05rem; margin: 0; }
+.rule-builder label { display: flex; flex-direction: column; gap: 4px; color: #9DB2D0; font-size: 0.85rem; }
+.rule-builder input, .rule-builder select { background: #071E42; color: #F0F4FA; border: 1px solid #274B84; border-radius: 4px; padding: 8px 12px; }
+.builder-row { display: flex; flex-direction: column; gap: 6px; }
+.builder-label { color: #9DB2D0; font-size: 0.85rem; }
+.country-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.country-chip { background: #1e3a5f; color: #9DB2D0; border: 1px solid #2a4a70; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+.country-chip.active { background: #1D4E9E; color: #F0F4FA; border-color: #3D74C4; }
+.condition-list { display: flex; flex-direction: column; gap: 8px; }
+.condition-item { display: flex; align-items: center; gap: 8px; }
+.condition-item input { width: 120px; }
+.and-tag { color: #D9A02B; font-size: 0.8rem; font-weight: 600; }
+.add-cond { align-self: flex-start; font-size: 0.8rem; }
+.channel-row { display: flex; gap: 16px; }
+.channel-check { display: flex; align-items: center; gap: 6px; color: #9DB2D0; font-size: 0.85rem; }
+.status-msg { color: #60A5FA; font-size: 0.85rem; margin: 0; }
+.page-error { color: #C8102E; margin: 0; }
+.rule-list-title { color: #E2E8F0; font-size: 1.05rem; margin: 24px 0 12px; }
+.rule-list { display: flex; flex-direction: column; gap: 10px; }
+.page-loading { color: #9DB2D0; }
+.rule-card { background: #0f1f3d; border: 1px solid #1e3a5f; border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 16px; }
+.rule-card.disabled { opacity: 0.55; }
+.rule-main { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.rule-name { color: #E2E8F0; }
+.rule-cond { color: #D9A02B; font-size: 0.85rem; }
+.rule-meta { color: #64748B; font-size: 0.8rem; }
+.rule-ops { display: flex; gap: 8px; }
+.rule-ops button { font-size: 0.8rem; padding: 6px 12px; }
