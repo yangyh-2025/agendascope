@@ -51,12 +51,13 @@ def _make_event(db, topic: Topic, status="suspected") -> AgendaEvent:
 
 def _stub_annotator(output: FinalReviewOutput | Exception, model_name: str = "Qwen2.5-0.5B-Instruct"):
     """构造 stub annotator（真实调 engine.generate_structured 但替换返回值为预定输出；
-    非业务 Mock——业务逻辑 review_event 仍真实执行，仅 LLM 推理被替身）。"""
+    非业务 Mock——业务逻辑 review_event 仍真实执行，仅 LLM 推理被替身）。
+    返回口径与真实 LLMEngine.generate_structured 一致：(pydantic 输出, 耗时秒)。"""
     annotator = MagicMock()
     if isinstance(output, Exception):
         annotator.engine.generate_structured.side_effect = output
     else:
-        annotator.engine.generate_structured.return_value = output
+        annotator.engine.generate_structured.return_value = (output, 0.5)
     annotator.settings.resolved_model_name.return_value = model_name
     return annotator
 
@@ -126,7 +127,7 @@ class TestReviewEvent:
         assert event.status == "watching"
 
     def test_skip_non_suspected_status(self, db):
-        """非 suspected 状态跳过重审。"""
+        """非 suspected 状态跳过重审（未发起 LLM 调用，不写 llm_judgements）。"""
         topic = _make_topic(db)
         event = _make_event(db, topic, status="confirmed")
         annotator = _stub_annotator(FinalReviewOutput(score=8, verdict="completed", reasoning="x"))
@@ -135,6 +136,9 @@ class TestReviewEvent:
         assert result.score is None
         # annotator.engine.generate_structured 未被调用
         assert not annotator.engine.generate_structured.called
+        from app.models.llm import LLMJudgement
+        count = db.query(LLMJudgement).filter(LLMJudgement.task_type == "final_review").count()
+        assert count == 0
 
     def test_llm_unavailable_skips_to_human_review(self, db):
         """LLM 不可用：跳过终审直进人工复核队列，final_review.verdict='skipped_unavailable'，不自动告警。"""
@@ -150,3 +154,62 @@ class TestReviewEvent:
         assert event.final_review["verdict"] == "skipped_unavailable"
         assert event.final_review["model"] is None
         assert "终审不可用" in event.final_review["reasoning"]
+
+
+class TestFinalReviewJudgementRecording:
+    """T3.12/T2.17：每次终审（含失败）写 llm_judgements 留痕。"""
+
+    def _latest_judgement(self, db):
+        from app.models.llm import LLMJudgement
+        return (
+            db.query(LLMJudgement)
+            .filter(LLMJudgement.task_type == "final_review")
+            .order_by(LLMJudgement.created_at.desc())
+            .first()
+        )
+
+    def test_success_writes_judgement(self, db):
+        topic = _make_topic(db)
+        event = _make_event(db, topic, status="suspected")
+        output = FinalReviewOutput(score=8, verdict="completed", reasoning="证据链完整", concerns=[])
+        annotator = _stub_annotator(output)
+
+        review_event(db, event, topic_name=topic.name, llm_annotator=annotator)
+        judgement = self._latest_judgement(db)
+        assert judgement is not None
+        assert judgement.topic_id == topic.id
+        assert judgement.model_name == "Qwen2.5-0.5B-Instruct"
+        assert judgement.prompt_version == "final-review-v1"
+        assert judgement.success is True
+        assert judgement.error is None
+        assert judgement.latency_ms == 500
+        assert judgement.output_payload["score"] == 8
+        assert judgement.output_payload["verdict"] == "completed"
+        assert judgement.input_payload["topic_name"] == topic.name
+        assert judgement.input_payload["origin_country_code"] == "CN"
+
+    def test_rejected_also_writes_judgement(self, db):
+        topic = _make_topic(db)
+        event = _make_event(db, topic, status="suspected")
+        output = FinalReviewOutput(score=3, verdict="rejected", reasoning="证据不足", concerns=["样本少"])
+        annotator = _stub_annotator(output)
+
+        review_event(db, event, topic_name=topic.name, llm_annotator=annotator)
+        judgement = self._latest_judgement(db)
+        assert judgement is not None
+        assert judgement.success is True  # LLM 调用本身成功，驳回是业务结论
+        assert judgement.output_payload["score"] == 3
+
+    def test_llm_failure_writes_failed_judgement(self, db):
+        """LLM 不可用：仍写 llm_judgements（success=False + error），不静默。"""
+        topic = _make_topic(db)
+        event = _make_event(db, topic, status="suspected")
+        annotator = _stub_annotator(RuntimeError("Qwen 推理服务不可用"))
+
+        review_event(db, event, topic_name=topic.name, llm_annotator=annotator)
+        judgement = self._latest_judgement(db)
+        assert judgement is not None
+        assert judgement.success is False
+        assert judgement.output_payload is None
+        assert "Qwen" in judgement.error
+        assert judgement.latency_ms is not None

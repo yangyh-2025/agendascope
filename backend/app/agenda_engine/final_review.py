@@ -8,42 +8,30 @@
     不自动告警（PRD 8.5 降级链：LLM 终审不可用时事件直进人工复核队列）
 
 prompt 版本化：final-review-v1 注册进 PROMPT_REGISTRY（只增不改），与 T2.17
-prompt 版本管理一致；每次终审写 llm_judgements（模型名+prompt_version+输入/输出
-快照+耗时+成败）与 event.final_review（score/verdict/model/prompt_version/reviewed_at）。
+prompt 版本管理一致；每次终审写 llm_judgements（task_type='final_review'：
+模型名+prompt_version+输入/输出快照+耗时+成败）与 event.final_review
+（score/verdict/model/prompt_version/reviewed_at）。
+
+FinalReviewOutput 单一定义在 app.llm.schemas（prompt 注册表与本模块统一 import），
+本模块仅 re-export 兼容既有引用。
 """
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.agenda_engine.event import AgendaEvent
 from app.core.logging import get_logger
 from app.llm.prompts import TASK_FINAL_REVIEW, get_prompt
-from app.llm.schemas import schema_instruction
+from app.llm.schemas import FinalReviewOutput, schema_instruction
+from app.models.agenda import AgendaEvent
+from app.models.llm import LLMJudgement
 
 logger = get_logger("agenda.final_review")
 
 VerdictType = Literal["completed", "rejected", "skipped_unavailable"]
-
-
-class FinalReviewOutput(BaseModel):
-    """LLM 终审输出（强制 JSON Schema）。"""
-
-    score: int = Field(ge=1, le=10, description="逻辑连贯性评分 1-10，5 分为通过阈值")
-    verdict: Literal["completed", "rejected"] = Field(
-        description="completed=评分≥5 维持 suspected；rejected=评分<5 自动降疑似/驳回"
-    )
-    reasoning: str = Field(
-        max_length=500,
-        description="评分理由（≤500 字）：首发源是否可靠、跟随链路是否合理、统计是否支撑、是否存在更可能的非议程设置解释",
-    )
-    concerns: list[str] = Field(
-        default_factory=list,
-        description="主要疑虑点列表（无则空数组）：供分析师复核参考",
-    )
 
 
 @dataclass(frozen=True)
@@ -91,9 +79,11 @@ def review_event(
     """对 suspected 事件跑一次 LLM 终审。
 
     流程：
-    1. 若 event.status != 'suspected'：跳过重审（返回 verdict='skipped_unavailable' 无 score）
-    2. 调 llm_annotator 的 generate_structured 走 first-review prompt
-    3. 解析输出 → score/verdict/reasoning/concerns
+    1. 若 event.status != 'suspected'：跳过重审（返回 verdict='skipped_unavailable' 无 score；
+       未发起 LLM 调用，不写 llm_judgements）
+    2. 调 llm_annotator.engine.generate_structured 走 final-review prompt（返回 (输出, 耗时秒)）
+    3. 所有 LLM 调用路径（成功/失败/不可用）写 llm_judgements 留痕
+       （task_type='final_review'，模型名+prompt_version+输入/输出快照+耗时+成败）
     4. score < 5 或 verdict='rejected'：
        - event.status = 'watching'（自动降疑似，不自动告警）
        - final_review.verdict = 'rejected'
@@ -120,15 +110,41 @@ def review_event(
     # LLM 调用（真实推理，解析失败重试 1 次复用 annotator 链路）
     prompt_template = get_prompt(TASK_FINAL_REVIEW)
     input_payload = _build_review_input(event, topic_name)
+    model_name = llm_annotator.settings.resolved_model_name()
+
+    def _record_judgement(
+        *,
+        success: bool,
+        output_payload: dict | None,
+        error: str | None,
+        latency_ms: int,
+    ) -> None:
+        """写 llm_judgements 终审留痕（详细设计 3.2 关键不变量③）。"""
+        db.add(LLMJudgement(
+            topic_id=event.topic_id,
+            task_type=TASK_FINAL_REVIEW,
+            model_name=model_name,
+            prompt_version=prompt_template.version,
+            input_payload=input_payload,
+            output_payload=output_payload,
+            success=success,
+            naming_method=None,  # 终审不涉及命名兜底链，置空（与命名/分类任务区分）
+            error=error,
+            latency_ms=latency_ms,
+        ))
+        db.flush()
+
+    started = time.monotonic()
     try:
-        output: FinalReviewOutput = llm_annotator.engine.generate_structured(
+        output, latency_s = llm_annotator.engine.generate_structured(
             prompt_template.system,
             prompt_template.build_user(input_payload),
             FinalReviewOutput,
             max_retries=1,
         )
-        model_name = llm_annotator.settings.resolved_model_name()
     except Exception as exc:  # noqa: BLE001 终审不可用不阻塞事件流
+        latency_ms = int((time.monotonic() - started) * 1000)
+        _record_judgement(success=False, output_payload=None, error=str(exc)[:300], latency_ms=latency_ms)
         logger.warning(
             "final_review_llm_unavailable",
             event_id=str(event.id), error=str(exc)[:300],
@@ -150,6 +166,8 @@ def review_event(
             prompt_version=prompt_template.version, reviewed_at=now,
         )
 
+    latency_ms = int(latency_s * 1000)
+
     # 判定分支
     passed = output.score >= 5 and output.verdict == "completed"
     verdict: VerdictType = "completed" if passed else "rejected"
@@ -167,6 +185,17 @@ def review_event(
         "reasoning": output.reasoning,
         "concerns": output.concerns,
     }
+    _record_judgement(
+        success=True,
+        output_payload={
+            "score": output.score,
+            "verdict": output.verdict,
+            "reasoning": output.reasoning,
+            "concerns": output.concerns,
+        },
+        error=None,
+        latency_ms=latency_ms,
+    )
     db.flush()
     logger.info(
         "final_review_done",
@@ -180,7 +209,7 @@ def review_event(
 
 
 __all__ = [
-    "FinalReviewOutput",
+    "FinalReviewOutput",  # re-export（唯一定义在 app.llm.schemas）兼容既有引用
     "FinalReviewResult",
     "review_event",
     "schema_instruction",  # re-export 供 prompt 模板使用
