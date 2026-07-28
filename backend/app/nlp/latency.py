@@ -90,3 +90,12 @@ def channel_stats(db: Session, since: datetime) -> list[dict]:
         {"key": row.channel, "p95_min": round(float(row.p95_min), 2), "sample": int(row.sample)}
         for row in db.execute(stmt).all()
     ]
+
+
+def overall_p95_min(db: Session, since: datetime) -> float | None:
+    """全通道 P95 延迟（分钟）；窗口内无样本返回 None（管理后台概览口径）。"""
+    p95 = func.percentile_cont(0.95).within_group(pipeline_latency_sample.c.latency_ms)
+    value = db.scalar(
+        select((p95 / 60000).label("p95_min")).where(pipeline_latency_sample.c.sampled_at >= since)
+    )
+    return round(float(value), 2) if value is not None else None
