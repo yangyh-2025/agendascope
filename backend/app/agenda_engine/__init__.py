@@ -8,5 +8,9 @@
 - entity_blacklist.py  T3.5 动态高频实体黑名单（Redis Set + 24h 刷新）
 - config.py            AgendaSettings（AGENDA_ 前缀环境变量）
 
-后续 Phase 3 M3-2/M3-3 在此包内扩展：实体库/首发源判定/统计佐证/事件判定/终审官/快照。
+M3-2/M3-3 已在包内扩展：origin.py（首发锚点+跟随序列）、entity_repo.py（实体库）、
+first_utterance.py（LLM 首发判定）、stats_evidence.py（统计佐证）、event.py（事件判定）、
+final_review.py（LLM 终审）、revision.py（增量重估/人工优先）、confidence.py（置信度升降）、
+snapshot.py（快照）；detection.py 为上述孤岛函数的编排器（完整检测主链路），
+由 app.worker.detection_worker 周期驱动。
 """

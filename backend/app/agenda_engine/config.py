@@ -90,6 +90,12 @@ class AgendaSettings(BaseSettings):
     # 议程引擎 worker（app.worker.agenda_worker，M3-1 收尾接入）
     worker_poll_seconds: float = 60.0  # 主循环节拍（归并/消亡/黑名单按各自周期到期触发）
 
+    # 事件检测编排（app.agenda_engine.detection + app.worker.detection_worker，M3-2/M3-3 主链路）
+    detection_interval_minutes: int = 30        # 事件检测周期（对活跃议题跑完整检测链路）
+    detection_topic_batch_size: int = 200       # 单轮检测的活跃议题上限（按 last_seen_at 降序，防失控）
+    detection_max_first_utterance_judges: int = 5   # 单议题单轮 LLM 首发判定次数上限（控制 LLM 成本）
+    detection_entity_register_limit: int = 20   # 单议题单轮 NER 实体登记上限（防实体库被噪音灌入）
+
     # 议程快照刷新（详细设计 2.9 agenda_snapshots + 4 开发计划 T3.16，app.worker.snapshot_worker）
     snapshot_interval_minutes: int = 15        # 快照刷新周期（15min 滚动）
     snapshot_window_hours: int = 24            # 每次计算覆盖时间窗（近 24h）
