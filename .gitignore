@@ -41,3 +41,6 @@ Thumbs.db
 htmlcov/
 .coverage
 coverage.xml
+
+# 离线安装包构建产物（体积大，构建机本地生成，不入库）
+deploy/offline/
