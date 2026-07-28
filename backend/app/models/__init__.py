@@ -11,6 +11,7 @@ from app.models import (  # noqa: F401
     report,
     source,
     subscription,
+    system_state,
     topic,
     user,
 )
