@@ -254,9 +254,12 @@ class AlertingWorker:
         """到期的日报/周报订阅生成并投递 + 投递退避重试 + 日终失败报告。"""
         from app.alerting.subscription import run_subscription_round
 
+        base_url = get_settings().collect_api_base  # 退订链接指向本 API 服务
         db = self.session_factory()
         try:
-            stats = run_subscription_round(db, smtp_config=self.smtp_config)
+            stats = run_subscription_round(
+                db, smtp_config=self.smtp_config, unsubscribe_base_url=base_url,
+            )
             db.commit()
             if any(stats.values()):
                 logger.info("subscription_round_done", **stats)
