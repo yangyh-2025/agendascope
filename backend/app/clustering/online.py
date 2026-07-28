@@ -3,7 +3,8 @@
 每篇已向量化文章到达时：
   ① T_dup=0.95 判重：与近期文章 HNSW 近邻比对，命中标记转载（is_duplicate/canonical_id），
      归入原文所在议题共享归属（跟风报道是议程跟随证据，不丢弃），不重复建簇
-  ② T_event=0.85 归簇：与活跃议题质心 HNSW 比对，命中则归入并增量维护质心/生命周期
+  ② T_event=0.85 归簇：与活跃议题质心 HNSW 比对，命中则归入并增量维护质心/生命周期；
+     新文章 published_at 早于议题当前首发锚点时触发增量重估（T3.13 reestimate_origin）
   ③ 都不命中：建 size=1 nascent 孤证微簇（议题萌芽保留，等待后续证据）
 
 幂等：已归属文章直接跳过（worker 重投递/重复投递不重复建簇）。
@@ -109,6 +110,11 @@ class OnlineAssigner:
             topic, score = hit
             assign_article(db, topic, article.id, score, "online")
             update_topic_on_assignment(db, topic, article, embedding)
+            # 新文章早于议题当前首发锚点时触发增量重估（T3.13，详细设计 4.2 算法 4
+            # reestimate；函数级 import 保持 clustering → agenda_engine 单向依赖）
+            from app.agenda_engine.revision import reestimate_if_earlier_article
+
+            reestimate_if_earlier_article(db, topic.id, article)
             db.flush()
             return AssignmentOutcome(article.id, OUTCOME_ASSIGNED, topic.id, score, 0.0)
 

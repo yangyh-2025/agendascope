@@ -17,6 +17,8 @@ human_locked_fields 含 'merged_into' 的源议题不自动归并（人工优先
   - target.lifecycle_state ← advance_for_size 推进（不后退）
   - 双方 revision_log 追加留痕（actor='machine'，trigger_evidence 含 sim）
   - 关联 agenda_events topic_id 从 c 迁回 target（事件本身保留历史）
+  - 归并完成后对 target 触发增量重估（T3.13 reestimate_origin，详细设计 4.2
+    算法 3 末段；target 无 AgendaEvent 时为正常空操作）
 
 实体黑名单联动（详细设计 4.2 算法 5 用途②）：归并相似度门槛只看语义向量
 （黑名单实体永远不提高相似度）；归并比对的关键词重叠在剔除 entity:blacklist
@@ -495,6 +497,23 @@ def nextday_merge(
             similarity=sim,
             keyword_overlap=overlap_info,
         ))
+
+        # 归并完成后触发受影响议题的增量重估（详细设计 4.2 算法 3 末段：
+        # "merge_map 非空 → 触发受影响议题的增量重估（见算法 4）"）。
+        # target 无 AgendaEvent 时 reestimate_origin 直接返回 None（正常路径）。
+        # 函数级 import：保持 merge → revision 单向依赖，避免模块加载顺序耦合。
+        from app.agenda_engine.revision import reestimate_origin
+
+        reestimate_origin(
+            db,
+            target.id,
+            trigger={
+                "type": "merge",
+                "source_topic_id": str(cand.id),
+                "target_topic_id": str(target.id),
+                "similarity": round(sim, 6),
+            },
+        )
 
     db.flush()
     logger.info(

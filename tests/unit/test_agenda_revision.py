@@ -559,3 +559,77 @@ class TestRejectRevision:
                 db, event.id, 1, actor_user_id=admin_user.id, reason="",
             )
         assert exc_info.value.code == 4002
+
+
+class TestReestimateIfEarlierArticle:
+    """T3.13：新文章归入既有议题且早于首发锚点时触发增量重估。"""
+
+    def test_earlier_article_triggers_reestimate(self, db):
+        """议题已有事件 origin_at=T0，新文章 T0-3h 归入 → 重估并把 origin_at 修正到 T0-3h。"""
+        from app.agenda_engine.revision import reestimate_if_earlier_article
+
+        topic = _make_topic(db)
+        source = make_source(db, country_code="GB")
+        article_old = _persist_article(db, source, published_at=T0, country_code="GB")
+        _link(db, topic, article_old)
+        event = _make_event(db, topic, origin_at=T0, status="suspected", confidence="suspected")
+
+        # 新文章更早（模拟归簇完成后触发）
+        earlier = _persist_article(db, source, published_at=T0 - timedelta(hours=3), country_code="GB")
+        _link(db, topic, earlier)
+
+        result = reestimate_if_earlier_article(db, topic.id, earlier)
+        assert result is not None
+        db.refresh(event)
+        assert event.origin_at == T0 - timedelta(hours=3)
+        assert event.status == "revised"
+        fields = [e["field"] for e in event.revision_log]
+        assert "origin_at" in fields
+        entry = next(e for e in event.revision_log if e["field"] == "origin_at")
+        assert entry["trigger_evidence"]["type"] == "earlier_article"
+        assert entry["actor"] == "machine"
+
+    def test_later_article_no_trigger(self, db):
+        """新文章晚于当前锚点：不触发重估（正常路径）。"""
+        from app.agenda_engine.revision import reestimate_if_earlier_article
+
+        topic = _make_topic(db)
+        source = make_source(db, country_code="GB")
+        article_old = _persist_article(db, source, published_at=T0, country_code="GB")
+        _link(db, topic, article_old)
+        event = _make_event(db, topic, origin_at=T0, status="suspected", confidence="suspected")
+
+        later = _persist_article(db, source, published_at=T0 + timedelta(hours=2), country_code="GB")
+        _link(db, topic, later)
+
+        assert reestimate_if_earlier_article(db, topic.id, later) is None
+        db.refresh(event)
+        assert event.revision_log == []
+
+    def test_no_event_no_trigger(self, db):
+        """议题无 AgendaEvent：返回 None（首次检测由 detection 编排器负责）。"""
+        from app.agenda_engine.revision import reestimate_if_earlier_article
+
+        topic = _make_topic(db)
+        source = make_source(db, country_code="GB")
+        earlier = _persist_article(db, source, published_at=T0 - timedelta(hours=3), country_code="GB")
+        _link(db, topic, earlier)
+
+        assert reestimate_if_earlier_article(db, topic.id, earlier) is None
+
+    def test_archived_event_no_trigger(self, db):
+        """已归档事件不被自动重估（人工已结案）。"""
+        from app.agenda_engine.revision import reestimate_if_earlier_article
+
+        topic = _make_topic(db)
+        source = make_source(db, country_code="GB")
+        article_old = _persist_article(db, source, published_at=T0, country_code="GB")
+        _link(db, topic, article_old)
+        event = _make_event(db, topic, origin_at=T0, status="archived")
+
+        earlier = _persist_article(db, source, published_at=T0 - timedelta(hours=3), country_code="GB")
+        _link(db, topic, earlier)
+
+        assert reestimate_if_earlier_article(db, topic.id, earlier) is None
+        db.refresh(event)
+        assert event.revision_log == []

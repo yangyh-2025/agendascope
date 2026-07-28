@@ -401,3 +401,71 @@ class TestKeywordOverlapBlacklist:
         assert overlap["blacklist_applied"] is False
         assert overlap["shared_keywords"] == ["United States", "天然气"]
         assert overlap["filtered_out"] == []
+
+
+class TestMergeTriggersReestimate:
+    """T3.13：归并完成后对 target 议题触发增量重估（详细设计 4.2 算法 3 末段）。"""
+
+    def test_merge_reestimates_target_event_origin(self, db):
+        """target 已有事件（origin_at 偏晚），并入含更早文章的候选后：
+        事件 origin_at 被修正到更早报道时间，revision_log 触发类型为 merge。"""
+        from app.agenda_engine.revision import reestimate_origin  # noqa: F401 确认触发路径可 import
+        from app.models.agenda import AgendaEvent
+
+        now = datetime.now(UTC)
+        src = make_source(db, country_code="CN")
+        target = _make_topic(
+            db, name="目标议题", lifecycle_state="forming",
+            centroid=_unit(0), country_scope=["CN"], last_seen_at=now,
+        )
+        # target 自己的文章 T0（事件锚点据此建立）
+        t_article = _persist_article(db, src, embedding=_unit(0), published_at=now - timedelta(hours=2))
+        db.add(TopicArticle(topic_id=target.id, article_id=t_article.id, weight=1.0, assign_method="online"))
+        event = AgendaEvent(
+            topic_id=target.id, round_no=1, status="suspected", confidence="suspected",
+            origin_type="media", origin_country_code="CN",
+            origin_at=now - timedelta(hours=2), origin_confidence="medium",
+            follower_sequence=[], revision_log=[], human_locked_fields=[],
+        )
+        db.add(event)
+
+        cand = _make_topic(
+            db, name="候选议题", lifecycle_state="nascent",
+            centroid=_vec_with_cosine(0.92), country_scope=["CN"],
+            first_seen_at=now - timedelta(hours=5), last_seen_at=now - timedelta(hours=5),
+        )
+        # 候选议题的文章比 target 事件锚点更早
+        c_article = _persist_article(db, src, embedding=_vec_with_cosine(0.90), published_at=now - timedelta(hours=5))
+        db.add(TopicArticle(topic_id=cand.id, article_id=c_article.id, weight=1.0, assign_method="online"))
+        db.commit()
+
+        report = nextday_merge(db)
+        db.commit()
+
+        assert len(report.merged) == 1
+        db.refresh(event)
+        # 归并后 target 含更早文章 → 重估修正 origin_at
+        assert event.origin_at == now - timedelta(hours=5)
+        assert event.status == "revised"
+        entry = next(e for e in event.revision_log if e["field"] == "origin_at")
+        assert entry["trigger_evidence"]["type"] == "merge"
+        assert entry["actor"] == "machine"
+
+    def test_merge_without_event_no_reestimate(self, db):
+        """target 无 AgendaEvent：归并正常完成，重估为空操作不报错。"""
+        now = datetime.now(UTC)
+        _make_topic(
+            db, name="目标议题", lifecycle_state="forming",
+            centroid=_unit(0), last_seen_at=now,
+        )
+        cand = _make_topic(
+            db, name="候选议题", lifecycle_state="nascent",
+            centroid=_vec_with_cosine(0.92),
+            first_seen_at=now - timedelta(hours=1), last_seen_at=now - timedelta(hours=1),
+        )
+        db.commit()
+
+        report = nextday_merge(db)
+        db.commit()
+        assert len(report.merged) == 1
+        assert report.merged[0].source_topic_id == cand.id

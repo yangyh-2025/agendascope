@@ -208,7 +208,10 @@ def reestimate_origin(
     """增量重估：新证据出现自动重跑首发源判定与事件判定（详细设计 4.2 算法 4 reestimate）。
 
     触发场景（trigger['type']）：
-      - 'earlier_article'：归并后发现议题内出现更早 TIME_PUB 节点 → 重跑媒体首发判定
+      - 'earlier_article'：新文章归入既有议题且 published_at 早于当前首发锚点
+        （clustering/online.py 归簇路径触发）→ 重跑媒体首发判定
+      - 'merge'：次日归并完成、源议题文章并入 target（merge.py nextday_merge 触发，
+        详细设计 4.2 算法 3 末段"merge_map 非空触发增量重估"）→ 重跑首发/跟随/统计
       - 'person_origin'：LLM 首发表述判定出新的 person/org 首发 → 重跑（含 LLM）
       - 'stats_change'：统计佐证重算后显著性变化 → 重跑 follower_sequence 与 stats_evidence
 
@@ -407,6 +410,56 @@ def reestimate_origin(
         confidence=event.confidence,
     )
     return event
+
+
+def reestimate_if_earlier_article(
+    db: Session,
+    topic_id: UUID,
+    article: Any,
+    *,
+    settings: AgendaSettings | None = None,
+) -> AgendaEvent | None:
+    """新文章归入既有议题时的增量重估触发（T3.13，详细设计 4.2 算法 4 reestimate）。
+
+    触发条件：议题已有 AgendaEvent，且新文章 published_at 早于当前首发锚点
+    event.origin_at —— 更早的报道可能推翻首发源判定，重跑 reestimate_origin。
+    无事件 / 事件已归档 / 文章不早于锚点：返回 None 不触发（正常路径，非异常）。
+    """
+    from sqlalchemy import select
+
+    stmt = (
+        select(AgendaEvent)
+        .where(AgendaEvent.topic_id == topic_id)
+        .order_by(AgendaEvent.created_at.desc())
+        .limit(1)
+    )
+    event = db.scalars(stmt).first()
+    if event is None or event.status == "archived":
+        return None
+    published_at = getattr(article, "published_at", None)
+    if published_at is None or event.origin_at is None:
+        return None
+    if published_at >= event.origin_at:
+        return None
+    logger.info(
+        "reestimate_trigger_earlier_article",
+        topic_id=str(topic_id),
+        event_id=str(event.id),
+        article_id=str(article.id),
+        published_at=published_at.isoformat(),
+        current_origin_at=event.origin_at.isoformat(),
+    )
+    return reestimate_origin(
+        db,
+        topic_id,
+        trigger={
+            "type": "earlier_article",
+            "article_id": str(article.id),
+            "published_at": published_at.isoformat(),
+            "previous_origin_at": event.origin_at.isoformat(),
+        },
+        settings=settings,
+    )
 
 
 def confirm_event(
@@ -614,5 +667,6 @@ __all__ = [
     "append_revision",
     "confirm_event",
     "reject_revision",
+    "reestimate_if_earlier_article",
     "reestimate_origin",
 ]
