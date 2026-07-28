@@ -138,15 +138,36 @@ def combine_and(results: list[ConditionResult]) -> bool:
 def parse_conditions(rule: AlertRule) -> list[tuple[str, float]]:
     """从规则行解析 (type, value) 列表：主条件 + condition_extra 叠加。
 
+    condition_extra 契约（alert_rules API 写入为 {"and": [...]}，兼容裸 list）：
+      - {"and": [{"type": "top_n", "value": 10}, ...]}  （API 标准写入格式）
+      - [{"type": "top_n", "value": 10}, ...]           （裸 list，历史/直写兼容）
+      - {"type": "top_n", "value": 10}                  （单条件 dict，兼容）
     返回顺序：[主条件, *叠加条件]，全部需 AND 满足。
     """
     conditions: list[tuple[str, float]] = [(rule.condition_type, float(rule.condition_value))]
-    if rule.condition_extra:
-        for item in rule.condition_extra:
-            ctype = item.get("type")
-            cvalue = item.get("value")
-            if ctype in ("growth_rate", "top_n", "neg_ratio") and cvalue is not None:
-                conditions.append((ctype, float(cvalue)))
+    extra = rule.condition_extra
+    if not extra:
+        return conditions
+    if isinstance(extra, dict):
+        # dict 包一层 {"and": [...]} 或单条件 {"type","value"}
+        items = extra.get("and") if "and" in extra else [extra]
+    elif isinstance(extra, list):
+        items = extra
+    else:
+        logger.warning(
+            "alert_condition_extra_unexpected_type",
+            rule_id=str(rule.id), extra_type=type(extra).__name__,
+        )
+        return conditions
+    if not isinstance(items, list):
+        items = [items]
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        ctype = item.get("type")
+        cvalue = item.get("value")
+        if ctype in ("growth_rate", "top_n", "neg_ratio") and cvalue is not None:
+            conditions.append((ctype, float(cvalue)))
     return conditions
 
 
