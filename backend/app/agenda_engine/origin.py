@@ -8,13 +8,15 @@
 
 判定规则（与算法 4 注释一致）：
   - 议题 topic_articles 关联 articles，过滤已 is_duplicate=True 的转载（保留原创节点）
-  - 按 published_at 升序，最早者为首发候选
+  - 通讯社优先判定：候选来源是通讯社时，其报道时间锚点向前倾斜
+    origin_wire_boost_hours 小时参与比较（通讯社原文通常早于转载与跟风稿，
+    倾斜通讯社更早成为首发锚点）；普通媒体按真实 published_at 比较
   - 候选来源是通讯社（source.name 大小写不敏感命中 origin_wire_services 名单，
     或 source.media_type='wire'/'agency'），且 is_duplicate=False：confidence='high'
   - 普通媒体原创：confidence='medium'
   - time_source='crawled'：发布时间实际为抓取时间，置信度低，
     confidence='low' 且 needs_review=True，不自动告警（前端标注"首发源待核实"）
-  - 同一秒并列最早：通讯社优先（is_wire_service=True 胜出）
+  - 同一秒并列最早（倾斜后）：通讯社优先（is_wire_service=True 胜出）
 
 跟随国序列：
   - 排除 origin.country_code，对其他国家 c 取该国内媒体首篇该议题报道
@@ -29,7 +31,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -128,6 +130,10 @@ def _load_topic_articles(db: Session, topic_id: UUID) -> list[tuple[Article, Sou
 def detect_media_origin(db: Session, topic_id: UUID) -> MediaOrigin | None:
     """议题内最早 published_at 的原创报道为首发锚点。
 
+    通讯社优先判定：通讯社候选的比较锚点 = published_at - origin_wire_boost_hours
+    （通讯社原文优先于转载的倾斜策略）；返回的 MediaOrigin.published_at 仍为真实
+    发布时间（倾斜只影响挑选，不改写留痕时间）。
+
     返回 None：议题下无任何可用原创报道（空议题或全部已被折叠为转载）。
     """
     settings = get_agenda_settings()
@@ -136,14 +142,25 @@ def detect_media_origin(db: Session, topic_id: UUID) -> MediaOrigin | None:
         logger.info("media_origin_no_articles", extra={"topic_id": str(topic_id)})
         return None
 
-    earliest_published = candidates[0][0].published_at
-    # 同一秒并列最早：通讯社优先（详细设计算法 4 未明言，但通讯社原创可信度更高，
-    # 与 origin_wire_boost_hours 倾斜策略同向；取并列集内的通讯社为首发）
-    tied = [pair for pair in candidates if pair[0].published_at == earliest_published]
+    boost = timedelta(hours=settings.origin_wire_boost_hours)
+
+    def _effective_anchor(article: Article, is_wire: bool) -> datetime:
+        """通讯社候选锚点向前倾斜 boost 小时参与比较；普通媒体按真实时间。"""
+        if is_wire:
+            return article.published_at - boost
+        return article.published_at
+
+    # 按（倾斜后锚点, 非通讯社, 真实时间, id）排序取最优：倾斜后并列时通讯社优先
+    scored = [
+        (_effective_anchor(a, _is_wire_service(s, settings.origin_wire_services)), a, s)
+        for a, s in candidates
+    ]
+    earliest_effective = min(item[0] for item in scored)
+    tied = [item for item in scored if item[0] == earliest_effective]
     chosen_article: Article | None = None
     chosen_source: Source | None = None
     chosen_is_wire = False
-    for article, source in tied:
+    for _anchor, article, source in tied:
         is_wire = _is_wire_service(source, settings.origin_wire_services)
         if chosen_article is None:
             chosen_article, chosen_source, chosen_is_wire = article, source, is_wire
@@ -153,6 +170,9 @@ def detect_media_origin(db: Session, topic_id: UUID) -> MediaOrigin | None:
 
     assert chosen_article is not None and chosen_source is not None  # 上文已确保 tied 非空
     confidence, needs_review = _classify_confidence(chosen_article, chosen_is_wire)
+    # boost 是否改变了结果（相对纯按真实 published_at 的最早者）
+    earliest_real = candidates[0][0]
+    boost_changed_outcome = chosen_article.id != earliest_real.id
     origin = MediaOrigin(
         article_id=chosen_article.id,
         source_id=chosen_source.id,
@@ -173,6 +193,8 @@ def detect_media_origin(db: Session, topic_id: UUID) -> MediaOrigin | None:
             "is_wire_service": origin.is_wire_service,
             "confidence": origin.confidence,
             "needs_review": origin.needs_review,
+            "wire_boost_hours": settings.origin_wire_boost_hours,
+            "wire_boost_changed_outcome": boost_changed_outcome,
         },
     )
     return origin

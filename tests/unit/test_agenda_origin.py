@@ -163,6 +163,44 @@ class TestDetectMediaOrigin:
         assert origin.is_wire_service is True
         assert origin.confidence == "high"
 
+    def test_wire_boost_shifts_anchor_within_window(self, db):
+        """通讯社锚点向前倾斜 origin_wire_boost_hours（默认 6h）参与比较：
+        普通媒体 T0、通讯社 T0+4h（倾斜后 T0-2h）→ 通讯社胜出为首发锚点，
+        且 origin.published_at 仍是真实发布时间（倾斜不改写留痕时间）。"""
+        topic = _make_topic(db)
+        regular = make_source(db, name="Regular Daily", country_code="US", media_type="newspaper")
+        wire = make_source(db, name="Reuters", country_code="GB", media_type="agency")
+        regular_article = _persist_article(db, regular, published_at=T0, country_code="US")
+        wire_article = _persist_article(
+            db, wire, published_at=T0 + timedelta(hours=4), country_code="GB",
+        )
+        _link(db, topic, regular_article)
+        _link(db, topic, wire_article)
+
+        origin = detect_media_origin(db, topic.id)
+        assert origin is not None
+        assert origin.article_id == wire_article.id
+        assert origin.is_wire_service is True
+        assert origin.published_at == T0 + timedelta(hours=4)
+
+    def test_wire_boost_not_applied_beyond_window(self, db):
+        """通讯社晚于最早报道超过 boost 窗口（T0+7h > 6h）：倾斜后仍晚，最早原创保持首发。"""
+        topic = _make_topic(db)
+        regular = make_source(db, name="Regular Daily", country_code="US", media_type="newspaper")
+        wire = make_source(db, name="Reuters", country_code="GB", media_type="agency")
+        regular_article = _persist_article(db, regular, published_at=T0, country_code="US")
+        wire_article = _persist_article(
+            db, wire, published_at=T0 + timedelta(hours=7), country_code="GB",
+        )
+        _link(db, topic, regular_article)
+        _link(db, topic, wire_article)
+
+        origin = detect_media_origin(db, topic.id)
+        assert origin is not None
+        assert origin.article_id == regular_article.id
+        assert origin.is_wire_service is False
+        assert origin.confidence == "medium"
+
     def test_wire_name_case_insensitive_match(self, db):
         """source.name 大小写不敏感匹配名单：'reuters' / 'REUTERS' 均识别为通讯社。"""
         topic = _make_topic(db)
