@@ -7,10 +7,14 @@ const NAV_ITEMS = [
   { to: "/", label: "看板", end: true },
   { to: "/map", label: "全球地图", end: false },
   { to: "/topics", label: "议题", end: false },
+  { to: "/timeline", label: "议程时间线", end: false },
   { to: "/events", label: "议程事件", end: false },
+  { to: "/revisions", label: "修正历史", end: false },
+  { to: "/persons", label: "人物监测", end: false },
   { to: "/analytics", label: "跨国对比", end: false },
-  { to: "/sources", label: "媒体源", end: false },
+  { to: "/alerts", label: "预警配置", end: false },
   { to: "/reports", label: "报告", end: false },
+  { to: "/sources", label: "媒体源", end: false },
   { to: "/system", label: "系统", end: false },
 ];
 
@@ -57,7 +61,7 @@ export default function Layout() {
       </aside>
       <div className="layout-main">
         <header className="layout-topbar">
-          <span className="layout-topbar-title">Phase 1 · 全球媒体源监控</span>
+          <span className="layout-topbar-title">AgendaScope 观澜 · 全球议程设置监控平台</span>
           <div className="layout-topbar-user">
             <span className="layout-username">
               {user ? `${user.display_name || user.username}（${user.role}）` : "加载中…"}
