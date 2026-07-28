@@ -16,7 +16,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.agenda_engine.revision import (
@@ -46,6 +46,9 @@ from app.schemas.agenda import DismissEventRequest
 router = APIRouter()
 
 _EVENT_STATUSES = {"watching", "suspected", "confirmed", "dismissed", "revised", "archived"}
+
+# confidence 排序显式优先级映射（修复：此前按字符串字典序 asc，语义错误）
+_CONFIDENCE_SORT_PRIORITY = {"confirmed": 0, "suspected": 1, "watching": 2}
 
 
 class RejectRevisionRequest(BaseModel):
@@ -145,8 +148,17 @@ def list_events(
     if sort == "origin_at":
         stmt = stmt.order_by(AgendaEvent.origin_at.desc())
     elif sort == "confidence":
-        # confidence 按 suspected>watching>confirmed 简化字典序
-        stmt = stmt.order_by(AgendaEvent.confidence.asc(), AgendaEvent.updated_at.desc())
+        # 显式优先级映射：confirmed > suspected > watching，同级按更新时间倒序
+        stmt = stmt.order_by(
+            case(
+                *[
+                    (AgendaEvent.confidence == level, priority)
+                    for level, priority in _CONFIDENCE_SORT_PRIORITY.items()
+                ],
+                else_=len(_CONFIDENCE_SORT_PRIORITY),
+            ),
+            AgendaEvent.updated_at.desc(),
+        )
     else:
         stmt = stmt.order_by(AgendaEvent.updated_at.desc())
 
@@ -432,6 +444,57 @@ def list_revisions_endpoint(
         "confidence": event.confidence,
         "human_locked_fields": list(event.human_locked_fields or []),
         "revisions": revisions,
+    })
+
+
+@router.get("/{event_id}/chain")
+def event_chain(
+    event_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(ROLE_AUTHORIZED)),
+):
+    """传播链路（详细设计 1.8 链路图数据）：首发国 → 跟随国时滞序列 + 边集合。
+
+    数据全部来自引擎落库字段：origin_* / follower_sequence（JSONB，
+    元素含 country_code/first_media_name/first_published_at/lag_hours）。
+    """
+    event = _get_event_or_404(db, event_id)
+
+    origin_media = None
+    if event.origin_source_id:
+        src = db.get(Source, event.origin_source_id)
+        if src is not None:
+            origin_media = {"id": str(src.id), "name": src.name}
+
+    followers: list[dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
+    for f in event.follower_sequence or []:
+        if not isinstance(f, dict):
+            continue
+        followers.append({
+            "country": f.get("country_code"),
+            "first_media": f.get("first_media_name"),
+            "first_article_id": f.get("first_article_id"),
+            "first_published_at": f.get("first_published_at"),
+            "lag_hours": float(f.get("lag_hours", 0)),
+        })
+        edges.append({
+            "from_country": event.origin_country_code,
+            "to_country": f.get("country_code"),
+            "lag_hours": float(f.get("lag_hours", 0)),
+        })
+
+    return ok({
+        "event_id": str(event.id),
+        "topic_id": str(event.topic_id),
+        "origin": {
+            "country": event.origin_country_code,
+            "media": origin_media,
+            "published_at": event.origin_at.isoformat() if event.origin_at else None,
+            "confidence": event.origin_confidence,
+        },
+        "follower_sequence": followers,
+        "edges": edges,
     })
 
 
