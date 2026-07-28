@@ -44,6 +44,7 @@ def upgrade() -> None:
         attempts INTEGER NOT NULL DEFAULT 0,
         next_retry_at TIMESTAMPTZ,
         error TEXT,
+        reported BOOLEAN NOT NULL DEFAULT FALSE,
         sent_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         CONSTRAINT ck_deliveries_status CHECK (status IN ('pending','sent','failed')),
