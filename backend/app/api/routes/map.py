@@ -58,15 +58,21 @@ def map_countries(
         ).order_by(AgendaSnapshot.salience_rank.asc())
     ).all()
 
+    # 批量取议题名（修复：此前循环内 db.get(Topic) 为 N+1 查询）
+    topic_ids = {snap.topic_id for snap in snaps if snap.topic_id}
+    topic_names: dict = {}
+    if topic_ids:
+        for t in db.scalars(select(Topic).where(Topic.id.in_(topic_ids))).all():
+            topic_names[t.id] = t.name
+
     by_country: dict[str, list] = {}
     for snap in snaps:
         lst = by_country.setdefault(snap.country_code, [])
         if len(lst) >= _MAX_TOP_TOPICS:
             continue
-        topic = db.get(Topic, snap.topic_id)
         lst.append({
             "topic_id": str(snap.topic_id) if snap.topic_id else None,
-            "name": topic.name if topic else None,
+            "name": topic_names.get(snap.topic_id),
             "salience_score": float(snap.salience_score or 0),
             "article_count": snap.article_count,
         })
@@ -79,19 +85,28 @@ def map_countries(
     if latest_visible:
         data_delay_minutes = max(0, int((now - latest_visible).total_seconds() / 60))
 
-    total_countries_with_data = len([c for c in cc_counts if cc_counts[c] > 0])
-    coverage_confidence = total_countries_with_data / max(len(cc_counts), 1)
+    # 覆盖率置信度：以 30 国目标清单为分母（修复：此前以"有数据国家数"为分母导致恒≈1）
+    target_with_data = len([
+        cc for cc in _COUNTRY_NAMES
+        if cc_counts.get(cc, 0) > 0 or cc in by_country
+    ])
+    coverage_confidence = target_with_data / len(_COUNTRY_NAMES)
 
+    # 无数据的目标国家也要下发（empty 标记，前端置灰；不冒充旧数据）
+    all_countries = sorted(set(_COUNTRY_NAMES) | set(cc_counts) | set(by_country))
     items = []
-    for cc in sorted(set(cc_counts) | set(by_country)):
+    for cc in all_countries:
         article_count = cc_counts.get(cc, 0)
+        top_topics = by_country.get(cc, [])
+        has_data = article_count > 0 or bool(top_topics)
         items.append({
             "country_code": cc,
             "country_name_zh": _COUNTRY_NAMES.get(cc, cc),
             "article_count_today": article_count,
-            "top_topics": by_country.get(cc, []),
+            "top_topics": top_topics,
             "coverage_confidence": round(coverage_confidence, 2),
             "degraded": coverage_confidence < _MIN_COVERAGE,
+            "empty": not has_data,
             "data_delay_minutes": data_delay_minutes,
         })
 
