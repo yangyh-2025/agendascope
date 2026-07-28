@@ -18,22 +18,36 @@ human_locked_fields 含 'merged_into' 的源议题不自动归并（人工优先
   - 双方 revision_log 追加留痕（actor='machine'，trigger_evidence 含 sim）
   - 关联 agenda_events topic_id 从 c 迁回 target（事件本身保留历史）
 
+实体黑名单联动（详细设计 4.2 算法 5 用途②）：归并相似度门槛只看语义向量
+（黑名单实体永远不提高相似度）；归并比对的关键词重叠在剔除 entity:blacklist
+黑名单实体后计算，作为留痕写入 revision trigger_evidence 与 MergeDecision——
+防止"共享超高频实体"被误读为归并依据。redis_client 缺位时黑名单不生效，
+重叠按原始关键词计算并在留痕中标记 blacklist_applied=False（黑名单是优化
+而非正确性依赖）。
+
 绝不静默降级：每次归并/跳过均落 logger.info 结构化日志与 revision_log。
 """
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agenda_engine.config import get_agenda_settings
+from app.agenda_engine.entity_blacklist import filter_blacklisted
 from app.agenda_engine.lifecycle import advance_for_size, topic_size
 from app.clustering.repository import assign_article, time_decay_pool
 from app.core.logging import get_logger
 from app.models.agenda import AgendaEvent
 from app.models.topic import Topic, TopicArticle
+
+if TYPE_CHECKING:
+    import redis
 
 logger = get_logger("agenda_engine.merge")
 
@@ -45,6 +59,7 @@ class MergeDecision:
     source_topic_id: UUID
     target_topic_id: UUID
     similarity: float
+    keyword_overlap: dict | None = None  # 黑名单剔除后的关键词重叠留痕（见 _keyword_overlap）
 
 
 @dataclass(frozen=True)
@@ -169,6 +184,46 @@ def _norm_pair(a: UUID, b: UUID) -> tuple[UUID, UUID]:
     return (a, b) if a.bytes <= b.bytes else (b, a)
 
 
+def _keyword_overlap(
+    candidate: Topic,
+    target: Topic,
+    redis_client: redis.Redis | None,
+) -> dict:
+    """归并比对的关键词重叠（剔除 entity:blacklist 黑名单实体后计算）。
+
+    详细设计 4.2 算法 5 用途②：不因共享黑名单实体（超高频大国名/名人等超级节点）
+    而提高归并判断中的实体重叠——重叠仅供留痕与审计，归并门槛仍只看语义向量。
+
+    返回 dict：
+      - shared_keywords：剔除黑名单后的共享关键词（升序，确定性输出）
+      - overlap_count：共享数
+      - blacklist_applied：黑名单是否生效（redis_client 缺位时 False，按原始关键词算）
+      - filtered_out：被黑名单剔除的关键词（双方都算，升序）
+    """
+    cand_kw = [str(k) for k in (candidate.keywords or [])]
+    tgt_kw = [str(k) for k in (target.keywords or [])]
+    if redis_client is None:
+        shared = sorted(set(cand_kw) & set(tgt_kw))
+        return {
+            "shared_keywords": shared,
+            "overlap_count": len(shared),
+            "blacklist_applied": False,
+            "filtered_out": [],
+        }
+    filtered_cand = filter_blacklisted(cand_kw, redis_client)
+    filtered_tgt = filter_blacklisted(tgt_kw, redis_client)
+    shared = sorted(set(filtered_cand) & set(filtered_tgt))
+    filtered_out = sorted(
+        (set(cand_kw) | set(tgt_kw)) - (set(filtered_cand) | set(filtered_tgt))
+    )
+    return {
+        "shared_keywords": shared,
+        "overlap_count": len(shared),
+        "blacklist_applied": True,
+        "filtered_out": filtered_out,
+    }
+
+
 def _find_merge_target(
     db: Session,
     candidate: Topic,
@@ -240,6 +295,7 @@ def merge_pair(
     target: Topic,
     *,
     similarity: float,
+    keyword_overlap: dict | None = None,
     now: datetime | None = None,
 ) -> None:
     """执行单次归并（不落 commit；调用方负责事务边界）。
@@ -247,6 +303,7 @@ def merge_pair(
     动作：c.merged_into=target.id；c.lifecycle_state='evolving'；topic_articles 迁移；
     target.centroid 规模加权池化；country_scope 并集；last_seen_at 推进；
     target.lifecycle_state 按规模推进（不后退）；双方 revision_log 追加；agenda_events 迁移。
+    keyword_overlap：黑名单剔除后的关键词重叠留痕（nextday_merge 传入），并入 trigger_evidence。
     """
     ts = now or datetime.now(UTC)
     source_id = source.id
@@ -300,6 +357,7 @@ def merge_pair(
             "algorithm": "nextday_merge",
             "moved_articles": moved_articles,
             "moved_events": moved_events,
+            "keyword_overlap": keyword_overlap,
         },
         actor="machine",
         now=ts,
@@ -313,6 +371,7 @@ def merge_pair(
             "algorithm": "nextday_merge",
             "moved_articles": moved_articles,
             "moved_events": moved_events,
+            "keyword_overlap": keyword_overlap,
         },
         actor="machine",
         now=ts,
@@ -336,6 +395,7 @@ def nextday_merge(
     *,
     candidate_since: datetime | None = None,
     batch_size: int | None = None,
+    redis_client: redis.Redis | None = None,
 ) -> MergeReport:
     """次日归并主入口（flush 由本函数完成；commit 由调用方负责）。
 
@@ -343,6 +403,9 @@ def nextday_merge(
               按 first_seen_at 升序，老议题优先被并入目标
     档案集 D：merged_into IS NULL AND lifecycle_state != 'archived'
               AND last_seen_at >= now() - merge_active_days
+    redis_client：提供时归并比对的关键词重叠剔除 entity:blacklist 黑名单实体后计算
+              （详细设计 4.2 算法 5 用途②）；缺位时按原始关键词算并标记
+              blacklist_applied=False（黑名单是优化而非正确性依赖）
     """
     settings = get_agenda_settings()
     now = datetime.now(UTC)
@@ -423,11 +486,14 @@ def nextday_merge(
             continue
 
         # 执行归并（单源议题事务内由本函数 flush，调用方统一 commit）
-        merge_pair(db, cand, target, similarity=sim, now=now)
+        # 关键词重叠：剔除黑名单实体后计算（留痕与审计用，门槛仍只看语义向量）
+        overlap_info = _keyword_overlap(cand, target, redis_client)
+        merge_pair(db, cand, target, similarity=sim, keyword_overlap=overlap_info, now=now)
         merged.append(MergeDecision(
             source_topic_id=cand.id,
             target_topic_id=target.id,
             similarity=sim,
+            keyword_overlap=overlap_info,
         ))
 
     db.flush()

@@ -330,3 +330,74 @@ class TestCandidateWindow:
 
         assert report.merged == []
         assert old_nascent.id not in report.new_topics  # 不在候选集，自然不在 new_topics
+
+
+class _FakeRedis:
+    """最小 Redis 替身：仅实现 smembers（filter_blacklisted 读取黑名单的唯一入口）。"""
+
+    def __init__(self, members):
+        self._members = set(members)
+
+    def smembers(self, _key):
+        return set(self._members)
+
+
+class TestKeywordOverlapBlacklist:
+    """T3.5 联动：归并比对的关键词重叠剔除黑名单实体后计算（门槛仍只看向量）。"""
+
+    def _setup_merge(self, db):
+        now = datetime.now(UTC)
+        target = _make_topic(
+            db,
+            name="目标议题",
+            lifecycle_state="forming",
+            centroid=_unit(0),
+            keywords=["United States", "天然气", "能源"],
+            last_seen_at=now,
+        )
+        cand = _make_topic(
+            db,
+            name="候选议题",
+            lifecycle_state="nascent",
+            centroid=_vec_with_cosine(0.92),
+            keywords=["United States", "天然气", "制裁"],
+            first_seen_at=now - timedelta(hours=1),
+            last_seen_at=now - timedelta(hours=1),
+        )
+        db.commit()
+        return cand, target
+
+    def test_blacklist_entity_excluded_from_overlap(self, db):
+        """共享关键词中的黑名单实体（United States）被剔除，不参与重叠留痕。"""
+        cand, target = self._setup_merge(db)
+        fake_redis = _FakeRedis({"United States"})
+
+        report = nextday_merge(db, redis_client=fake_redis)
+        db.commit()
+
+        assert len(report.merged) == 1
+        overlap = report.merged[0].keyword_overlap
+        assert overlap is not None
+        assert overlap["blacklist_applied"] is True
+        assert overlap["shared_keywords"] == ["天然气"]
+        assert overlap["filtered_out"] == ["United States"]
+        # 归并留痕同步写入 revision trigger_evidence
+        db.expire_all()
+        cand_db = db.get(Topic, cand.id)
+        entry = next(e for e in cand_db.revision_log if e["field"] == "merged_into")
+        assert entry["trigger_evidence"]["keyword_overlap"]["shared_keywords"] == ["天然气"]
+        assert entry["trigger_evidence"]["keyword_overlap"]["blacklist_applied"] is True
+
+    def test_no_redis_marks_blacklist_not_applied(self, db):
+        """redis_client 缺位：黑名单不生效，按原始关键词算重叠并标记 blacklist_applied=False。"""
+        cand, _target = self._setup_merge(db)
+
+        report = nextday_merge(db, redis_client=None)
+        db.commit()
+
+        assert len(report.merged) == 1
+        overlap = report.merged[0].keyword_overlap
+        assert overlap is not None
+        assert overlap["blacklist_applied"] is False
+        assert overlap["shared_keywords"] == ["United States", "天然气"]
+        assert overlap["filtered_out"] == []

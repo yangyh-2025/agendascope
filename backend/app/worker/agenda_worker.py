@@ -48,7 +48,7 @@ class AgendaWorker:
             return False
         db = self.session_factory()
         try:
-            report = nextday_merge(db)
+            report = nextday_merge(db, redis_client=self.redis)
             db.commit()
             self._last_merge = time.monotonic()
             logger.info(
