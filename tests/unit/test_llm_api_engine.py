@@ -10,6 +10,7 @@
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -106,13 +107,17 @@ def test_basic_json_response(stub_api: int):
     engine = OpenAICompatibleEngine(settings)
     engine.load()
 
-    result, elapsed = engine.generate_structured(
-        "系统提示", "用户输入", NameOutput, max_retries=0,
-    )
+    # elapsed 由 time.monotonic() 差值计算；Windows 计时器精度下本地回环可能测得 0，
+    # mock 单调时钟为固定差值，确定性验证"返回真实耗时"这一语义
+    with patch("app.llm.api_engine.time") as mock_time:
+        mock_time.monotonic.side_effect = [1000.0, 1000.125]
+        result, elapsed = engine.generate_structured(
+            "系统提示", "用户输入", NameOutput, max_retries=0,
+        )
     assert isinstance(result, NameOutput)
     assert result.name == "测试议题"
     assert result.confidence == "high"
-    assert elapsed > 0
+    assert elapsed == pytest.approx(0.125)
 
     # 验证请求格式
     req = _FakeAPIHandler.request_log[0]
