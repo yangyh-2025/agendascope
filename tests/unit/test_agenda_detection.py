@@ -121,6 +121,8 @@ def _stub_annotator(
     annotator.monitor.degraded_since = None
     annotator.engine.model_name = "Qwen2.5-0.5B-Instruct"
     annotator.engine.is_loaded = True
+    # 首发判定的候选片段预算控制依赖 count_tokens（与 LLMEngine 未加载兜底口径一致：2 字符≈1 token）
+    annotator.engine.count_tokens.side_effect = lambda text: max(1, len(text) // 2)
     annotator.settings.resolved_model_name.return_value = "Qwen2.5-0.5B-Instruct"
     calls = {"first_utterance": 0, "final_review": 0}
 
@@ -279,8 +281,12 @@ class TestMediaTimeFallback:
         assert fr is not None and fr.success is False
 
     def test_fallback_when_annotator_none(self, db):
-        """llm_annotator 未注入：同样走 media_time_fallback 回落。"""
-        topic, _origin, _followers = _build_four_country_topic(db)
+        """llm_annotator 未注入：同样走 media_time_fallback 回落。
+
+        用通讯社起源（high→medium 降级后仍满足首发源明确条件）；普通媒体
+        medium→low 降级后按设计不创建 suspected 事件（低置信首发不自动告警）。
+        """
+        topic, _origin, _followers = _build_four_country_topic(db, origin_wire=True)
 
         result = detect_topic_event(db, topic.id, llm_annotator=None)
 
@@ -311,6 +317,9 @@ class TestRunDetectionCycle:
         """单议题异常：回滚该议题、记入 failed_topics，其他议题正常落库。"""
         topic_ok, _o, _f = _build_four_country_topic(db)
         topic_bad = _make_topic(db, name="故障议题")
+        # 周期按议题独立 commit/rollback：议题数据需先落库，否则故障议题触发的
+        # rollback 会把同事务内未提交的夹具数据一并回滚（生产上议题本就是已提交数据）
+        db.commit()
         annotator = _stub_annotator()
 
         import app.agenda_engine.detection as detection_mod
@@ -354,9 +363,14 @@ class TestRunDetectionCycle:
 class TestDetectionWorker:
     def test_worker_maybe_detect_runs_cycle(self, db):
         """DetectionWorker 注入 session_factory/annotator 后到期即执行一轮检测。"""
+        from sqlalchemy.orm import sessionmaker
+
         from app.worker.detection_worker import DetectionWorker
 
         topic, _o, _f = _build_four_country_topic(db)
+        # worker finally 会 close() 会话：注入绑定同一引擎的独立 factory（对齐生产），
+        # 夹具数据先提交，worker 的自治会话才可见（生产上议题本就是已提交数据）
+        db.commit()
         annotator = _stub_annotator()
         fake_redis = MagicMock()
         fake_redis.smembers.return_value = set()
@@ -364,7 +378,7 @@ class TestDetectionWorker:
         fake_redis.exists.return_value = 0
 
         worker = DetectionWorker(
-            session_factory=lambda: db,
+            session_factory=sessionmaker(bind=db.get_bind()),
             redis_client=fake_redis,
             llm_annotator=annotator,
         )

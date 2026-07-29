@@ -272,10 +272,12 @@ class TestUpsertEvent:
 
     def test_stats_pending_marker_written(self, db):
         """样本不足创建的事件：stats_evidence 落 significance_pending=True 标记。"""
+        from tests.conftest import make_source
         topic = _make_topic(db)
+        source = make_source(db, country_code="CN", language="zh")
         input_data = EventDetectionInput(
             topic_id=topic.id,
-            media_origin=_make_origin(),
+            media_origin=_make_origin(source_id=source.id),
             followers=[_make_follower("US"), _make_follower("GB"), _make_follower("JP")],
             stats=_make_stats(significant=False, insufficient=True, sample_size=50),
         )
