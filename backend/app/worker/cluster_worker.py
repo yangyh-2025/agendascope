@@ -116,7 +116,8 @@ class ClusterWorker:
     def maybe_recluster(self) -> bool:
         """到点执行全局重聚类校正 + 快照发布；校正失败记日志下一轮重试，不阻塞在线归簇。"""
         interval_s = self.settings.recluster_interval_minutes * 60
-        if time.monotonic() - self._last_recluster < interval_s:
+        # _last_recluster=0.0 是"从未执行"哨兵：uptime 短于周期时直接比较会误判未到期
+        if self._last_recluster > 0.0 and time.monotonic() - self._last_recluster < interval_s:
             return False
         db = self.session_factory()
         try:

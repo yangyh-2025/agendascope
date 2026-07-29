@@ -45,7 +45,8 @@ class DetectionWorker:
     def maybe_detect(self) -> bool:
         """到点触发一轮事件检测；返回本轮是否实际执行。"""
         interval_s = self.settings.detection_interval_minutes * 60
-        if time.monotonic() - self._last_detect < interval_s:
+        # _last_detect=0.0 是"从未执行"哨兵：uptime 短于周期时直接比较会误判未到期
+        if self._last_detect > 0.0 and time.monotonic() - self._last_detect < interval_s:
             return False
         db = self.session_factory()
         try:

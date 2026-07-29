@@ -44,7 +44,9 @@ class AgendaWorker:
     def maybe_merge(self) -> bool:
         """到点触发次日归并；返回本轮是否实际执行。"""
         interval_s = self.settings.merge_interval_minutes * 60
-        if time.monotonic() - self._last_merge < interval_s:
+        # _last_merge=0.0 是"从未执行"哨兵：机器 uptime 短于周期时 monotonic() 仍小于
+        # interval，若直接比较会误判未到期，故哨兵必须先判（启动即首轮触发）
+        if self._last_merge > 0.0 and time.monotonic() - self._last_merge < interval_s:
             return False
         db = self.session_factory()
         try:
@@ -70,7 +72,7 @@ class AgendaWorker:
     def maybe_sweep(self) -> bool:
         """到点触发消亡扫描；返回本轮是否实际执行。"""
         interval_s = self.settings.sweep_interval_minutes * 60
-        if time.monotonic() - self._last_sweep < interval_s:
+        if self._last_sweep > 0.0 and time.monotonic() - self._last_sweep < interval_s:
             return False
         db = self.session_factory()
         try:
@@ -91,7 +93,7 @@ class AgendaWorker:
     def maybe_refresh_blacklist(self) -> bool:
         """到点刷新实体黑名单；返回本轮是否实际执行。"""
         interval_s = self.settings.entity_blacklist_refresh_hours * 3600
-        if time.monotonic() - self._last_blacklist < interval_s:
+        if self._last_blacklist > 0.0 and time.monotonic() - self._last_blacklist < interval_s:
             return False
         db = self.session_factory()
         try:

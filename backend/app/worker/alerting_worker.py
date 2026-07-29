@@ -93,7 +93,8 @@ class AlertingWorker:
     # ------------------------------------------------------------------
     def maybe_evaluate(self) -> bool:
         """到点触发一轮规则评估；返回本轮是否实际执行。"""
-        if time.monotonic() - self._last_eval < self.eval_interval_seconds:
+        # _last_eval=0.0 是"从未执行"哨兵：uptime 短于周期时直接比较会误判未到期
+        if self._last_eval > 0.0 and time.monotonic() - self._last_eval < self.eval_interval_seconds:
             return False
         db = self.session_factory()
         try:

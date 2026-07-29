@@ -31,7 +31,8 @@ class SnapshotWorker:
     def maybe_refresh(self) -> bool:
         """到点触发快照刷新；返回本轮是否实际执行。"""
         interval_s = self.settings.snapshot_interval_minutes * 60
-        if time.monotonic() - self._last_run < interval_s:
+        # _last_run=0.0 是"从未执行"哨兵：uptime 短于周期时直接比较会误判未到期
+        if self._last_run > 0.0 and time.monotonic() - self._last_run < interval_s:
             return False
         db = self.session_factory()
         try:
