@@ -51,10 +51,12 @@ services:
       discovery.type: single-node
       xpack.security.enabled: "false"
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      path.repo: /usr/share/elasticsearch/backups   # 备份快照仓库（scripts/backup.sh 注册 _snapshot/backup）
     ports:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - esbackup:/usr/share/elasticsearch/backups
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9200 >/dev/null || exit 1"]
       interval: 10s
@@ -210,7 +212,55 @@ services:
         condition: service_healthy
     command: python -m app.worker.snapshot_worker
 
+  detection-worker:
+    image: agendascope-backend:latest   # 与 backend 共用镜像
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_URL: redis://redis:6379/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      AGENDA_DETECTION_INTERVAL_MINUTES: ${AGENDA_DETECTION_INTERVAL_MINUTES:-30}
+      LLM_PROFILE: ${LLM_PROFILE:-cpu-dev}
+      LLM_MODEL_DIR: /models/Qwen2.5-0.5B-Instruct   # 模型权重经卷挂载（镜像不含模型，控制体积）
+    volumes:
+      - ../models:/models:ro
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    command: python -m app.worker.detection_worker
+
+  alerting-worker:
+    image: agendascope-backend:latest   # 与 backend 共用镜像
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_URL: redis://redis:6379/1
+      COLLECT_API_BASE: http://backend:8000   # 订阅退订链接指向本 API 服务
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_FROM: ${SMTP_FROM:-alert@agendascope.local}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_TLS: ${SMTP_TLS:-}
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.worker.alerting_worker
+
 volumes:
   pgdata:
   redisdata:
   esdata:
+  esbackup:
