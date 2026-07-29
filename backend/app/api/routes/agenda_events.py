@@ -26,7 +26,7 @@ from app.agenda_engine.revision import (
     confirm_event,
     reject_revision,
 )
-from app.api.deps import ROLE_AUTHORIZED, ROLE_REGISTERED, require_role
+from app.api.deps import ROLE_AUTHORIZED, ROLE_REGISTERED, require_license_active, require_role
 from app.core.errors import (
     CODE_NOT_FOUND,
     CODE_PARAM_INVALID,
@@ -283,6 +283,7 @@ def confirm_event_endpoint(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_AUTHORIZED)),
+    _license: None = Depends(require_license_active),
 ):
     """人工确认（详细设计 1.8）：status/confidence → 'confirmed'。
 
@@ -320,6 +321,7 @@ def dismiss_event_endpoint(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_AUTHORIZED)),
+    _license: None = Depends(require_license_active),
 ):
     """人工排除事件（详细设计 1.8 + PRD 8.4 误报反馈闭环）。
 

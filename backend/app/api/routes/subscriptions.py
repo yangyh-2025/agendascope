@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROLE_REGISTERED, get_db, require_role
+from app.api.deps import ROLE_REGISTERED, get_db, require_license_active, require_role
 from app.core.errors import CODE_FORBIDDEN, CODE_NOT_FOUND, BizError, ok
 from app.models.subscription import Subscription
 from app.models.user import User
@@ -61,6 +61,7 @@ def create_subscription(
     body: CreateSubscriptionRequest,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_REGISTERED)),
+    _license: None = Depends(require_license_active),
 ):
     count = int(db.scalar(
         select(func.count()).select_from(Subscription).where(Subscription.user_id == user.id)
@@ -85,6 +86,7 @@ def delete_subscription(
     subscription_id: uuid.UUID,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_REGISTERED)),
+    _license: None = Depends(require_license_active),
 ):
     sub = db.get(Subscription, subscription_id)
     if sub is None:

@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROLE_REGISTERED, get_db, require_role
+from app.api.deps import ROLE_REGISTERED, get_db, require_license_active, require_role
 from app.core.errors import CODE_FORBIDDEN, CODE_NOT_FOUND, CODE_STATE_INVALID, BizError, ok
 from app.db.session import get_session_factory
 from app.models.report import ReportExport
@@ -85,6 +85,7 @@ def create_export(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_REGISTERED)),
+    _license: None = Depends(require_license_active),
 ):
     """创建导出任务：90 天预检 → 并发 >3 排队 → 60s 内联尝试，超时转异步。"""
     export = report_service.create_export(db, user.id, body.to_payload())

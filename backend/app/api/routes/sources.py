@@ -6,7 +6,7 @@ from datetime import UTC
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROLE_REGISTERED, require_role
+from app.api.deps import ROLE_REGISTERED, require_license_active, require_role
 from app.collector.governance import Governance
 from app.core.errors import CODE_NOT_FOUND, CODE_STATE_INVALID, BizError, ok
 from app.db.redis_client import get_cache_redis
@@ -99,6 +99,7 @@ def create_source(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role("admin")),
+    _license: None = Depends(require_license_active),
 ):
     service = SourceService(db)
     source = service.create(body)
@@ -116,6 +117,7 @@ def update_source(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role("admin")),
+    _license: None = Depends(require_license_active),
 ):
     service = SourceService(db)
     source = _get_source_or_404(db, source_id)

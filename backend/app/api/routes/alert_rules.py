@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func as sql_func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import ROLE_ADMIN, ROLE_AUTHORIZED, get_db, require_role
+from app.api.deps import ROLE_ADMIN, ROLE_AUTHORIZED, get_db, require_license_active, require_role
 from app.core.errors import CODE_FORBIDDEN, CODE_NOT_FOUND, CODE_QUOTA_EXCEEDED, BizError, ok
 from app.models.alert import AlertRule
 from app.models.user import User
@@ -72,7 +72,7 @@ def list_rules(
 
 
 @router.post("")
-def create_rule(body: CreateRuleRequest, db: Session = Depends(get_db), user: User = Depends(require_role(ROLE_AUTHORIZED))):
+def create_rule(body: CreateRuleRequest, db: Session = Depends(get_db), user: User = Depends(require_role(ROLE_AUTHORIZED)), _license: None = Depends(require_license_active)):
     _check_quota(db, user)
     rule = AlertRule(
         user_id=user.id, name=body.name, country_codes=body.country_codes,
@@ -87,7 +87,7 @@ def create_rule(body: CreateRuleRequest, db: Session = Depends(get_db), user: Us
 
 
 @router.patch("/{rule_id}")
-def update_rule(rule_id: uuid.UUID, body: UpdateRuleRequest, db: Session = Depends(get_db), user: User = Depends(require_role(ROLE_AUTHORIZED))):
+def update_rule(rule_id: uuid.UUID, body: UpdateRuleRequest, db: Session = Depends(get_db), user: User = Depends(require_role(ROLE_AUTHORIZED)), _license: None = Depends(require_license_active)):
     rule = db.get(AlertRule, rule_id)
     if rule is None:
         raise BizError(CODE_NOT_FOUND, f"规则不存在: {rule_id}")
@@ -110,7 +110,7 @@ def update_rule(rule_id: uuid.UUID, body: UpdateRuleRequest, db: Session = Depen
 
 
 @router.delete("/{rule_id}")
-def delete_rule(rule_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_role(ROLE_AUTHORIZED))):
+def delete_rule(rule_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_role(ROLE_AUTHORIZED)), _license: None = Depends(require_license_active)):
     rule = db.get(AlertRule, rule_id)
     if rule is None:
         raise BizError(CODE_NOT_FOUND, f"规则不存在: {rule_id}")

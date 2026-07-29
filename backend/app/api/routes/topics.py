@@ -9,7 +9,7 @@ from sqlalchemy import Numeric, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.agenda_engine.split import SplitError, split_topic
-from app.api.deps import ROLE_AUTHORIZED, ROLE_REGISTERED, require_role
+from app.api.deps import ROLE_AUTHORIZED, ROLE_REGISTERED, require_license_active, require_role
 from app.core.errors import (
     CODE_FORBIDDEN,
     CODE_NOT_FOUND,
@@ -432,6 +432,7 @@ def rename_topic(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_AUTHORIZED)),
+    _license: None = Depends(require_license_active),
 ):
     """人工重命名/改分类（详细设计 1.7）：human_locked_fields 标记后机器不再自动推翻。"""
     if body.name is None and body.topic_category is None:
@@ -510,6 +511,7 @@ def split_topic_endpoint(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_AUTHORIZED)),
+    _license: None = Depends(require_license_active),
 ):
     """议题分裂/误并回滚（详细设计 1.7 + 4.2 算法 3 注释）。
 
