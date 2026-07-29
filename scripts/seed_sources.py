@@ -23,6 +23,11 @@ from app.services.seed_service import (  # noqa: E402
     ensure_gdelt_pseudo_source,
     ensure_system_rules,
 )
+from app.services.setup_service import (  # noqa: E402
+    KEY_MONITOR_SCOPE,
+    apply_monitor_scope,
+    get_state,
+)
 
 logger = get_logger("seed")
 
@@ -185,6 +190,13 @@ def main() -> None:
                     setattr(source, key, value)
                 updated += 1
         db.commit()
+        # 监控范围生效（T5.6）：安装向导已保存勾选国家时，导入完成后再次应用，
+        # 使未勾选国家的源置 disabled（重新导入/补种不丢失范围设定）
+        scope = get_state(db, KEY_MONITOR_SCOPE) or {}
+        if scope.get("countries"):
+            scope_result = apply_monitor_scope(db, scope["countries"])
+            db.commit()
+            logger.info("monitor_scope_applied", **scope_result)
         logger.info("seed_done", created=created, updated=updated,
                     admin=admin.username, total=len(SEED_SOURCES))
         print(f"种子导入完成: 新增 {created} / 更新 {updated} / 共 {len(SEED_SOURCES)} 个媒体源；管理员 {admin.username}")
