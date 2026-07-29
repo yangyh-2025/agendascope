@@ -8,7 +8,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from app.api.deps import ROLE_ADMIN, require_role, get_db
+from app.api.deps import ROLE_ADMIN, get_db, require_role
 from app.config import get_settings
 from app.core.errors import CODE_DATA_INSUFFICIENT, CODE_NOT_FOUND, BizError, ok
 from app.core.logging import get_logger

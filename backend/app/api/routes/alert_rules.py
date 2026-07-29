@@ -3,7 +3,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import func as sql_func, select
+from sqlalchemy import func as sql_func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ROLE_ADMIN, ROLE_AUTHORIZED, get_db, require_license_active, require_role

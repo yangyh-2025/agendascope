@@ -12,7 +12,6 @@
 """
 from __future__ import annotations
 
-import os
 import threading
 import time
 import uuid
@@ -341,7 +340,7 @@ def build_periodic_weekly(db: Session, scope: dict) -> dict[str, Any]:
             "table": None,
         })
         return report
-    for idx, (cc, rows) in enumerate(sorted(by_country.items())):
+    for cc, rows in sorted(by_country.items()):
         report["sections"].append({
             "heading": f"{cc} Top 议题（{len(rows)}）",
             "paragraphs": [],

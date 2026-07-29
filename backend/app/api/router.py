@@ -2,8 +2,20 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
-    agenda_events, alert_rules, alerts, articles, audit, auth,
-    persons_orgs, reports, setup, snapshots, sources, subscriptions, system_admin, topics,
+    agenda_events,
+    alert_rules,
+    alerts,
+    articles,
+    audit,
+    auth,
+    persons_orgs,
+    reports,
+    setup,
+    snapshots,
+    sources,
+    subscriptions,
+    system_admin,
+    topics,
 )
 from app.api.routes import (
     map as map_route,
