@@ -4,6 +4,48 @@
 
 ---
 
+## 修复轮次（2026-07-28）
+
+> **本轮范围**：Phase 5 收尾后全模块缺陷修复与最终集成接线——新增 2 个 worker、4 组业务 API 注册、安装向导与系统管理前端、部署/脚本加固，并完成统一接线与全量验证。
+
+### 新增 worker
+
+- **事件检测 worker**（`python -m app.worker.detection_worker`，`app/agenda_engine/detection.py`）：对活跃议题周期跑完整检测链路（回声折叠 → 实体登记 → 首发锚点判定 → LLM 首发表述判定 → 跟随国序列 → 统计佐证 → 事件判定 → LLM 终审），LLM 降级时整轮回落 media_time_fallback 并写 P1 告警；`AGENDA_DETECTION_*` 环境变量可配
+- **预警调度 worker**（`python -m app.worker.alerting_worker`）：15min 周期规则评估 + 通知退避重试执行者（webhook 终态降级邮件并停用通道）+ 订阅日报/周报推送 + 报告导出队列；SMTP 经环境变量注入，未配置不阻塞
+
+### 新增 API 与门禁
+
+- **审计日志**（`GET /system/audit-logs` + `/export`，管理员限定）：时间/actor/action 过滤分页查询与 CSV 导出
+- **站内预警**（`/alerts`）：列表 / 标记已读 / 全部已读
+- **订阅管理**（`/subscriptions`）：创建/删除/列表 + 免登录 token 一键退订
+- **报告导出**（`/report-exports`）：三模板真实查询、PDF+DOCX、90 天预检、并发 >3 排队、60s 转异步
+- **安装向导**（`/setup`）：Step2/3 真实落库、监控范围生效、`/setup/status` 三阶段进度、初始化完成后写端点关闭（4005）
+- **系统管理后台**（`/system`）：概览指标（接入延迟 P95）、用户角色管理、日志查看、许可管理（HMAC 验签录入 + 30/7/1 天三级提醒）、一键诊断包
+- **许可只读门禁**（`api/deps.py require_license_active`）：企业许可到期后 sources 增改、alert_rules 增删改、subscriptions 增删、report-exports 创建、topics 拆分/重命名、agenda-events 确认/否决共 12 个写端点拒绝写操作（4006），读接口与数据全部保留
+
+### 前端页面
+
+- **安装向导页**（`/setup`）：5 步向导 + 三阶段进度 5s 轮询 + 未初始化重定向守卫
+- **系统管理页重写**：概览指标卡、用户角色、审计日志过滤/导出、日志查看器、许可三级提醒与诊断包下载
+- **新增四页**：议程时间线 / 人物监测 / 修正历史 / 预警配置；议题详情与事件详情页（修正标注展开/传播流向地图/检验结果卡）；报告中心对接 report-exports 契约
+- **修复**：注册离线世界地图修复地图页白屏；顶栏残留文案改正式产品名；chain/revisions 响应结构对齐；lint 归零
+
+### 脚本与部署
+
+- **install.sh 重写**：代码获取 git/local 双模式、种子源真实执行失败即中止、随机管理员密码配合首登强制改密、离线镜像校验加载模式
+- **backup.sh/restore.sh 重写**：AES-256 加密强制密钥文件、ES 快照注册失败即报错、水位线增量备份、连续 2 次失败写 P1 告警、恢复停写与校验
+- **新增脚本**：`stress_test.py` 全链路压测、`llm_eval.py` LLM 质量评估、`build_offline_package.sh` 离线安装包、`check_outbound.sh` 外发连接自检
+- **docker-compose**：接入 detection-worker/alerting-worker（与 backend 共用镜像）；ES 增加 `path.repo` 与备份卷挂载支持快照
+- **调度器接线**：每日磁盘超阈值（>85%）清理 90 天前原始 HTML/GDELT 缓冲并写站内告警，离线模式下本地清理仍执行；种子源导入完成后自动应用已保存的监控范围（未勾选国家源置 disabled）
+- **`.env.example` 补齐**：AGENDA_DETECTION_*、SMTP_*、GDELT_BUFFER_DIR 等配置项
+
+### 质量
+
+- 单元 + assessment 测试全量通过；flaky 用例 `test_llm_api_engine::test_basic_json_response`（Windows 计时精度偶发失败）改 mock 单调时钟确定性验证
+- alembic 迁移链 0001→0007 单一 head 校验通过；集成测试在真实 db/redis 上执行
+
+---
+
 ## Phase 5 · 质量收尾与部署向导（2026-07-25）
 
 > **最终交付**：标签 `v1.0.0`。

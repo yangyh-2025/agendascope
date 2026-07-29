@@ -49,6 +49,8 @@ python -m app.worker.cluster_worker                                            #
 python -m app.worker.naming_worker                                             # 命名 worker：待命名议题 → LLM 命名/分类/摘要回填（另开终端）
 python -m app.worker.agenda_worker                                             # 议程引擎 worker：次日归并/消亡扫描/实体黑名单周期任务（另开终端）
 python -m app.worker.snapshot_worker                                           # 快照 worker：国家×议题显著性 15min 刷新（另开终端）
+python -m app.worker.detection_worker                                          # 事件检测 worker：活跃议题全链路检测（首发锚点/跟随序列/统计佐证/事件判定/终审，另开终端）
+python -m app.worker.alerting_worker                                           # 预警调度 worker：规则评估/通知退避重试/订阅推送/报告导出队列（另开终端）
 ```
 
 NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
@@ -63,7 +65,7 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 .venv/Scripts/python.exe -m pytest tests -q                    # 单元 + 集成测试（集成需基础设施在线）
 ```
 
-部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker/agenda-worker/snapshot-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
+部署：`docker compose -f deploy/docker-compose.yml up -d` 起全栈（db/redis/es/rsshub/backend/worker/nlp-worker/cluster-worker/naming-worker/agenda-worker/snapshot-worker/detection-worker/alerting-worker），backend 容器启动时自动执行迁移。受限网络构建：`docker compose -f deploy/docker-compose.yml build --build-arg HTTPS_PROXY=http://host.docker.internal:11304 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn backend`。
 
 ### LLM 服务（backend/app/llm/，M2-3）
 
