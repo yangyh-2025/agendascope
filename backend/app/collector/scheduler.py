@@ -44,6 +44,7 @@ class CollectorScheduler:
         self._last_gdelt_at: datetime | None = None
         self._last_daily_inspection_at: datetime | None = None
         self._last_hourly_inspection_at: datetime | None = None
+        self._last_disk_cleanup_at: datetime | None = None
         self._stopped = asyncio.Event()
 
     def stop(self) -> None:
@@ -63,6 +64,8 @@ class CollectorScheduler:
     # ---------- 同步执行区（线程池内） ----------
 
     def tick(self) -> None:
+        # 磁盘超阈值清理（T5.10）是本地磁盘维护，离线模式下仍照常执行
+        self._maybe_dispatch_disk_cleanup()
         if self.settings.offline_mode:
             # 离线模式（T1.2）：禁止一切外联——源拉取、GDELT 兜底、健康巡检探测全部跳过
             logger.debug("offline_mode_skip_tick")
@@ -124,6 +127,36 @@ class CollectorScheduler:
             return
         self._last_gdelt_at = now
         self.executor.submit(self._run_gdelt)
+
+    # ---------- 磁盘超阈值自动清理（T5.10） ----------
+
+    def _maybe_dispatch_disk_cleanup(self) -> None:
+        """每日一次磁盘清理调度：本地维护任务，不随离线模式跳过。"""
+        now = datetime.now(UTC)
+        if self._last_disk_cleanup_at is None or now - self._last_disk_cleanup_at >= timedelta(hours=24):
+            self._last_disk_cleanup_at = now
+            self.executor.submit(self._run_disk_cleanup)
+
+    def _run_disk_cleanup(self) -> None:
+        set_trace_id(new_trace_id())
+        db = get_session_factory()()
+        try:
+            from app.services.maintenance_service import run_disk_cleanup
+
+            result = run_disk_cleanup(db)
+            db.commit()
+            if result["triggered"]:
+                logger.warning(
+                    "disk_cleanup_triggered",
+                    disk_percent=result["disk_percent"],
+                    deleted=result["deleted"],
+                    freed_bytes=result["freed_bytes"],
+                )
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            logger.error("disk_cleanup_error", exc_info=exc)
+        finally:
+            db.close()
 
     # ---------- 源健康巡检（T1.23） ----------
 
