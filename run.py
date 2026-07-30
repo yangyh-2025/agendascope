@@ -93,6 +93,8 @@ def cmd_logs(args: argparse.Namespace) -> None:
 
 
 def cmd_seed(_: argparse.Namespace) -> None:
+    # 先确保数据库结构迁移到最新（backend 容器若是旧镜像，库内可能缺新表）
+    run([str(VENV_PY), "-m", "alembic", "upgrade", "head"], cwd=BACKEND)
     run([str(VENV_PY), "scripts/seed_sources.py"])
 
 
