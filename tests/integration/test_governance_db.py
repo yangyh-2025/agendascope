@@ -127,8 +127,9 @@ class TestFailRateAlert:
         db.commit()
         gov = Governance(db, redis_client)
         # 24h 窗口内 1 成功 9 失败 → 失败率 90% > 10% 阈值
+        now = datetime.now(UTC)
         for i in range(10):
-            job = gov.create_job(source.id, "rss", NOW + timedelta(minutes=i))
+            job = gov.create_job(source.id, "rss", now + timedelta(minutes=i))
             gov.mark_running(job)
             if i == 0:
                 gov.mark_success(job, 10, 2)
@@ -151,8 +152,9 @@ class TestFailRateAlert:
         source = make_source(db)
         db.commit()
         gov = Governance(db, redis_client)
+        now = datetime.now(UTC)
         for i in range(10):
-            job = gov.create_job(source.id, "rss", NOW + timedelta(minutes=i))
+            job = gov.create_job(source.id, "rss", now + timedelta(minutes=i))
             gov.mark_running(job)
             if i < 9:
                 gov.mark_success(job, 10, 2)
