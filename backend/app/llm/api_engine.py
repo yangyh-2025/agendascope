@@ -136,6 +136,7 @@ class OpenAICompatibleEngine:
             {"role": "user", "content": user},
         ]
         last_error: LLMParseError | None = None
+        content = ""
 
         for attempt in range(max_retries + 1):
             try:
@@ -163,7 +164,7 @@ class OpenAICompatibleEngine:
                 last_error = exc
                 # 重试：把错误反馈进对话
                 messages = messages + [
-                    {"role": "assistant", "content": content if "content" in dir() else ""},
+                    {"role": "assistant", "content": content},
                     {"role": "user", "content": f"输出不符合要求：{exc}。请重新只输出符合 JSON Schema 的 JSON 对象。"},
                 ]
             except LLMUnavailableError:
