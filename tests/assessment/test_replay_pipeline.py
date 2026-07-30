@@ -25,9 +25,12 @@ _DIM = 768
 
 
 class DeterministicEmbedder:
-    """确定性伪向量：标题前缀 "::" 前为组键；同键向量 ≈ 重合（cos≈1），跨键 ≈ 正交。
+    """确定性伪向量：标题前缀 "::" 前为组键；同键向量高相似但不判重（cos≈0.90，
+    落在 T_event=0.85 与 T_dup=0.95 之间——同事件各国报道是独立原创而非转载，
+    否则被折叠为 is_duplicate 后不计入跟随国序列），跨键 ≈ 正交。
 
     仅用于测试管线机制（归簇/归并/判定路径），不替代真实语义向量模型。
+    噪声标定：768 维下 E[cos] ≈ 1/(1+768·σ²)，σ=0.012 → cos≈0.90。
     """
 
     def __init__(self):
@@ -45,7 +48,7 @@ class DeterministicEmbedder:
         key = title.split("::", 1)[0]
         rng = random.Random(int(hashlib.sha256(title.encode()).hexdigest(), 16))
         base = self._base(key)
-        noisy = [b + rng.gauss(0, 0.005) for b in base]
+        noisy = [b + rng.gauss(0, 0.012) for b in base]
         norm = sum(v * v for v in noisy) ** 0.5
         return [v / norm for v in noisy]
 
