@@ -6,6 +6,12 @@
 - 结构化输出 retry 链：首次失败 → 错误反馈回对话 → 第二次成功
 - 鉴权头 Bearer token 正确传递
 - 超时处理
+
+隔离性说明（曾有全量跑偶发失败的教训）：
+- 服务端用 ThreadingHTTPServer——httpx.Client 默认 keep-alive，单线程
+  HTTPServer 会阻塞在上一个测试的空闲连接上无法接受新连接。
+- 状态（request_log/payloads/call_count）挂在 server 实例上且 fixture 为函数级——
+  若用类变量，上一个测试的迟到请求会写入类变量污染下一个测试的断言。
 """
 import json
 import threading
@@ -25,38 +31,44 @@ class NameOutput(BaseModel):
     confidence: str = Field(pattern=r"^(high|medium|low)$")
 
 
-class _FakeAPIHandler(BaseHTTPRequestHandler):
-    """Fake OpenAI-compatible endpoint，由 test 配置 request_log 与 response_payloads。"""
+class _StubServer(ThreadingHTTPServer):
+    """携带每实例状态的 stub 服务端（状态隔离见模块 docstring）。"""
 
-    # 类变量（测试侧设置）
-    request_log: list[dict] = []
-    response_payloads: list[dict] = []
-    status_overrides: list[int] = []
-    call_count: int = 0
+    daemon_threads = True
+
+    def __init__(self, addr: tuple[str, int], handler: type[BaseHTTPRequestHandler]):
+        super().__init__(addr, handler)
+        self.request_log: list[dict] = []
+        self.response_payloads: list[dict] = []
+        self.status_overrides: list[int] = []
+        self.call_count: int = 0
+
+
+class _FakeAPIHandler(BaseHTTPRequestHandler):
+    """Fake OpenAI-compatible endpoint，状态读写均走 self.server 实例。"""
+
+    server: _StubServer
 
     def do_POST(self) -> None:
         content_length = int(self.headers.get("Content-Length", 0))
         body_raw = self.rfile.read(content_length)
         body = json.loads(body_raw) if body_raw else {}
 
-        self.__class__.call_count += 1
-        self.__class__.request_log.append({
+        srv = self.server
+        srv.call_count += 1
+        srv.request_log.append({
             "path": self.path,
             "authorization": self.headers.get("Authorization", ""),
             "body": body,
         })
 
-        idx = self.__class__.call_count - 1
-        status = (
-            self.__class__.status_overrides[idx]
-            if idx < len(self.__class__.status_overrides)
-            else 200
+        idx = srv.call_count - 1
+        status = srv.status_overrides[idx] if idx < len(srv.status_overrides) else 200
+        payload = (
+            srv.response_payloads[idx]
+            if idx < len(srv.response_payloads)
+            else {"choices": [{"message": {"content": "{}"}}]}
         )
-
-        if idx < len(self.__class__.response_payloads):
-            payload = self.__class__.response_payloads[idx]
-        else:
-            payload = {"choices": [{"message": {"content": "{}"}}]}
 
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -67,28 +79,15 @@ class _FakeAPIHandler(BaseHTTPRequestHandler):
         pass  # 抑制 stderr 日志
 
 
-def _reset_handler():
-    _FakeAPIHandler.request_log = []
-    _FakeAPIHandler.response_payloads = []
-    _FakeAPIHandler.status_overrides = []
-    _FakeAPIHandler.call_count = 0
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def stub_api():
-    """起一个 fake OpenAI-compatible API 服务端，测试结束后关闭。
-
-    必须用 ThreadingHTTPServer：httpx.Client 默认 keep-alive，单线程 HTTPServer
-    会阻塞在上一个测试的空闲连接上无法接受新连接（依赖 GC 回收时机，全量跑时偶发挂起）。
-    """
-    _reset_handler()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), _FakeAPIHandler)
-    server.daemon_threads = True
-    port = server.server_address[1]
+    """每个测试独立起一个 fake API 服务端（函数级隔离），测试结束后关闭。"""
+    server = _StubServer(("127.0.0.1", 0), _FakeAPIHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    yield port
+    yield server
     server.shutdown()
+    server.server_close()
     thread.join(timeout=2)
 
 
@@ -102,13 +101,13 @@ def make_settings(port: int, api_key: str = "") -> LLMSettings:
     )
 
 
-def test_basic_json_response(stub_api: int):
+def test_basic_json_response(stub_api: _StubServer):
     """正确 JSON 响应 → 解析为 pydantic 对象。"""
-    _reset_handler()
-    _FakeAPIHandler.response_payloads = [
+    stub_api.response_payloads = [
         {"choices": [{"message": {"content": '{"name":"测试议题","confidence":"high"}'}}]}
     ]
-    settings = make_settings(stub_api)
+    port = stub_api.server_address[1]
+    settings = make_settings(port)
     engine = OpenAICompatibleEngine(settings)
     engine.load()
 
@@ -125,7 +124,7 @@ def test_basic_json_response(stub_api: int):
     assert elapsed == pytest.approx(0.125)
 
     # 验证请求格式
-    req = _FakeAPIHandler.request_log[0]
+    req = stub_api.request_log[0]
     assert req["path"] == "/v1/chat/completions"
     assert req["body"]["model"] == "test-model"
     assert req["body"]["temperature"] == 0.0
@@ -133,35 +132,33 @@ def test_basic_json_response(stub_api: int):
     assert len(req["body"]["messages"]) == 2  # system + user
 
 
-def test_bearer_token_sent(stub_api: int):
+def test_bearer_token_sent(stub_api: _StubServer):
     """API key → Authorization: Bearer <key>。"""
-    _reset_handler()
-    _FakeAPIHandler.response_payloads = [
+    stub_api.response_payloads = [
         {"choices": [{"message": {"content": '{"name":"x","confidence":"low"}'}}]}
     ]
-    settings = make_settings(stub_api, api_key="sk-test-123")
+    settings = make_settings(stub_api.server_address[1], api_key="sk-test-123")
     engine = OpenAICompatibleEngine(settings)
     engine.load()
     engine.generate_structured("s", "u", NameOutput, max_retries=0)
-    assert _FakeAPIHandler.request_log[0]["authorization"] == "Bearer sk-test-123"
+    assert stub_api.request_log[0]["authorization"] == "Bearer sk-test-123"
 
 
-def test_retry_on_parse_error(stub_api: int):
+def test_retry_on_parse_error(stub_api: _StubServer):
     """首次 JSON 非法 → 重试 1 次 → 第二次正确。"""
-    _reset_handler()
-    _FakeAPIHandler.response_payloads = [
+    stub_api.response_payloads = [
         {"choices": [{"message": {"content": "not json at all"}}]},
         {"choices": [{"message": {"content": '{"name":"修复后","confidence":"medium"}'}}]},
     ]
-    settings = make_settings(stub_api)
+    settings = make_settings(stub_api.server_address[1])
     engine = OpenAICompatibleEngine(settings)
     engine.load()
 
     result, _ = engine.generate_structured("s", "u", NameOutput, max_retries=1)
     assert result.name == "修复后"
-    assert _FakeAPIHandler.call_count == 2
+    assert stub_api.call_count == 2
     # 第二次请求中应包含错误反馈消息
-    second_body = _FakeAPIHandler.request_log[1]["body"]
+    second_body = stub_api.request_log[1]["body"]
     assert any("输出不符合要求" in m["content"] for m in second_body["messages"])
 
 
@@ -173,14 +170,13 @@ def test_load_without_base_url_raises():
         engine.load()
 
 
-def test_retry_exhausted_raises(stub_api: int):
+def test_retry_exhausted_raises(stub_api: _StubServer):
     """两次均失败 → 最终抛 LLMParseError。"""
-    _reset_handler()
-    _FakeAPIHandler.response_payloads = [
+    stub_api.response_payloads = [
         {"choices": [{"message": {"content": "bad json 1"}}]},
         {"choices": [{"message": {"content": "bad json 2"}}]},
     ]
-    settings = make_settings(stub_api)
+    settings = make_settings(stub_api.server_address[1])
     engine = OpenAICompatibleEngine(settings)
     engine.load()
 
