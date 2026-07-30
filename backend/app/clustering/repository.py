@@ -179,11 +179,16 @@ def update_topic_on_assignment(
 
 
 def nearest_active_topic(
-    db: Session, embedding: list[float], min_score: float, active_days: int | None = None
+    db: Session, embedding: list[float], min_score: float, active_days: int | None = None,
+    now: datetime | None = None,
 ) -> tuple[Topic, float] | None:
-    """活跃议题质心 HNSW 最近邻（cosine ≥ min_score）；排除已归并/已归档议题。"""
+    """活跃议题质心 HNSW 最近邻（cosine ≥ min_score）；排除已归并/已归档议题。
+
+    now：活跃窗口的时间基准（缺省墙钟 now）；回放/测试注入模拟时间（如文章
+    published_at），使历史时间轴上的议题在自身时间轴内保持"活跃"可比。
+    """
     days = active_days or get_cluster_settings().active_topic_days
-    cutoff = datetime.now(UTC) - timedelta(days=days)
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
     distance = Topic.centroid.cosine_distance(list(embedding))
     stmt = (
         select(Topic, distance.label("distance"))

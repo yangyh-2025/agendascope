@@ -451,6 +451,9 @@ def replay_cases(
             report.notes.append(f"[ERROR] 案例 {case.case_id} 回放异常: {summary}")
             continue
         metrics = evaluate_case_outcome(case, outcome)
+        # 案例隔离：整案回滚——各案例历史时间轴可能相互落入活跃议题窗口，
+        # 不隔离会发生跨案例误并/归簇污染（真实生产中不存在该时间重叠）
+        db.rollback()
         report.case_metrics.append(metrics)
         _accumulate(report, metrics)
 
@@ -564,10 +567,14 @@ def _replay_one_case(
 
     步骤：
     1. 按案例文章来源建 Source 行（通讯社 media_type='agency'，供首发置信度判定）
-    2. 按 published_at 升序逐篇向量化并 OnlineAssigner.assign（真实双阈值在线归簇）
-    3. 每个 UTC 日界触发 nextday_merge（真实次日归并）
+    2. 按 published_at 升序逐篇向量化并 OnlineAssigner.assign（真实双阈值在线归簇；
+       注入 now=文章发布时间，使活跃议题窗口沿案例历史时间轴计算而非真实墙钟）
+    3. 每个 UTC 日界触发 nextday_merge（真实次日归并；注入 now=日界时刻）
     4. 对案例涉及的每个议题 detect_media_origin + compute_follower_sequence
        + evaluate_conditions/upsert_event（真实首发源判定与事件判定）
+
+    事务：本函数只 flush 不 commit——每案例在 replay_cases 的独立事务内回放，
+    评估后整体回滚（案例间时间轴可能相互落入活跃窗口，必须隔离防跨案例误并）。
     """
     from app.agenda_engine.event import EventDetectionInput, evaluate_conditions, upsert_event
     from app.agenda_engine.merge import nextday_merge
@@ -611,10 +618,11 @@ def _replay_one_case(
     current_day = articles_sorted[0].published_at.date()
     for ca in articles_sorted:
         if ca.published_at.date() != current_day:
-            # UTC 日界：触发次日归并（候选窗口覆盖案例全程）
-            nextday_merge(db, candidate_since=case_start - timedelta(days=1))
-            db.commit()
+            # UTC 日界：触发次日归并（候选窗口覆盖案例全程；时间基准取新日 00:00Z）
             current_day = ca.published_at.date()
+            day_start = datetime(current_day.year, current_day.month, current_day.day, tzinfo=UTC)
+            nextday_merge(db, candidate_since=case_start - timedelta(days=1), now=day_start)
+            db.flush()
         embedding = embedder.embed_article(ca.title, None, ca.content)
         article = Article(
             source_id=sources[(ca.source_name, ca.country_code)].id,
@@ -634,12 +642,13 @@ def _replay_one_case(
         )
         db.add(article)
         db.flush()
-        assigner.assign(db, article)
-        db.commit()
+        assigner.assign(db, article, now=ca.published_at)
+        db.flush()
         art_map[ca.article_id] = article
-    # 收尾再跑一轮归并（末日微簇）
-    nextday_merge(db, candidate_since=case_start - timedelta(days=1))
-    db.commit()
+    # 收尾再跑一轮归并（末日微簇；时间基准取末日次日 00:00Z）
+    last_day_end = datetime(current_day.year, current_day.month, current_day.day, tzinfo=UTC) + timedelta(days=1)
+    nextday_merge(db, candidate_since=case_start - timedelta(days=1), now=last_day_end)
+    db.flush()
 
     # 3) 汇总文章→议题归属
     article_topics: dict[str, str | None] = {}
@@ -685,7 +694,7 @@ def _replay_one_case(
             origin_source = origin.source_name
             origin_conf = origin.confidence
             follower_countries = [f.country_code for f in followers]
-    db.commit()
+    db.flush()
 
     return CaseOutcome(
         article_topics=article_topics,

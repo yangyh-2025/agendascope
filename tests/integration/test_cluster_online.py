@@ -7,6 +7,7 @@
 """
 
 import pytest
+from datetime import UTC, datetime, timedelta
 
 from app.clustering.online import (
     OUTCOME_ASSIGNED,
@@ -154,3 +155,50 @@ def test_online_assign_latency_budget(db, mpnet_embedder):
     p95 = sorted(durations)[int(len(durations) * 0.95) - 1]
     assert p95 < 5000  # 向量化+聚类单篇 P95 ≤5s 目标中归簇部分（实测毫秒级）
     print(f"\n在线归簇单篇耗时 ms: {[f'{d:.1f}' for d in durations]}")
+
+
+def test_assign_historical_timeline_with_injected_now(db, mpnet_embedder):
+    """M5 回放根因回归：历史时间轴文章注入 now=published_at 后，
+    活跃议题窗口沿案例时间轴计算，次日报道可命中首日议题（缺省墙钟则全部不可见）。"""
+    hist1 = datetime(2021, 3, 24, 10, tzinfo=UTC)
+    hist2 = datetime(2021, 3, 25, 12, tzinfo=UTC)
+    source = make_source(db, language="en")
+    first = make_article(db, source, title=EVENT_A, published_at=hist1)
+    second = make_article(db, source, title=EVENT_A_PARAPHRASE, published_at=hist2)
+    _embed(mpnet_embedder, first, EVENT_A)
+    _embed(mpnet_embedder, second, EVENT_A_PARAPHRASE)
+    db.commit()
+
+    sim = _cosine(first.embedding, second.embedding)
+    assigner = OnlineAssigner(t_event=sim - 0.02, t_dup=sim + 0.02)  # 实测相似度标定阈值
+    first_outcome = assigner.assign(db, first, now=first.published_at)
+    second_outcome = assigner.assign(db, second, now=second.published_at)
+    db.commit()
+
+    assert first_outcome.outcome == OUTCOME_NEW_MICRO
+    assert second_outcome.outcome == OUTCOME_ASSIGNED
+    assert second_outcome.topic_id == first_outcome.topic_id
+    # 议题时间戳留在案例时间轴上（不被墙钟污染），供次日归并窗口对齐
+    topic = db.get(Topic, first_outcome.topic_id)
+    assert topic.last_seen_at == hist2
+
+
+def test_nearest_active_topic_window_with_injected_now(db):
+    """活跃窗口时间基准可注入：同一历史议题，墙钟基准不可见、注入基准可见。"""
+    from app.clustering.repository import nearest_active_topic
+
+    hist = datetime(2021, 3, 24, 10, tzinfo=UTC)
+    vec = [0.0] * 768
+    vec[0] = 1.0
+    topic = Topic(
+        name="历史议题", name_auto="历史议题", naming_method="ctfidf_fallback",
+        cluster_method="agglomerative", keywords=["测试"], country_scope=["US"],
+        lifecycle_state="nascent", centroid=vec,
+        first_seen_at=hist, last_seen_at=hist,
+    )
+    db.add(topic)
+    db.commit()
+
+    assert nearest_active_topic(db, vec, min_score=0.5) is None  # 墙钟窗口外
+    hit = nearest_active_topic(db, vec, min_score=0.5, now=hist + timedelta(hours=2))
+    assert hit is not None and hit[0].id == topic.id

@@ -231,14 +231,16 @@ def _find_merge_target(
     candidate: Topic,
     *,
     active_days: int,
+    now: datetime | None = None,
 ) -> tuple[Topic, float] | None:
     """在档案集 D 内 HNSW 检索 candidate.centroid 最近邻 target。
 
     返回 (target, cosine_similarity)；找不到或向量缺失返回 None。
+    now：活跃窗口时间基准（缺省墙钟 now）；回放注入模拟时间使历史议题可比。
     """
     if candidate.centroid is None:
         return None
-    cutoff = datetime.now(UTC) - timedelta(days=active_days)
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=active_days)
     distance = Topic.centroid.cosine_distance([float(v) for v in candidate.centroid])
     stmt = (
         select(Topic, distance.label("distance"))
@@ -398,6 +400,7 @@ def nextday_merge(
     candidate_since: datetime | None = None,
     batch_size: int | None = None,
     redis_client: redis.Redis | None = None,
+    now: datetime | None = None,
 ) -> MergeReport:
     """次日归并主入口（flush 由本函数完成；commit 由调用方负责）。
 
@@ -408,9 +411,11 @@ def nextday_merge(
     redis_client：提供时归并比对的关键词重叠剔除 entity:blacklist 黑名单实体后计算
               （详细设计 4.2 算法 5 用途②）；缺位时按原始关键词算并标记
               blacklist_applied=False（黑名单是优化而非正确性依赖）
+    now：本轮归并的时间基准（缺省墙钟 now）；回放注入模拟时间（如日界时刻），
+         使历史时间轴上的议题在自身时间轴内参与归并比对
     """
     settings = get_agenda_settings()
-    now = datetime.now(UTC)
+    now = now or datetime.now(UTC)
     since = candidate_since or (now - timedelta(hours=24))
     limit = batch_size or settings.merge_batch_size
     merge_sim = settings.merge_sim
@@ -456,7 +461,7 @@ def nextday_merge(
             )
             continue
 
-        found = _find_merge_target(db, cand, active_days=active_days)
+        found = _find_merge_target(db, cand, active_days=active_days, now=now)
         if found is None:
             new_topics.append(cand.id)
             continue

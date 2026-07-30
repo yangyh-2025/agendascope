@@ -11,6 +11,7 @@
 """
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -56,9 +57,11 @@ class OnlineAssigner:
         self.t_event = t_event if t_event is not None else settings.t_event
         self.t_dup = t_dup if t_dup is not None else settings.t_dup
 
-    def assign(self, db: Session, article: Article) -> AssignmentOutcome:
+    def assign(self, db: Session, article: Article, now: datetime | None = None) -> AssignmentOutcome:
+        """在线归簇入口。now：处理时刻基准（缺省墙钟 now）；回放注入文章发布时间，
+        使活跃议题窗口/质心衰减沿案例历史时间轴计算而非真实墙钟。"""
         t0 = time.perf_counter()
-        outcome = self._assign(db, article)
+        outcome = self._assign(db, article, now)
         duration_ms = (time.perf_counter() - t0) * 1000
         logger.info(
             "online_assign",
@@ -71,7 +74,7 @@ class OnlineAssigner:
             topic_id=outcome.topic_id, score=outcome.score, duration_ms=duration_ms,
         )
 
-    def _assign(self, db: Session, article: Article) -> AssignmentOutcome:
+    def _assign(self, db: Session, article: Article, now: datetime | None = None) -> AssignmentOutcome:
         done = AssignmentOutcome(article.id, OUTCOME_SKIPPED, None, 0.0, 0.0)
         if article.embedding is None:
             return done
@@ -98,18 +101,18 @@ class OnlineAssigner:
                 topic = db.get(Topic, canonical_assignment.topic_id)
                 if topic is not None:
                     assign_article(db, topic, article.id, canonical.score, "online")
-                    update_topic_on_assignment(db, topic, article, embedding)
+                    update_topic_on_assignment(db, topic, article, embedding, now=now)
                     db.flush()
                     return AssignmentOutcome(article.id, OUTCOME_DUPLICATE, topic.id, canonical.score, 0.0)
             db.flush()
             return AssignmentOutcome(article.id, OUTCOME_UNCLASSIFIED, None, canonical.score, 0.0)
 
         # ② 归簇：活跃议题质心最近邻
-        hit = nearest_active_topic(db, embedding, min_score=self.t_event)
+        hit = nearest_active_topic(db, embedding, min_score=self.t_event, now=now)
         if hit is not None:
             topic, score = hit
             assign_article(db, topic, article.id, score, "online")
-            update_topic_on_assignment(db, topic, article, embedding)
+            update_topic_on_assignment(db, topic, article, embedding, now=now)
             # 新文章早于议题当前首发锚点时触发增量重估（T3.13，详细设计 4.2 算法 4
             # reestimate；函数级 import 保持 clustering → agenda_engine 单向依赖）
             from app.agenda_engine.revision import reestimate_if_earlier_article

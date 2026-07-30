@@ -403,3 +403,43 @@ class TestSplitApi:
         stmt = select(AuditLog).where(AuditLog.action == "topic.split")
         entries = [e for e in db.scalars(stmt).all() if e.result == "failure"]
         assert len(entries) >= 1
+
+
+class TestNextdayMergeHistoricalTimeline:
+    """M5 回放"次日归并 0%"根因回归：议题时间戳在历史日期时，
+    活跃窗口必须可注入时间基准（now），否则墙钟窗口把历史议题全部排除。"""
+
+    def _historical_scenario(self, db):
+        hist = datetime(2021, 3, 25, 0, tzinfo=UTC)
+        source = make_source(db, country_code="US")
+        target = _make_topic(
+            db, name="历史目标议题", lifecycle_state="forming",
+            centroid=_unit(0), country_scope=["US"],
+            first_seen_at=hist - timedelta(days=1), last_seen_at=hist - timedelta(days=1),
+        )
+        cand = _make_topic(
+            db, name="历史候选议题", lifecycle_state="nascent",
+            centroid=_vec_with_cosine(0.92), country_scope=["CN"],
+            first_seen_at=hist - timedelta(hours=3), last_seen_at=hist - timedelta(hours=3),
+        )
+        a1 = _persist_article(db, source, embedding=_vec_with_cosine(0.93), country_code="CN")
+        db.add(TopicArticle(topic_id=cand.id, article_id=a1.id, weight=0.95, assign_method="online"))
+        db.commit()
+        return hist, cand, target
+
+    def test_wall_clock_window_excludes_historical_topics(self, db):
+        """对照：缺省墙钟基准 → 历史议题落在活跃窗口外，找不到归并目标。"""
+        hist, cand, _target = self._historical_scenario(db)
+        report = nextday_merge(db, candidate_since=hist - timedelta(days=2))
+        db.commit()
+        assert len(report.merged) == 0
+        assert cand.id in report.new_topics
+
+    def test_merge_with_injected_now(self, db):
+        """注入回放时间基准 → 历史议题在自身时间轴内正常归并。"""
+        hist, cand, target = self._historical_scenario(db)
+        report = nextday_merge(db, candidate_since=hist - timedelta(days=2), now=hist)
+        db.commit()
+        assert len(report.merged) == 1
+        assert report.merged[0].source_topic_id == cand.id
+        assert report.merged[0].target_topic_id == target.id
