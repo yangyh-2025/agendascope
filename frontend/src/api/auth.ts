@@ -34,3 +34,10 @@ export function logout(refreshToken: string): Promise<null> {
 export function fetchMe(): Promise<CurrentUser> {
   return request<CurrentUser>("/api/v1/auth/me");
 }
+
+export function changePassword(oldPassword: string, newPassword: string): Promise<null> {
+  return request<null>("/api/v1/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+  });
+}
