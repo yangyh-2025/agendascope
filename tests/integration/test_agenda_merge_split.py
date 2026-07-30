@@ -497,3 +497,42 @@ class TestNextdayMergeHistoricalTimeline:
         assert len(report.merged) == 1
         assert report.merged[0].source_topic_id == younger.id
         assert report.merged[0].target_topic_id == older.id
+
+    def test_fixpoint_rereads_below_threshold_candidates(self, db):
+        """单轮不动点迭代：候选 A 先评估略低于阈值（0.84<0.85），同轮候选 X 并入
+        推高 target 质心后，A 在下一轮追平归并（消除单遍顺序伪影——M5 回放
+        russia-ukraine 案例 a2 误拆根因：同轮先评估 0.608 未并，主簇同轮合并
+        4 篇后 sim 升至 0.629 却无下一轮可追）。
+
+        几何构造：T=e0；A=0.84·e0+0.5426·e1（sim(A,T)=0.84 低于阈值）；
+        X=0.88·e0+0.2227·e1+0.4187·e2（sim(X,T)=0.88≥阈值，sim(X,A)=0.86<0.88
+        保证 X 选 T 而非 A）；X 并入后 dt=12h 池化 cos(A,T')≈0.858≥0.85。
+        """
+        def _vec3(c0, c1, c2):
+            v = [0.0] * DIM
+            v[0], v[1], v[2] = c0, c1, c2
+            return v
+
+        now = datetime.now(UTC)
+        target = _make_topic(
+            db, name="主议题", lifecycle_state="forming",
+            centroid=_unit(0), country_scope=["US"],
+            first_seen_at=now - timedelta(days=2), last_seen_at=now - timedelta(hours=12),
+        )
+        cand_a = _make_topic(
+            db, name="候选A-先评估低于阈值", lifecycle_state="nascent",
+            centroid=_vec_with_cosine(0.84, 0, 1), country_scope=["CN"],
+            first_seen_at=now - timedelta(hours=3), last_seen_at=now - timedelta(hours=3),
+        )
+        cand_x = _make_topic(
+            db, name="候选X-推高质心", lifecycle_state="nascent",
+            centroid=_vec3(0.88, 0.2227, 0.4187), country_scope=["GB"],
+            first_seen_at=now - timedelta(hours=2), last_seen_at=now - timedelta(hours=2),
+        )
+        db.commit()
+
+        report = nextday_merge(db)
+        db.commit()
+        merged_pairs = {(d.source_topic_id, d.target_topic_id) for d in report.merged}
+        assert (cand_x.id, target.id) in merged_pairs
+        assert (cand_a.id, target.id) in merged_pairs  # 不动点第二轮追平

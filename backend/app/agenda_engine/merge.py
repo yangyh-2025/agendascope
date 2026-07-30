@@ -422,6 +422,9 @@ def nextday_merge(
               blacklist_applied=False（黑名单是优化而非正确性依赖）
     now：本轮归并的时间基准（缺省墙钟 now）；回放注入模拟时间（如日界时刻），
          使历史时间轴上的议题在自身时间轴内参与归并比对
+
+    单轮内迭代至不动点：每次归并更新 target 质心后重评剩余低于阈值候选，
+    消除单遍顺序伪影（先评估差之毫厘、同轮质心推高后无可追轮的误拆）。
     """
     settings = get_agenda_settings()
     now = now or datetime.now(UTC)
@@ -450,84 +453,102 @@ def nextday_merge(
     skipped_no_merge: list[tuple[UUID, UUID]] = []
     skipped_locked: list[UUID] = []
 
-    for cand in candidates:
-        # 人工锁定 merged_into 的源议题不自动归并（人工优先）
-        locked = cand.human_locked_fields or []
-        if "merged_into" in locked:
-            skipped_locked.append(cand.id)
-            logger.info(
-                "nextday_merge_skip_locked",
-                candidate_id=str(cand.id), locked_fields=locked,
+    # 单轮内迭代至不动点：候选按 first_seen_at 升序逐轮评估；每次归并会更新
+    # target 质心（规模加权时间衰减池化），使"先评估时略低于阈值、同轮后续归并
+    # 推高相似度"的候选在下一轮追上——消除单遍顺序伪影（M5 回放误拆根因之三：
+    # russia-ukraine a2 同轮先评估 0.608<0.62 未并，同轮主簇合并 4 篇后
+    # sim 升至 0.629 却无下一轮可追）。
+    # 终止性：每轮至少归并 1 个候选才继续，候选数有限故必然终止。
+    # 锁定/无向量/无目标/命中 no_merge_with 为终态决策，首轮判定后不再重评。
+    pending = list(candidates)
+    while pending:
+        retry: list[Topic] = []
+        progress = False
+        for cand in pending:
+            # 人工锁定 merged_into 的源议题不自动归并（人工优先）
+            locked = cand.human_locked_fields or []
+            if "merged_into" in locked:
+                skipped_locked.append(cand.id)
+                logger.info(
+                    "nextday_merge_skip_locked",
+                    candidate_id=str(cand.id), locked_fields=locked,
+                )
+                continue
+
+            # 无向量 → 无比对基础，保留新 topic_id
+            if cand.centroid is None:
+                new_topics.append(cand.id)
+                logger.info(
+                    "nextday_merge_skip_no_centroid",
+                    candidate_id=str(cand.id),
+                )
+                continue
+
+            found = _find_merge_target(db, cand, active_days=active_days, now=now)
+            if found is None:
+                new_topics.append(cand.id)
+                continue
+            target, sim = found
+
+            # 相似度低于阈值：本轮保留；target 质心被同轮其他归并推高后下轮重评
+            if sim < merge_sim:
+                retry.append(cand)
+                logger.info(
+                    "nextday_merge_below_threshold",
+                    candidate_id=str(cand.id),
+                    target_id=str(target.id),
+                    similarity=round(sim, 6),
+                    threshold=merge_sim,
+                )
+                continue
+
+            # 命中 no_merge_with 名单：跳过自动归并，保留独立 topic_id
+            pair = _norm_pair(cand.id, target.id)
+            if pair in no_merge_pairs:
+                skipped_no_merge.append((cand.id, target.id))
+                new_topics.append(cand.id)
+                logger.info(
+                    "nextday_merge_skip_no_merge_list",
+                    candidate_id=str(cand.id),
+                    target_id=str(target.id),
+                    similarity=round(sim, 6),
+                )
+                continue
+
+            # 执行归并（单源议题事务内由本函数 flush，调用方统一 commit）
+            # 关键词重叠：剔除黑名单实体后计算（留痕与审计用，门槛仍只看语义向量）
+            overlap_info = _keyword_overlap(cand, target, redis_client)
+            merge_pair(db, cand, target, similarity=sim, keyword_overlap=overlap_info, now=now)
+            merged.append(MergeDecision(
+                source_topic_id=cand.id,
+                target_topic_id=target.id,
+                similarity=sim,
+                keyword_overlap=overlap_info,
+            ))
+            progress = True
+
+            # 归并完成后触发受影响议题的增量重估（详细设计 4.2 算法 3 末段：
+            # "merge_map 非空 → 触发受影响议题的增量重估（见算法 4）"）。
+            # target 无 AgendaEvent 时 reestimate_origin 直接返回 None（正常路径）。
+            # 函数级 import：保持 merge → revision 单向依赖，避免模块加载顺序耦合。
+            from app.agenda_engine.revision import reestimate_origin
+
+            reestimate_origin(
+                db,
+                target.id,
+                trigger={
+                    "type": "merge",
+                    "source_topic_id": str(cand.id),
+                    "target_topic_id": str(target.id),
+                    "similarity": round(sim, 6),
+                },
             )
-            continue
 
-        # 无向量 → 无比对基础，保留新 topic_id
-        if cand.centroid is None:
-            new_topics.append(cand.id)
-            logger.info(
-                "nextday_merge_skip_no_centroid",
-                candidate_id=str(cand.id),
-            )
-            continue
-
-        found = _find_merge_target(db, cand, active_days=active_days, now=now)
-        if found is None:
-            new_topics.append(cand.id)
-            continue
-        target, sim = found
-
-        # 相似度低于阈值：保留新 topic_id
-        if sim < merge_sim:
-            new_topics.append(cand.id)
-            logger.info(
-                "nextday_merge_below_threshold",
-                candidate_id=str(cand.id),
-                target_id=str(target.id),
-                similarity=round(sim, 6),
-                threshold=merge_sim,
-            )
-            continue
-
-        # 命中 no_merge_with 名单：跳过自动归并，保留独立 topic_id
-        pair = _norm_pair(cand.id, target.id)
-        if pair in no_merge_pairs:
-            skipped_no_merge.append((cand.id, target.id))
-            new_topics.append(cand.id)
-            logger.info(
-                "nextday_merge_skip_no_merge_list",
-                candidate_id=str(cand.id),
-                target_id=str(target.id),
-                similarity=round(sim, 6),
-            )
-            continue
-
-        # 执行归并（单源议题事务内由本函数 flush，调用方统一 commit）
-        # 关键词重叠：剔除黑名单实体后计算（留痕与审计用，门槛仍只看语义向量）
-        overlap_info = _keyword_overlap(cand, target, redis_client)
-        merge_pair(db, cand, target, similarity=sim, keyword_overlap=overlap_info, now=now)
-        merged.append(MergeDecision(
-            source_topic_id=cand.id,
-            target_topic_id=target.id,
-            similarity=sim,
-            keyword_overlap=overlap_info,
-        ))
-
-        # 归并完成后触发受影响议题的增量重估（详细设计 4.2 算法 3 末段：
-        # "merge_map 非空 → 触发受影响议题的增量重估（见算法 4）"）。
-        # target 无 AgendaEvent 时 reestimate_origin 直接返回 None（正常路径）。
-        # 函数级 import：保持 merge → revision 单向依赖，避免模块加载顺序耦合。
-        from app.agenda_engine.revision import reestimate_origin
-
-        reestimate_origin(
-            db,
-            target.id,
-            trigger={
-                "type": "merge",
-                "source_topic_id": str(cand.id),
-                "target_topic_id": str(target.id),
-                "similarity": round(sim, 6),
-            },
-        )
+        if not progress:
+            # 不动点：剩余候选全部低于阈值，保留新 topic_id
+            new_topics.extend(c.id for c in retry)
+            break
+        pending = retry
 
     db.flush()
     logger.info(
