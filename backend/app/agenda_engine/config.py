@@ -1,7 +1,9 @@
 """议程引擎配置（pydantic-settings，AGENDA_ 环境变量前缀，与 CLUSTER_/NLP_ 分离）。
 
-阈值口径全部来自详细设计 4.2 算法 1/3/5：回声折叠 0.65/0.85、次日归并 0.85、
-消亡 7 天、实体黑名单 Top-50 30 天窗口 48h TTL、修正风暴保护 5 次/24h。
+阈值口径全部来自详细设计 4.2 算法 1/3/5：回声折叠 0.65/0.85、消亡 7 天、
+实体黑名单 Top-50 30 天窗口 48h TTL、修正风暴保护 5 次/24h。
+次日归并 merge_sim 与通讯社锚点倾斜 origin_wire_boost_hours 原为估算值，
+经 M5 回放测试标定调整（2026-07-30，依据见各字段注释与 M5 回放测试报告）。
 """
 from functools import lru_cache
 
@@ -23,7 +25,15 @@ class AgendaSettings(BaseSettings):
     confirmed_min_size: int = 10       # ≥ N 篇进 confirmed（与 clustering 口径一致）
 
     # 次日自动归并（详细设计 4.2 算法 3，T3.3）
-    merge_sim: float = 0.85            # 跨语言向量比对归并阈值（估算）
+    # merge_sim 标定记录（M5 回放 24 案例 217 篇，2026-07-30，开发计划 2.2 处置路径）：
+    # 同事件文章对 n=490 min=0.492 p25=0.728 median=0.813；跨事件对 n=81
+    # median=0.087 max=0.642；跨语言对 n=25 min=0.655 median=0.782。
+    # 0.85（原估算）→ 同事件对召回仅 34.5%（阈值高于 mpnet 跨语言/多日报道
+    # 相似度常态）；0.60 → 误并 6/81=7.4% 超标（neg-independent-regional-floods
+    # 两起独立洪灾被并）；0.62 → 回放实测归并 95.7%、误并 3.7%、误拆 4.3%、
+    # 跨语言 100% 全部达标。残余重叠带（suez a8=0.607 vs floods 跨事件 0.60-0.64）
+    # 为 mpnet 能力上限，LaBSE 切换见 ADR-005。
+    merge_sim: float = 0.62            # 跨语言向量比对归并阈值（M5 回放标定）
     merge_candidate_k: int = 5         # HNSW 近邻候选数
     merge_active_days: int = 30        # 参与归并比对的历史活跃议题窗口（估算）
     merge_batch_size: int = 200        # 单轮归并处理的候选议题上限（防失控）
@@ -61,7 +71,10 @@ class AgendaSettings(BaseSettings):
     origin_wire_services: list[str] = [      # 通讯社识别名单（大小写不敏感匹配 source.name）
         "Reuters", "AP", "AFP", "Bloomberg", "TASS", "Xinhua",
     ]
-    origin_wire_boost_hours: float = 6.0     # 通讯社原文锚点向早于普通媒体最多 N 小时倾斜（估算）
+    origin_wire_boost_hours: float = 0.5     # 通讯社锚点倾斜（M5 回放标定：原估算 6h 会压过
+        # 真正更早的本地首发——beirut/meng-wanzhou/fukushima/nordstream/suez/turkey/
+        # who-covid 七案例通讯社晚到 1-3h 却凭倾斜反超，首发国准确率跌至 70.8%；
+        # 0.5h 仅在近似并列时倾向通讯社，实测 24/24 首发国/源全对）
     origin_min_confidence_for_alert: str = "high"  # 低置信首发不自动告警，需人工核实
 
     # 跟随国序列计算（详细设计 4.2 算法 4，T3.9）

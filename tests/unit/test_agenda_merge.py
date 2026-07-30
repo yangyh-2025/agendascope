@@ -4,14 +4,16 @@
   - 基准向量 e1 = [1, 0, ..., 0]
   - 与 e1 余弦为 s 的向量：v = [s, sqrt(1-s^2), 0, ..., 0]（已 L2 归一化）
 
-候选集 C：merged_into IS NULL AND lifecycle_state='nascent' AND first_seen_at 近 24h
+候选集 C：merged_into IS NULL AND lifecycle_state IN ('nascent','forming')
+          AND first_seen_at 近 24h（算法 3"昨日至今的新议题/微簇集"口径）；
+          归并方向"新并入老"（target.first_seen_at <= candidate.first_seen_at）
 档案集 D：merged_into IS NULL AND lifecycle_state != 'archived' AND last_seen_at 近 30d
 
 测试覆盖：
   1. 候选为空 → 返回空 merge_report
-  2. 高相似度（≥0.85）候选归并：merged_into 设置、topic_articles 迁移、revision_log 留痕、
+  2. 高相似度（≥0.62 归并阈值）候选归并：merged_into 设置、topic_articles 迁移、revision_log 留痕、
      target centroid/country_scope 更新
-  3. 低相似度（<0.85）→ 保留新 topic_id，归并不发生
+  3. 低相似度（<0.62）→ 保留新 topic_id，归并不发生
   4. no_merge_with 阻止归并：高相似度但 (c, target) ∈ no_merge_pairs → 跳过且
      记录到 skipped_no_merge
   5. human_locked_fields 含 'merged_into' 的源议题不自动归并
@@ -94,7 +96,7 @@ class TestEmptyCandidates:
         assert report.skipped_locked == []
 
     def test_no_nascent_topics_no_merge(self, db):
-        # 只有 forming/confirmed 议题，无 nascent → 候选集为空
+        # 只有 confirmed 议题（不在 nascent/forming 候选口径内）→ 候选集为空
         _make_topic(db, name="confirmed 议题", lifecycle_state="confirmed",
                     centroid=_unit(0))
         report = nextday_merge(db)
@@ -104,16 +106,17 @@ class TestEmptyCandidates:
 
 class TestHighSimilarityMerge:
     def test_high_similarity_merge_success(self, db):
-        """高相似度（≥0.85）候选归并：merged_into / topic_articles / revision_log / target 更新。"""
+        """高相似度（≥0.62 归并阈值）候选归并：merged_into / topic_articles / revision_log / target 更新。"""
         now = datetime.now(UTC)
         source = make_source(db, country_code="US")
-        # target：活跃 forming 议题，向量与 candidate 高相似
+        # target：活跃 forming 议题，向量与 candidate 高相似（既有档案：first_seen 更早）
         target = _make_topic(
             db,
             name="目标议题",
             lifecycle_state="forming",
             centroid=_unit(0),
             country_scope=["US"],
+            first_seen_at=now - timedelta(days=2),
             last_seen_at=now,
         )
         # candidate：孤立微簇（nascent，近 24h）
@@ -170,20 +173,21 @@ class TestHighSimilarityMerge:
 
 class TestLowSimilarityNoMerge:
     def test_below_threshold_keeps_new_topic(self, db):
-        """低相似度（<0.85）：保留新 topic_id，归并不发生。"""
+        """低相似度（<0.62 归并阈值）：保留新 topic_id，归并不发生。"""
         now = datetime.now(UTC)
         target = _make_topic(
             db,
             name="目标议题",
             lifecycle_state="forming",
             centroid=_unit(0),
+            first_seen_at=now - timedelta(days=2),  # 既有档案议题（归并方向"新并入老"）
             last_seen_at=now,
         )
         cand = _make_topic(
             db,
             name="低相似候选",
             lifecycle_state="nascent",
-            centroid=_vec_with_cosine(0.50),  # 远低于 0.85 阈值
+            centroid=_vec_with_cosine(0.50),  # 低于 0.62 归并阈值
             first_seen_at=now - timedelta(hours=1),
             last_seen_at=now - timedelta(hours=1),
         )
@@ -212,6 +216,7 @@ class TestNoMergeListBlocks:
             name="目标议题",
             lifecycle_state="forming",
             centroid=_unit(0),
+            first_seen_at=now - timedelta(days=2),  # 既有档案议题（归并方向"新并入老"）
             last_seen_at=now,
         )
         cand = _make_topic(
@@ -247,6 +252,7 @@ class TestHumanLockedSkipped:
             name="目标议题",
             lifecycle_state="forming",
             centroid=_unit(0),
+            first_seen_at=now - timedelta(days=2),  # 既有档案议题（归并方向"新并入老"）
             last_seen_at=now,
         )
         cand = _make_topic(
@@ -313,6 +319,7 @@ class TestCandidateWindow:
             name="目标议题",
             lifecycle_state="forming",
             centroid=_unit(0),
+            first_seen_at=now - timedelta(days=2),  # 既有档案议题（归并方向"新并入老"）
             last_seen_at=now,
         )
         old_nascent = _make_topic(
@@ -353,6 +360,7 @@ class TestKeywordOverlapBlacklist:
             lifecycle_state="forming",
             centroid=_unit(0),
             keywords=["United States", "天然气", "能源"],
+            first_seen_at=now - timedelta(days=2),
             last_seen_at=now,
         )
         cand = _make_topic(
@@ -416,7 +424,8 @@ class TestMergeTriggersReestimate:
         src = make_source(db, country_code="CN")
         target = _make_topic(
             db, name="目标议题", lifecycle_state="forming",
-            centroid=_unit(0), country_scope=["CN"], last_seen_at=now,
+            centroid=_unit(0), country_scope=["CN"],
+            first_seen_at=now - timedelta(days=2), last_seen_at=now,
         )
         # target 自己的文章 T0（事件锚点据此建立）
         t_article = _persist_article(db, src, embedding=_unit(0), published_at=now - timedelta(hours=2))
@@ -456,7 +465,7 @@ class TestMergeTriggersReestimate:
         now = datetime.now(UTC)
         _make_topic(
             db, name="目标议题", lifecycle_state="forming",
-            centroid=_unit(0), last_seen_at=now,
+            centroid=_unit(0), first_seen_at=now - timedelta(days=2), last_seen_at=now,
         )
         cand = _make_topic(
             db, name="候选议题", lifecycle_state="nascent",
