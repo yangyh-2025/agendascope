@@ -9,9 +9,8 @@
 """
 import json
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
-from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel, Field
@@ -48,10 +47,11 @@ class _FakeAPIHandler(BaseHTTPRequestHandler):
         })
 
         idx = self.__class__.call_count - 1
-        if idx < len(self.__class__.status_overrides):
-            status = self.__class__.status_overrides[idx]
-        else:
-            status = 200
+        status = (
+            self.__class__.status_overrides[idx]
+            if idx < len(self.__class__.status_overrides)
+            else 200
+        )
 
         if idx < len(self.__class__.response_payloads):
             payload = self.__class__.response_payloads[idx]
@@ -76,9 +76,14 @@ def _reset_handler():
 
 @pytest.fixture(scope="module")
 def stub_api():
-    """起一个 fake OpenAI-compatible API 服务端，测试结束后关闭。"""
+    """起一个 fake OpenAI-compatible API 服务端，测试结束后关闭。
+
+    必须用 ThreadingHTTPServer：httpx.Client 默认 keep-alive，单线程 HTTPServer
+    会阻塞在上一个测试的空闲连接上无法接受新连接（依赖 GC 回收时机，全量跑时偶发挂起）。
+    """
     _reset_handler()
-    server = HTTPServer(("127.0.0.1", 0), _FakeAPIHandler)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _FakeAPIHandler)
+    server.daemon_threads = True
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
