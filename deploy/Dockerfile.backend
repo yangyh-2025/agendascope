@@ -7,7 +7,12 @@ ARG HTTPS_PROXY=""
 ARG NO_PROXY=""
 # apt 源镜像（默认官方源；受限网络可传 --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn）
 ARG APT_MIRROR=""
+# pip 索引镜像（默认官方 PyPI；受限网络可传 --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple）
+ARG PIP_INDEX_URL=""
+# Playwright 浏览器下载镜像（默认官方 CDN；受限网络可传 npmmirror）
+ARG PLAYWRIGHT_DOWNLOAD_HOST=""
 ENV HTTP_PROXY=${HTTP_PROXY} HTTPS_PROXY=${HTTPS_PROXY} NO_PROXY=${NO_PROXY}
+ENV PIP_INDEX_URL=${PIP_INDEX_URL} PLAYWRIGHT_DOWNLOAD_HOST=${PLAYWRIGHT_DOWNLOAD_HOST}
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1

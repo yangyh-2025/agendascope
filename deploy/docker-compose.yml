@@ -67,6 +67,11 @@ services:
     build:
       context: ../backend
       dockerfile: ../deploy/Dockerfile.backend
+      args:
+        # 受限网络（国内）构建镜像源，可用环境变量覆盖为空直连官方源
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.tuna.tsinghua.edu.cn}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        PLAYWRIGHT_DOWNLOAD_HOST: ${PLAYWRIGHT_DOWNLOAD_HOST:-https://cdn.npmmirror.com/binaries/playwright}
     environment:
       APP_ENV: dev
       APP_DEBUG: "true"
