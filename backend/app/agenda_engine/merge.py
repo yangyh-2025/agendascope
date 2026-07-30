@@ -1,6 +1,7 @@
 """次日自动归并（T3.3，详细设计 4.2 算法 3 + ADR-006 自我纠错）。
 
-候选集 C：merged_into IS NULL AND lifecycle_state='nascent'（孤立微簇）
+候选集 C：merged_into IS NULL AND lifecycle_state IN ('nascent','forming')
+          （昨日至今的新议题/微簇，详细设计 4.2 算法 3 口径）
           AND first_seen_at >= candidate_since（默认近 24h，估算）
           按 first_seen_at 升序，老议题优先被并入目标
 档案集 D：merged_into IS NULL AND lifecycle_state != 'archived'
@@ -237,6 +238,9 @@ def _find_merge_target(
 
     返回 (target, cosine_similarity)；找不到或向量缺失返回 None。
     now：活跃窗口时间基准（缺省墙钟 now）；回放注入模拟时间使历史议题可比。
+    target 须不晚于 candidate 创建（first_seen_at <= candidate.first_seen_at）：
+    保证"topic_id 复用"方向——新议题并入既有/更老议题，更老的 topic_id 存续，
+    避免同窗新议题互并时首发议题 id 被新子簇吞没。
     """
     if candidate.centroid is None:
         return None
@@ -249,6 +253,7 @@ def _find_merge_target(
             Topic.merged_into.is_(None),
             Topic.lifecycle_state != "archived",
             Topic.last_seen_at >= cutoff,
+            Topic.first_seen_at <= candidate.first_seen_at,
             Topic.id != candidate.id,
         )
         .order_by(distance)
@@ -404,7 +409,11 @@ def nextday_merge(
 ) -> MergeReport:
     """次日归并主入口（flush 由本函数完成；commit 由调用方负责）。
 
-    候选集 C：merged_into IS NULL AND lifecycle_state='nascent' AND first_seen_at >= since
+    候选集 C：merged_into IS NULL AND lifecycle_state IN ('nascent','forming')
+              （详细设计 4.2 算法 3："昨日至今的新议题/微簇集"——forming 是
+              在线归簇已获同伴的新议题，同属 C；仅曾实现为 nascent 导致
+              forming↔forming 同事件子簇永不归并，M5 回放误拆根因之一）
+              AND first_seen_at >= candidate_since（默认近 24h，估算）
               按 first_seen_at 升序，老议题优先被并入目标
     档案集 D：merged_into IS NULL AND lifecycle_state != 'archived'
               AND last_seen_at >= now() - merge_active_days
@@ -423,12 +432,12 @@ def nextday_merge(
 
     no_merge_pairs = _load_no_merge_pairs(db)
 
-    # 候选集（孤立微簇）
+    # 候选集（昨日至今的新议题/微簇：nascent 孤证 + forming 已形成同伴的新议题）
     stmt = (
         select(Topic)
         .where(
             Topic.merged_into.is_(None),
-            Topic.lifecycle_state == "nascent",
+            Topic.lifecycle_state.in_(("nascent", "forming")),
             Topic.first_seen_at >= since,
         )
         .order_by(Topic.first_seen_at.asc())

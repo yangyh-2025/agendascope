@@ -81,7 +81,11 @@ def _persist_article(db, source, **overrides) -> Article:
 
 
 def _build_merge_scenario(db):
-    """构造 candidate A（2 文章）+ target B，A 与 B 高相似（≥0.85）。"""
+    """构造 candidate A（2 文章）+ target B，A 与 B 高相似（≥0.85）。
+
+    target 是更早创建的既有议题（first_seen 2 天前）：归并方向为"新并入老"，
+    更老 topic_id 存续（算法 3"topic_id 复用"口径，target 须不晚于 candidate）。
+    """
     now = datetime.now(UTC)
     source = make_source(db, country_code="US")
     target = _make_topic(
@@ -90,6 +94,7 @@ def _build_merge_scenario(db):
         lifecycle_state="forming",
         centroid=_unit(0),
         country_scope=["US"],
+        first_seen_at=now - timedelta(days=2),
         last_seen_at=now,
     )
     cand = _make_topic(
@@ -443,3 +448,52 @@ class TestNextdayMergeHistoricalTimeline:
         assert len(report.merged) == 1
         assert report.merged[0].source_topic_id == cand.id
         assert report.merged[0].target_topic_id == target.id
+
+    def test_forming_candidate_merges_into_older_topic(self, db):
+        """候选集 C 含 forming（算法 3"新议题/微簇集"口径）：同事件 forming 子簇
+        不再因已获同伴而被排除在归并候选外（M5 回放误拆根因之二）。"""
+        now = datetime.now(UTC)
+        source = make_source(db, country_code="US")
+        target = _make_topic(
+            db, name="档案老议题", lifecycle_state="forming",
+            centroid=_unit(0), country_scope=["US"],
+            first_seen_at=now - timedelta(days=2), last_seen_at=now - timedelta(hours=2),
+        )
+        cand = _make_topic(
+            db, name="forming 子簇", lifecycle_state="forming",
+            centroid=_vec_with_cosine(0.92), country_scope=["CN"],
+            first_seen_at=now - timedelta(hours=3), last_seen_at=now - timedelta(hours=3),
+        )
+        a1 = _persist_article(db, source, embedding=_vec_with_cosine(0.93), country_code="CN")
+        a2 = _persist_article(db, source, embedding=_vec_with_cosine(0.91), country_code="CN")
+        db.add(TopicArticle(topic_id=cand.id, article_id=a1.id, weight=0.95, assign_method="online"))
+        db.add(TopicArticle(topic_id=cand.id, article_id=a2.id, weight=0.85, assign_method="online"))
+        db.commit()
+
+        report = nextday_merge(db)
+        db.commit()
+        assert len(report.merged) == 1
+        assert report.merged[0].source_topic_id == cand.id
+        assert report.merged[0].target_topic_id == target.id
+
+    def test_older_topic_id_survives_when_both_new(self, db):
+        """同窗两个新议题同事件：年轻议题并入更老议题——更老 topic_id 存续
+        （算法 3"topic_id 复用"意图：target 须不晚于 candidate 创建）。"""
+        now = datetime.now(UTC)
+        older = _make_topic(
+            db, name="较老新议题", lifecycle_state="forming",
+            centroid=_unit(0), country_scope=["US"],
+            first_seen_at=now - timedelta(hours=5), last_seen_at=now - timedelta(hours=5),
+        )
+        younger = _make_topic(
+            db, name="较新子簇", lifecycle_state="forming",
+            centroid=_vec_with_cosine(0.92), country_scope=["CN"],
+            first_seen_at=now - timedelta(hours=2), last_seen_at=now - timedelta(hours=2),
+        )
+        db.commit()
+
+        report = nextday_merge(db)
+        db.commit()
+        assert len(report.merged) == 1
+        assert report.merged[0].source_topic_id == younger.id
+        assert report.merged[0].target_topic_id == older.id
