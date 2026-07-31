@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select, update
+from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import ROLE_AUTHORIZED, get_db, require_role
@@ -97,7 +97,8 @@ def read_all_alerts(
         stmt = stmt.where(Alert.triggered_at <= before)
     result = db.execute(stmt)
     db.flush()
-    return ok({"marked": int(result.rowcount or 0)})
+    marked = result.rowcount if isinstance(result, CursorResult) else 0
+    return ok({"marked": int(marked or 0)})
 
 
 @router.post("/{alert_id}/read")

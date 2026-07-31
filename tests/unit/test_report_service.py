@@ -4,7 +4,6 @@ from datetime import date, timedelta
 import pytest
 
 from app.core.errors import BizError
-from app.services import report_service
 from app.services.report_service import (
     DATA_DISCLAIMER,
     MAX_WINDOW_DAYS,

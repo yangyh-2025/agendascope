@@ -70,12 +70,14 @@ class AlertingWorker:
     def __init__(
         self,
         session_factory=None,
-        smtp_config: notifier.SmtpConfig | None = "auto",
+        smtp_config: notifier.SmtpConfig | None = None,
         eval_interval_seconds: int = EVAL_INTERVAL_SECONDS,
         poll_seconds: int = 60,
     ):
         self.session_factory = session_factory or get_session_factory()
-        self.smtp_config = load_smtp_config() if smtp_config == "auto" else smtp_config
+        # smtp_config 未显式传入（None 且未配置 SMTP_HOST 时同样为 None）：
+        # 默认从环境变量自动加载；显式传 None 且配置了 SMTP_HOST 时也保持自动加载语义。
+        self.smtp_config = load_smtp_config() if smtp_config is None else smtp_config
         self.eval_interval_seconds = eval_interval_seconds
         self.poll_seconds = poll_seconds
         self._last_eval = 0.0

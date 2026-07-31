@@ -339,7 +339,7 @@ def cmd_merge_precision(args: argparse.Namespace) -> int:
         rows = conn.execute(text(map_sql), {"urls": list(url_index)}).all()
     topic_case_articles: dict[str, set[str]] = {}
     art_case: dict[str, str] = {}
-    for url, (case, art) in url_index.items():
+    for _url, (case, art) in url_index.items():
         art_case[art["article_id"]] = case["case_id"]
     for topic_id, url in rows:
         case, art = url_index[url]
@@ -482,8 +482,8 @@ def cmd_all(args: argparse.Namespace) -> int:
         return value, f"归并率 = {value}", code == 0
 
     def _capture_metric(fn, ns):
-        import io
         import contextlib
+        import io
 
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):

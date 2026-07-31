@@ -19,7 +19,7 @@ from app.assessment.replay import load_replay_cases  # noqa: E402
 
 def cosine(a, b):
     import math
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     return dot / (na * nb) if na and nb else 0.0

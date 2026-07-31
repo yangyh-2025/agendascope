@@ -112,23 +112,24 @@ def create_export(
         export.id, get_session_factory(), report_service.DEFAULT_EXPORT_DIR,
     )
     db.expire_all()
-    export = db.get(ReportExport, export.id)
-    if result.async_mode or (export is not None and export.status in ("pending", "processing")):
+    fresh = db.get(ReportExport, export.id)
+    assert fresh is not None, "export must exist after creation"
+    if result.async_mode or fresh.status in ("pending", "processing"):
         return ok(
-            {"id": str(export.id), "status": export.status, "queue_position": 0},
+            {"id": str(fresh.id), "status": fresh.status, "queue_position": 0},
             message="报告生成中，完成后站内通知",
         )
-    if export.status == "failed":
+    if fresh.status == "failed":
         return ok(
-            {"id": str(export.id), "status": "failed", "error": export.error},
+            {"id": str(fresh.id), "status": "failed", "error": fresh.error},
             message="报告生成失败",
         )
     return ok({
-        "id": str(export.id),
+        "id": str(fresh.id),
         "status": "done",
-        "download_url": f"/api/v1/report-exports/{export.id}/download",
-        "duration_ms": export.duration_ms,
-        "file_size": export.file_size,
+        "download_url": f"/api/v1/report-exports/{fresh.id}/download",
+        "duration_ms": fresh.duration_ms,
+        "file_size": fresh.file_size,
     })
 
 

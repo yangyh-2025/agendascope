@@ -123,10 +123,9 @@ def check_api(api_base: str, token: str) -> None:
 def ensure_stress_source(engine) -> uuid.UUID:
     """确保压测合成源存在，返回 source_id（幂等，按 name 查找）。"""
     from sqlalchemy import select
+    from sqlalchemy.orm import Session
 
     from app.models.source import Source
-
-    from sqlalchemy.orm import Session
 
     with Session(engine) as db:
         source = db.scalars(select(Source).where(Source.name == SOURCE_NAME)).first()
@@ -345,7 +344,7 @@ def render_report(
         "# M5 压测报告（T5.4 全链路延迟）",
         "",
         f"- 生成时间：{datetime.now(UTC).isoformat()}",
-        f"- 统计口径：pipeline_latency_sample（published_at→visible_at，端到端）",
+        "- 统计口径：pipeline_latency_sample（published_at→visible_at，端到端）",
         f"- 样本筛选：marker={marker or '（全部样本）'}；since={since.isoformat() if since else '（不限）'}",
         f"- 判定标准：P95 ≤ {P95_TARGET_MIN:.0f} min 为 PASS；红线 ≤ {REDLINE_MIN:.0f} min",
         "",

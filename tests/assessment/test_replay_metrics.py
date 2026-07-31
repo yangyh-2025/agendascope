@@ -5,13 +5,13 @@ import pytest
 
 from app.assessment.replay import (
     CaseOutcome,
+    CrossLingualAccuracy,
+    EventAccuracy,
     GroundTruth,
+    MergeAccuracy,
+    OriginAccuracy,
     ReplayCase,
     ReplayReport,
-    OriginAccuracy,
-    MergeAccuracy,
-    EventAccuracy,
-    CrossLingualAccuracy,
     _accumulate,
     _finalize,
     _lcs_len,

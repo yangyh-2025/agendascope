@@ -15,7 +15,6 @@ from app.assessment.replay import (
     GroundTruth,
     ReplayArticle,
     ReplayCase,
-    evaluate_case_outcome,
     replay_cases,
 )
 

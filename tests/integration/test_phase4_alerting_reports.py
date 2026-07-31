@@ -72,8 +72,8 @@ def _article(db, source, cc="US", title="Hello", content="x" * 300):
 
 class TestArticlesTotal:
     def test_total_respects_country_filter(self, db):
-        from tests.conftest import make_source
         from app.api.routes.articles import list_articles
+        from tests.conftest import make_source
 
         src_us = make_source(db, country_code="US")
         src_jp = make_source(db, country_code="JP", feed_url=f"https://example.com/f{uuid.uuid4().hex}.xml")
@@ -91,8 +91,8 @@ class TestArticlesTotal:
         assert len(resp["data"]["items"]) == 3
 
     def test_excerpt_truncated_to_150(self, db):
-        from tests.conftest import make_source
         from app.api.routes.articles import list_articles
+        from tests.conftest import make_source
 
         src = make_source(db)
         _article(db, src, content="y" * 500)
@@ -111,8 +111,8 @@ class TestArticlesTotal:
 
 class TestMapCountries:
     def test_all_30_countries_present_and_empty_marked(self, db):
-        from tests.conftest import make_source
         from app.api.routes.map import map_countries
+        from tests.conftest import make_source
 
         src = make_source(db, country_code="US")
         _article(db, src, cc="US")
@@ -140,8 +140,8 @@ class TestMapCountries:
 
 class TestEventChain:
     def test_chain_from_engine_fields(self, db):
-        from tests.conftest import make_source
         from app.api.routes.agenda_events import event_chain
+        from tests.conftest import make_source
 
         src = make_source(db, country_code="US", name="Origin Media")
         topic = _topic(db)
@@ -272,9 +272,9 @@ class TestSubscriptionRound:
 
 class TestReportGeneration:
     def test_generate_topic_deep_pdf(self, db, tmp_path):
-        from tests.conftest import make_source
         from app.models.topic import TopicArticle
         from app.services.report_service import create_export, generate_export
+        from tests.conftest import make_source
 
         user = _user(db)
         topic = _topic(db)
@@ -296,14 +296,14 @@ class TestReportGeneration:
         assert export.status == "done"
         assert export.file_path and export.file_size > 500
         assert export.expires_at is not None
-        content = open(export.file_path, "rb").read()
+        with open(export.file_path, "rb") as f:
+            content = f.read()
         assert content.startswith(b"%PDF")
 
     def test_process_pending_exports_notifies_user(self, db, tmp_path):
         from app.services.report_service import create_export, process_pending_exports
 
         user = _user(db)
-        topic = _topic(db)
         export = create_export(db, user.id, {
             "report_type": "periodic_weekly", "format": "docx",
             "params": {"countries": ["US"]},

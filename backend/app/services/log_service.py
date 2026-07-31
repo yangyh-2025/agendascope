@@ -22,9 +22,9 @@ def _line_level(line: str) -> str | None:
                 return level
         return None
     if isinstance(parsed, dict):
-        level = parsed.get("level")
-        if isinstance(level, str):
-            return level.upper()
+        raw_level = parsed.get("level")
+        if isinstance(raw_level, str):
+            return raw_level.upper()
     return None
 
 

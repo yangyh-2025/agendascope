@@ -41,8 +41,8 @@ from app.models.topic import Topic, TopicArticle
 logger = structlog.get_logger(__name__)
 
 # 检测方法标识（详细设计 4.2 算法 4）：LLM 判定 vs 媒体时间兜底
-DETECTION_METHOD_LLM = "llm_first_utterance"
-DETECTION_METHOD_FALLBACK = "media_time_fallback"
+DETECTION_METHOD_LLM: Literal["llm_first_utterance"] = "llm_first_utterance"
+DETECTION_METHOD_FALLBACK: Literal["media_time_fallback"] = "media_time_fallback"
 
 
 @dataclass(frozen=True)

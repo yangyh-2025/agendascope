@@ -6,8 +6,9 @@
 - 默认阈值下跨语言同事件报道（实测 ~0.6-0.75 < 0.85）不在线误并，留待重聚类校正
 """
 
-import pytest
 from datetime import UTC, datetime, timedelta
+
+import pytest
 
 from app.clustering.online import (
     OUTCOME_ASSIGNED,
