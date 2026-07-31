@@ -11,6 +11,8 @@ ARG APT_MIRROR=""
 ARG PIP_INDEX_URL=""
 # Playwright 浏览器下载镜像（默认官方 CDN；受限网络可传 npmmirror）
 ARG PLAYWRIGHT_DOWNLOAD_HOST=""
+# torch 安装索引（默认 CPU-only wheel，省 ~2GB CUDA 库；GPU 机器可传官方 CUDA index）
+ARG PIP_TORCH_INDEX="https://download.pytorch.org/whl/cpu"
 ENV HTTP_PROXY=${HTTP_PROXY} HTTPS_PROXY=${HTTPS_PROXY} NO_PROXY=${NO_PROXY}
 ENV PIP_INDEX_URL=${PIP_INDEX_URL} PLAYWRIGHT_DOWNLOAD_HOST=${PLAYWRIGHT_DOWNLOAD_HOST}
 
@@ -24,6 +26,8 @@ RUN if [ -n "$APT_MIRROR" ]; then \
     fi
 
 COPY requirements.txt .
+# 先装 CPU-only torch（本机纯 CPU 推理），避免 requirements.txt 里 torch 拉入 CUDA 全家桶
+RUN pip install torch --index-url "$PIP_TORCH_INDEX"
 RUN pip install -r requirements.txt
 
 # Playwright 无头浏览器（pipeline 反爬渲染抓取用；仅 chromium 减体积）

@@ -50,7 +50,7 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: "-Xms256m -Xmx256m"   # 开发单机堆 256m 足够；数据量大时可调高
       path.repo: /usr/share/elasticsearch/backups   # 备份快照仓库（scripts/backup.sh 注册 _snapshot/backup）
     ports:
       - "9200:9200"
