@@ -40,7 +40,7 @@ def test_worker_consumes_and_acks(db, queue, es_indexer, lid_detector, mpnet_emb
 
     db.expire_all()
     assert article.language == "zh"  # lid.176 纠正源默认语言
-    assert article.embedding is not None and len(article.embedding) == 768
+    assert article.embedding is not None and len(article.embedding) == 1024
     assert db.execute(select(pipeline_latency_sample)).all()  # 延迟埋点落表
     doc = es_indexer.client.get(index=es_indexer.index, id=str(article.id))
     assert doc["found"] is True

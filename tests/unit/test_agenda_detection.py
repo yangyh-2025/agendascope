@@ -25,7 +25,7 @@ from app.models.person import PersonOrg
 from app.models.topic import Topic, TopicArticle
 from tests.conftest import make_source
 
-DIM = 768
+DIM = 1024
 
 
 def _unit(dim_index: int) -> list[float]:

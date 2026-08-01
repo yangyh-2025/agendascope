@@ -34,7 +34,7 @@ class Article(Base):
     content_status: Mapped[str] = mapped_column(String(10), nullable=False, default="full")
     sentiment: Mapped[str | None] = mapped_column(String(10))
     sentiment_score: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
-    embedding = mapped_column(Vector(768), nullable=True)
+    embedding = mapped_column(Vector(1024), nullable=True)
     is_duplicate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     canonical_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("articles.id")

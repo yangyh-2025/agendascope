@@ -16,7 +16,7 @@ from app.agenda_engine.echo import echo_fold_articles, echo_fold_topic
 from app.models.article import Article
 from app.models.topic import Topic, TopicArticle
 
-DIM = 768
+DIM = 1024
 
 
 def _unit(dim_index: int) -> list[float]:

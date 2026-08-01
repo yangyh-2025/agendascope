@@ -51,7 +51,7 @@ def test_new_article_creates_nascent_micro_topic(db, mpnet_embedder):
     assert outcome.outcome == OUTCOME_NEW_MICRO
     topic = db.get(Topic, outcome.topic_id)
     assert topic.lifecycle_state == "nascent"  # 孤证微簇保留
-    assert topic.centroid is not None and len(topic.centroid) == 768
+    assert topic.centroid is not None and len(topic.centroid) == 1024
     assert topic.keywords  # c-TF-IDF 风格 top 词（降级命名/匹配输入）
     assert topic.naming_method == "ctfidf_fallback"  # LLM 命名前的兜底留痕
     assignment = get_assignment(db, article.id)
@@ -189,7 +189,7 @@ def test_nearest_active_topic_window_with_injected_now(db):
     from app.clustering.repository import nearest_active_topic
 
     hist = datetime(2021, 3, 24, 10, tzinfo=UTC)
-    vec = [0.0] * 768
+    vec = [0.0] * 1024
     vec[0] = 1.0
     topic = Topic(
         name="历史议题", name_auto="历史议题", naming_method="ctfidf_fallback",

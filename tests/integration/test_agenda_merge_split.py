@@ -24,7 +24,7 @@ from tests.conftest import make_source
 
 pytestmark = pytest.mark.integration
 
-DIM = 768
+DIM = 1024
 
 
 def _unit(dim_index: int) -> list[float]:

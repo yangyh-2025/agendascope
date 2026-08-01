@@ -20,7 +20,7 @@ from app.assessment.replay import (
 
 pytestmark = pytest.mark.integration
 
-_DIM = 768
+_DIM = 1024
 
 
 class DeterministicEmbedder:
@@ -29,7 +29,7 @@ class DeterministicEmbedder:
     否则被折叠为 is_duplicate 后不计入跟随国序列），跨键 ≈ 正交。
 
     仅用于测试管线机制（归簇/归并/判定路径），不替代真实语义向量模型。
-    噪声标定：768 维下 E[cos] ≈ 1/(1+768·σ²)，σ=0.012 → cos≈0.90。
+    噪声标定：1024 维下 E[cos] ≈ 1/(1+1024·σ²)，σ=0.012 → cos≈0.90。
     """
 
     def __init__(self):

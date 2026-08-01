@@ -25,7 +25,7 @@ class Topic(Base):
     prompt_version: Mapped[str | None] = mapped_column(String(50))  # 最近一次 LLM 判定所用 prompt 版本
     keywords: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     cluster_method: Mapped[str] = mapped_column(String(20), nullable=False, default="bertopic")
-    centroid = mapped_column(Vector(768), nullable=True)
+    centroid = mapped_column(Vector(1024), nullable=True)
     country_scope: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(15), nullable=False, default="emerging")
     lifecycle_state: Mapped[str] = mapped_column(String(15), nullable=False, default="nascent")

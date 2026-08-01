@@ -23,6 +23,13 @@ class NlpSettings(BaseSettings):
     embed_batch_size: int = 32
     lang_confidence_threshold: float = 0.8
 
+    # 云嵌入 API 模式（NLP_EMBEDDING_PROFILE=api 时生效，OpenAI 兼容 /embeddings 端点；
+    # 无需本地 sentence-transformers 权重，维度从 API 响应自动识别）
+    embedding_profile: str = "local"  # local（本地模型）/ api（云嵌入）
+    embedding_api_base_url: str = ""  # 如 https://api.openai.com/v1 / dashscope compatible-mode/v1
+    embedding_api_key: str = ""       # 留空则读 NLP_EMBEDDING_API_KEY 环境变量
+    embedding_api_model: str = "text-embedding-3-small"
+
     es_url: str = ""  # 空则回落主配置 elasticsearch_url
     es_index: str = "agendascope_articles"
     es_max_retries: int = 5  # 指数退避上限(有界, 不死等); 超限整批重投递
