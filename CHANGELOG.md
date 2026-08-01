@@ -4,6 +4,39 @@
 
 ---
 
+## 云 API 改造（2026-08-01）
+
+> **本轮范围**：LLM 与嵌入从本地模型全面切换为云端 API——消除本地大模型权重与推理占用，镜像瘦身、并发限流对齐供应商配额，并同步全部工程文档。
+
+### LLM 云端化（讯飞星辰 MaaS）
+
+- **LLM 全部走云端 API**（默认 `LLM_PROFILE=api`，OpenAI 兼容 `/chat/completions`）：议题命名/分类/摘要、首发表述判定、终审审查官统一走 `OpenAICompatibleEngine`；本地 Qwen 推理分支（`backend/app/llm/engine.py` `LLMEngine`）保留代码但不默认使用
+- **讯飞星辰接入**：`LLM_API_BASE_URL=https://maas-api.cn-huabei-1.xf-yun.com/v2`、模型 `xophunyuan7bmt`（真实模型 ID 需 `GET /v2/models` 查询，非产品名 `Hy-MT2-7B`）
+- **并发限流**：新增 `LLM_MAX_CONCURRENCY`（默认 2，`OpenAICompatibleEngine` 线程信号量），跨命名/检测/终审/首发表述统一限流，对齐讯飞 QPS 2/并发 2 配额
+- 删除本地权重 `models/Qwen2.5-0.5B-Instruct`（954MB）
+
+### 嵌入云端化（SiliconFlow bge-m3）
+
+- **嵌入全部走云端 API**（默认 `NLP_EMBEDDING_PROFILE=api`）：新增 `ApiEmbedder`（`backend/app/nlp/api_embedder.py`，OpenAI 兼容 `/embeddings`），`Embedder` 按 profile 路由到云嵌入
+- **SiliconFlow 接入**：`NLP_EMBEDDING_API_BASE_URL=https://api.siliconflow.cn/v1`、模型 `BAAI/bge-m3`（1024 维，L2 归一化）；限制 RPM 2000 / TPM 500000（嵌入按 32 篇/批远低于限）
+- **pgvector 维度迁移**：alembic `0009_embedding_dim_1024`——`articles.embedding` / `topics.centroid` 从 `vector(768)` 升为 `vector(1024)`，清空旧向量并重建 HNSW 索引
+- 删除本地权重 `models/sentence-transformers`（mpnet 768 维，1.1GB）；本地嵌入分支保留代码不默认使用
+
+### 部署与体积
+
+- 后端镜像瘦身：torch 改 CPU-only wheel（11.2GB→4.7GB，去除 CUDA 库）
+- ES 开发堆 512m→256m（`ES_JAVA_OPTS`）
+- 本地模型目录从 2.1GB 降至 126MB（仅保留 `lid.176.bin` 语言识别，无 API 替代）
+- 云 API 模式下运行内存显著下降（约 2.5GB vs 本地 LLM 4.9GB）
+- `run.py` 增强：新增 `doctor` 环境预检、`up` 一键启动全栈（预检→容器→健康检查→URL/账户指引→自动前端）、`logs` 支持 `-n`
+
+### 测试与文档
+
+- `ApiEmbedder` 单测 8 例；集成测试夹具改确定性假向量（1024 维 bigram 词频）；依赖真实语义嵌入质量的测试（跨语言检索、聚类复用）标记 skip，由真实 bge-m3 验证
+- 工程文档同步 v1.2：`1-技术方案.md` / `2-详细设计.md` / `3-架构决策.md`（ADR-004 标改选）/ `4-开发计划.md` 全部更新为云 API 现状；`README.md` LLM/嵌入段落改为云端描述
+
+---
+
 ## 修复轮次（2026-07-28）
 
 > **本轮范围**：Phase 5 收尾后全模块缺陷修复与最终集成接线——新增 2 个 worker、4 组业务 API 注册、安装向导与系统管理前端、部署/脚本加固，并完成统一接线与全量验证。

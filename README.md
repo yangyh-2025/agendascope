@@ -9,9 +9,9 @@
 - **实时监控**：重点源 RSS 高频轮询 + GDELT 兜底，新闻发布到平台可见 P95 ≤ 30 分钟（红线 ≤ 2 小时）
 - **议程溯源**：回声消除折叠多国跟风报道，识别首发源与跨国传播链路，自动判定议程设置事件
 - **自我纠错**：议题生命周期管理（萌芽→形成中→已确认→演化→消亡）、次日自动归并、判定修正留痕、人工否决优先
-- **多语言分析**：跨语言向量聚类 + 本地大模型（议题命名/分类/摘要/终审），数据不出内网
+- **多语言分析**：跨语言向量聚类 + 云端大模型（议题命名/分类/摘要/终审，LLM 走讯飞星辰 MaaS、嵌入走 SiliconFlow bge-m3），数据经机构批准的出网通道
 - **小白可用**：零编程基础用户可用的可视化看板（全球议程地图、议程时间线、传播链路图）
-- **私有化部署**：Docker Compose 单机部署，支持完全离线内网环境
+- **私有化部署**：Docker Compose 单机交付；LLM 与嵌入经机构批准的出网通道走云端 API（数据不出域，仅文本出域推理）
 
 ## 文档
 
@@ -53,7 +53,7 @@ python -m app.worker.detection_worker                                          #
 python -m app.worker.alerting_worker                                           # 预警调度 worker：规则评估/通知退避重试/订阅推送/报告导出队列（另开终端）
 ```
 
-NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin` 与 `sentence-transformers/paraphrase-multilingual-mpnet-base-v2/`；路径与设备经 `NLP_` 前缀环境变量可配（`backend/app/nlp/config.py`，`NLP_DEVICE=cuda/auto` 启用 GPU）。
+本地模型权重（不入库，放仓库根 `models/`）：仅 fastText `lid.176.bin`（语言识别，无 API 替代）；LLM 与嵌入走云端 API 无需本地权重。嵌入（SiliconFlow bge-m3，1024 维）与 LLM（讯飞星辰 MaaS）经 `LLM_` / `NLP_EMBEDDING_` 前缀环境变量配置（参考 `backend/.env.example`，`.env` 放仓库根、已 gitignore）。
 
 聚类引擎（`backend/app/clustering/`，`CLUSTER_` 前缀环境变量可配）：BERTopic（UMAP+HDBSCAN+c-TF-IDF）主线 + Agglomerative 硬阈值（cosine 0.25，average linkage）双策略并行评估，单簇占比 >80% 触发超大簇黑洞护栏回落 Agglomerative；在线增量双阈值归簇（T_event=0.85 归簇 / T_dup=0.95 判重），孤证保留为 size=1 nascent 微簇；每小时全局重聚类校正（近 24h 窗）+ Redis 快照发布（校正期间读侧读上一版并标注"校正中"）；双策略均不可用时关键词匹配粗聚类降级（cluster_method=keyword_fallback + P1 告警 + 恢复后回填）。议题命名/分类/摘要由 LLM 服务经 `app.clustering.service.ClusterService` 接口接线。
 
@@ -69,30 +69,26 @@ NLP 模型权重（不入库，放仓库根 `models/`）：fastText `lid.176.bin
 
 ### LLM 服务（backend/app/llm/，M2-3）
 
-本地大模型推理服务（Qwen 系列，transformers 运行时），负责议题命名/分类/摘要，数据不出内网。模型权重放根目录 `models/`（已 gitignore，部署时单独分发）。
+LLM 推理全部走云端 API（默认 `LLM_PROFILE=api`，OpenAI 兼容 `/chat/completions`），负责议题命名/分类/摘要、首发表述判定、终审审查官。默认接入讯飞星辰 MaaS（模型 `xophunyuan7bmt`，`GET /v2/models` 可查真实模型 ID）。本地 Qwen 推理分支（`backend/app/llm/engine.py` 的 `LLMEngine`）保留代码但不默认使用，仅作机构不批准云通道时的降级兜底。
 
-配置档（环境变量 `LLM_PROFILE` 切换）：
-
-| 配置档 | 硬件 | 推荐模型 | 单议题延迟目标（估算） |
-|--------|------|----------|------------------------|
-| `gpu-24g` | 1×24GB GPU | Qwen2.5-14B-Instruct-GPTQ-Int4（或 7B） | P95 ≤10s |
-| `cpu-quant` | CPU 量化 | Qwen2.5-3B-Instruct（int8/GGUF 转换后落 models/） | P95 ≤60s |
-| `cpu-dev`（默认） | CPU 开发/测试 | Qwen2.5-0.5B-Instruct（float32） | 实测见 CHANGELOG |
-
-关键环境变量：`LLM_MODEL_DIR`（覆盖模型目录，相对仓库根）、`LLM_DEVICE`、`LLM_MAX_CONTEXT_TOKENS`（命名 prompt 预算，默认 2000）、`LLM_CATEGORIES`（JSON 数组，扩展主题分类体系）、`LLM_FAILURE_RATE_THRESHOLD`（降级判定阈值，默认 0.2）。
-
-开发环境模型下载（权重不进 git）：
+关键环境变量（`.env` 放仓库根，已 gitignore）：
 
 ```bash
-# 直连失败时先 export HF_ENDPOINT=https://hf-mirror.com
-.venv/Scripts/python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-0.5B-Instruct', local_dir='models/Qwen2.5-0.5B-Instruct')"
+LLM_PROFILE=api
+LLM_API_BASE_URL=https://maas-api.cn-huabei-1.xf-yun.com/v2   # OpenAI 兼容端点
+LLM_API_KEY=xxxxxxxx:xxxxxxxx                                  # 供应商 API Key
+LLM_API_MODEL=xophunyuan7bmt                                   # 模型 ID（GET /v2/models 查询）
+LLM_MAX_CONCURRENCY=2                                          # API 并发上限（信号量，对齐供应商 QPS/并发配额）
 ```
+
+其他可配项：`LLM_MAX_CONTEXT_TOKENS`（命名 prompt 预算，默认 2000）、`LLM_CATEGORIES`（JSON 数组，扩展主题分类体系）、`LLM_FAILURE_RATE_THRESHOLD`（降级判定阈值，默认 0.2）。参考 `backend/.env.example`（不含真实 Key）。
 
 设计与行为要点：
 
-- **结构化输出**：prompt 内嵌 JSON Schema 强约束 + pydantic 校验，解析失败重试 1 次后单点降级（未引入 outlines/约束解码：输出 schema 极简，小模型 CPU 场景收益有限且增加版本耦合，理由见 `app/llm/schemas.py`）
+- **结构化输出**：prompt 内嵌 JSON Schema 强约束 + pydantic 校验，解析失败重试 1 次后单点降级（未引入 outlines/约束解码：输出 schema 极简，理由见 `app/llm/schemas.py`）
 - **异步批处理**：`LLMTaskQueue`（asyncio 队列 + 小窗口聚批 + 独立线程推理），主链路投递即返回，不阻塞采集
-- **降级链**：推理失败/超时率 >20%（滑窗）或模型加载失败 → c-TF-IDF 关键词标签兜底（`naming_method=ctfidf_fallback`，分类归「其他」，摘要留空不伪造）+ alerts 表 P1 告警（1h 防抖）+ WARN 日志；恢复后 `backfill_degraded_topics()` 对降级期议题回填重命名/分类/摘要并写 revision_log
+- **并发限制**：`LLM_MAX_CONCURRENCY` 线程信号量，跨命名/检测/终审/首发表述统一限流，对齐外部 API QPS/并发配额
+- **降级链**：调用失败/超时率 >20%（滑窗）或 API 不可用 → c-TF-IDF 关键词标签兜底（`naming_method=ctfidf_fallback`，分类归「其他」，摘要留空不伪造）+ alerts 表 P1 告警（1h 防抖）+ WARN 日志；恢复后 `backfill_degraded_topics()` 对降级期议题回填重命名/分类/摘要并写 revision_log
 - **prompt 版本管理**：命名/分类/摘要模板带版本号（`app/llm/prompts.py` 注册表，只增不改）；每次判定写 `llm_judgements` 表（模型名 + prompt_version + 输入/输出快照 + 耗时），topics 表冗余 `llm_model`/`prompt_version` 列；`rerun_judgements()` 支持换 prompt 后历史判定批量重跑对比
 - **聚类管线接线**：`python -m app.worker.naming_worker` 轮询聚类侧待命名队列（`ClusterService.list_pending_naming`：在线归簇新建微簇与重聚类校正产出的兜底命名议题），经 `LLMTaskQueue` 投递 `TopicAnnotator` 组合标注（命名+分类+摘要），`record_llm_naming` 回填 topics；降级时议题落「关键词：」兜底标签保持 `ctfidf_fallback` 留痕 + P1 告警，worker 每轮做恢复探针（真实推理验证），恢复后自动 `backfill_degraded_topics` 回填降级期议题；单点降级议题 10 分钟重试冷却，不刷判定留痕
 
