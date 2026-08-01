@@ -43,6 +43,27 @@ VENV_PY = ROOT / ".venv" / "Scripts" / "python.exe"  # Windows
 if not VENV_PY.exists():
     VENV_PY = ROOT / ".venv" / "bin" / "python"  # Linux/macOS
 
+
+def _load_root_env() -> None:
+    """把仓库根 .env 加载进 os.environ（不覆盖已存在的环境变量）。
+
+    docker compose 会自动读根 .env 注入容器；run.py 本机命令（doctor 等）需手动加载。
+    """
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip('"')
+
+
+_load_root_env()
+
 REPLAY_DB_URL = "postgresql+psycopg2://agenda:agenda_dev_pwd@localhost:5432/agendascope_replay"
 NPM = "npm.cmd" if os.name == "nt" else "npm"
 
@@ -100,7 +121,9 @@ def run(cmd: list[str], cwd: Path = ROOT, env: dict | None = None, check: bool =
 
 
 def compose(*args: str, check: bool = True) -> int:
-    return run(["docker", "compose", *args], cwd=DEPLOY, check=check)
+    # 显式指定根 .env 作为 compose 变量源（compose 默认不读仓库根 .env）
+    env_args = ["--env-file", str(ROOT / ".env")] if (ROOT / ".env").exists() else []
+    return run(["docker", "compose", *env_args, *args], cwd=DEPLOY, check=check)
 
 
 # ---------------------------------------------------------------------------
@@ -179,14 +202,19 @@ def _check_deps(quiet: bool = False) -> bool:
             else:
                 print(f"  {_c(WARN, YELLOW)} 端口占用: {svc} 端口 {port} 已被其他进程占用")
 
-    # 模型权重提示（不阻塞：允许 LLM 降级模式启动）
-    llm_dir = MODELS / "Qwen2.5-0.5B-Instruct"
-    emb_file = MODELS / "paraphrase-multilingual-mpnet-base-v2"
-    if not (llm_dir.is_dir() or emb_file.is_dir()):
-        print(f"  {_c(WARN, YELLOW)} 模型权重: models/ 下未发现 Qwen/嵌入模型")
-        print(f"    LLM 将进入降级模式（c-TF-IDF 兜底），如需完整命名/分类/摘要请先准备模型权重")
+    # 云 API 配置检查（LLM/嵌入默认走云；不阻塞，未配置时仅提示降级）
+    llm_api = os.environ.get("LLM_API_BASE_URL") or ""
+    emb_api = os.environ.get("NLP_EMBEDDING_API_BASE_URL") or ""
+    if llm_api:
+        print(f"  {_c(OK, GREEN)} LLM 云 API: 已配置 ({llm_api})")
     else:
-        print(f"  {_c(OK, GREEN)} 模型权重: models/ 已就绪")
+        print(f"  {_c(WARN, YELLOW)} LLM 云 API: 未配置 LLM_API_BASE_URL")
+        print(f"    LLM 将进入降级模式（c-TF-IDF 兜底），配置见 backend/.env.example")
+    if emb_api:
+        print(f"  {_c(OK, GREEN)} 嵌入云 API: 已配置 ({emb_api})")
+    else:
+        print(f"  {_c(WARN, YELLOW)} 嵌入云 API: 未配置 NLP_EMBEDDING_API_BASE_URL")
+        print(f"    嵌入将不可用（聚类/归并依赖向量），配置见 backend/.env.example")
 
     if not ok:
         print(f"\n{_c('环境未就绪，请先按上方修复命令处理。', RED)}")
