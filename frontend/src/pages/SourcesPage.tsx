@@ -5,6 +5,7 @@ import {
   type SourceListItem,
   type SourceListPage,
 } from "../api/sources";
+import { countryLabel } from "../api/meta";
 import StatusTag from "../components/StatusTag";
 import SourceCreatePanel from "../components/SourceCreatePanel";
 import "./SourcesPage.css";
@@ -43,7 +44,7 @@ export function SourceTable({ items }: { items: SourceListItem[] }) {
               <div className="source-name">{s.name}</div>
               {s.name_zh && <div className="source-name-zh">{s.name_zh}</div>}
             </td>
-            <td>{s.country_code}</td>
+            <td>{countryLabel(s.country_code)}</td>
             <td>{MEDIA_TYPE_LABEL[s.media_type] ?? s.media_type}</td>
             <td>
               <StatusTag status={s.status} />

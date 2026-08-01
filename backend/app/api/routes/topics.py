@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.agenda_engine.split import SplitError, split_topic
 from app.api.deps import ROLE_AUTHORIZED, ROLE_REGISTERED, require_license_active, require_role
+from app.core.countries import all_codes as _all_country_codes
 from app.core.errors import (
     CODE_FORBIDDEN,
     CODE_NOT_FOUND,
@@ -30,12 +31,8 @@ router = APIRouter()
 
 # registered 角色默认可访问的国家（PRD 4.1：registered 限 3 国）
 _REGISTERED_DEFAULT_COUNTRIES = {"CN", "US", "JP"}
-# 全量授权 30 国（与 GDELT 默认采集面一致；coverage 表当前实际覆盖）
-_AUTHORIZED_ALL_COUNTRIES = {
-    "US", "GB", "CN", "JP", "RU", "DE", "FR", "KR", "TR", "QA", "CA", "AU", "ES",
-    "IN", "BR", "ZA", "NG", "EG", "IR", "IL", "SA", "AE", "ID", "MY", "SG", "TH",
-    "VN", "PH", "MX", "AR",
-}
+# 全量授权国家：从 countries.py 单一事实源派生（覆盖 G20 + 全球南方全部监控国）
+_AUTHORIZED_ALL_COUNTRIES = set(_all_country_codes())
 
 _TOPIC_CATEGORIES = {
     "政治安全", "经济金融", "军事", "科技", "能源气候", "社会民生", "其他",

@@ -168,7 +168,9 @@ class Governance:
         if success:
             source.consecutive_failures = 0
             source.last_success_at = now
-            if source.status == "degraded":
+            # degraded/failed 恢复语义（T1.22）：连续 2 次成功才恢复 active，连胜计数存 Redis；
+            # failed 源停止调度后经巡检探测成功也能沿此路径回到 active（否则一旦 failed 永不复原）
+            if source.status in ("degraded", "failed"):
                 if self.redis is None:
                     source.status = "active"
                     source.degraded_since = None

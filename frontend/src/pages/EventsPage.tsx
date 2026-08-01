@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { request, ApiError } from "../api/client";
-import { COUNTRIES, AGENDA_EVENT_STATUS_LABEL } from "../api/meta";
+import { COUNTRIES, AGENDA_EVENT_STATUS_LABEL, countryLabel } from "../api/meta";
 import "./EventsPage.css";
 
 const STATUS_COLORS: Record<string, string> = { confirmed: "#C8102E", suspected: "#D97706", watching: "#64748B", revised: "#1D4E9E", dismissed: "#9CA3AF", archived: "#374151" };
@@ -53,7 +53,7 @@ export default function EventsPage() {
           <div key={ev.id} className="event-card" onClick={() => nav(`/events/${ev.id}`)}>
             <span className="event-status" style={{ background: STATUS_COLORS[ev.status] || "#374151" }}>{AGENDA_EVENT_STATUS_LABEL[ev.status]}</span>
             <div className="event-body">
-              <div className="event-origin">{ev.origin_country_code} → 跟随 {ev.follower_count} 国</div>
+              <div className="event-origin">{countryLabel(ev.origin_country_code)} → 跟随 {ev.follower_count} 国</div>
               <div className="event-ts">{ev.origin_at?.slice(0, 10)} · {ev.detection_method}</div>
             </div>
             <div className="event-score">{ev.final_review_score != null ? `终审 ${ev.final_review_score}/10` : "待终审"}</div>

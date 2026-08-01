@@ -66,7 +66,11 @@ class RssCollector:
             return self._fetcher_override, self._fetcher_override
         article_fetcher = build_fetcher(source.crawl_config or {}, source.country_code)
         proxy_key = (source.crawl_config or {}).get("proxy")
-        return RequestsFetcher(proxy_key=proxy_key, country_code=source.country_code), article_fetcher
+        insecure_ssl = bool((source.crawl_config or {}).get("insecure_ssl"))
+        return (
+            RequestsFetcher(proxy_key=proxy_key, country_code=source.country_code, verify=not insecure_ssl),
+            article_fetcher,
+        )
 
     @staticmethod
     def _entry_fulltext_html(entry) -> str:

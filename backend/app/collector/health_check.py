@@ -68,8 +68,12 @@ class SourceHealthInspector:
     def probe_source(self, source: Source) -> bool:
         """真实探测源可达性并推进治理状态机；返回是否可达。"""
         url = resolve_feed_url(source) or source.homepage_url
+        insecure_ssl = bool((source.crawl_config or {}).get("insecure_ssl"))
         try:
-            RequestsFetcher(country_code=source.country_code).fetch(url)
+            RequestsFetcher(
+                country_code=source.country_code,
+                verify=not insecure_ssl,
+            ).fetch(url)
         except FetchError as exc:
             self.gov.update_source_health(source, False, reason=f"巡检探测失败: {exc}"[:200])
             return False

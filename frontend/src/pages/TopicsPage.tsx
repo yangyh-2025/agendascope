@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { listTopics, LifecycleState, TopicListItem, TopicSort } from "../api/topics";
-import { COUNTRIES, TOPIC_CATEGORIES, LIFECYCLE_LABEL } from "../api/meta";
+import { COUNTRIES, TOPIC_CATEGORIES, LIFECYCLE_LABEL, countryLabel } from "../api/meta";
 import DegradedBadge from "../components/DegradedBadge";
 import { degradedKindsOf } from "../components/degraded";
 import "./TopicsPage.css";
@@ -73,7 +73,7 @@ export default function TopicsPage() {
             <p className="topic-summary">{t.salience_score.toFixed(2)} 显著性 · {t.article_count_24h ?? t.article_count ?? 0} 篇{t.media_count != null ? ` · ${t.media_count} 源` : ""}</p>
             <div className="topic-card-footer">
               <span className={`lifecycle-tag ${t.lifecycle_state}`}>{LIFECYCLE_LABEL[t.lifecycle_state]}</span>
-              <span className="country-scope">{t.country_scope?.join(", ")}</span>
+              <span className="country-scope">{t.country_scope?.map(countryLabel).join("、")}</span>
               {t.has_agenda_event && <span className="agenda-event-tag">议程事件</span>}
               {degradedKindsOf(t).map((k) => (
                 <DegradedBadge key={k} kind={k} />

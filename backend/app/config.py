@@ -47,7 +47,10 @@ class Settings(BaseSettings):
     gdelt_enabled: bool = True
     gdelt_interval_seconds: int = 900
     gdelt_api_base: str = "https://api.gdeltproject.org/api/v2/doc/doc"
-    gdelt_countries: str = "US,GB,CN,JP,RU,DE,FR,KR,TR,QA,CA,AU,ES"
+    gdelt_countries: str = (
+        "US,GB,CN,JP,RU,DE,FR,KR,TR,QA,CA,AU,ES,IN,BR,ZA,NG,EG,IR,IL,SA,AE,ID,"
+        "MY,SG,TH,VN,PH,MX,AR,PL,SE,NO,CH,NL,BE,CL,CO,PE,MA,GH,TZ,UG,KZ,NZ"
+    )
     gdelt_max_records: int = 50
     gdelt_buffer_dir: str = "data/gdelt_buffer"
 

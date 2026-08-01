@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ApiError } from "../api/client";
 import { fetchTopicCompare, type TopicCompareResult } from "../api/snapshots";
-import { COUNTRIES } from "../api/meta";
+import { COUNTRIES, countryLabel } from "../api/meta";
 import "./AnalyticsPage.css";
 
 export default function AnalyticsPage() {
@@ -42,7 +42,7 @@ export default function AnalyticsPage() {
           <div className="compare-grid">
             {result.per_country?.map((pc) => (
               <div key={pc.country_code} className="country-panel">
-                <h3>{pc.country_code}</h3>
+                <h3>{countryLabel(pc.country_code)}</h3>
                 <div className="stat-row"><span>总报道</span><b>{pc.total_articles}</b></div>
                 <div className="stat-row"><span>首位议题</span><b>{pc.top_topic_name || "—"}</b></div>
                 <div className="stat-row"><span>覆盖</span><b className={pc.coverage === "low" ? "low" : ""}>{pc.coverage}</b></div>

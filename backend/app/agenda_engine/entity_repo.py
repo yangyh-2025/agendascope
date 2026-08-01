@@ -51,6 +51,12 @@ _COUNTRY_HINTS: dict[str, tuple[str, ...]] = {
     "IR": ("IR", "Iran", "Iranian", "Tehran", "伊朗", "伊方", "德黑兰"),
     "KP": ("KP", "North Korea", "Pyongyang", "朝鲜", "平壤"),
     "TW": ("TW", "Taiwan", "Taiwanese", "台湾", "台北"),
+    "BR": ("BR", "Brazil", "Brazilian", "Brasília", "巴西", "巴方", "巴西利亚"),
+    "TR": ("TR", "Turkey", "Turkish", "Ankara", "土耳其", "土方", "安卡拉"),
+    "SA": ("SA", "Saudi Arabia", "Saudi", "Riyadh", "沙特", "利雅得"),
+    "ZA": ("ZA", "South Africa", "Pretoria", "南非", "比勒陀利亚"),
+    "ID": ("ID", "Indonesia", "Indonesian", "Jakarta", "印尼", "印度尼西亚", "雅加达"),
+    "PK": ("PK", "Pakistan", "Islamabad", "巴基斯坦", "巴方", "伊斯兰堡"),
 }
 
 # 英文 alias 提取用：拉丁词字符（含所有格与连字符），与 entity_extract 一致

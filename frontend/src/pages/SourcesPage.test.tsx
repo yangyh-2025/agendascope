@@ -73,8 +73,8 @@ describe("媒体源管理页", () => {
     expect(await screen.findByText("The Example Times")).toBeInTheDocument();
     expect(screen.getByText("Daily Sample")).toBeInTheDocument();
     expect(screen.getByText("每日样例")).toBeInTheDocument();
-    expect(screen.getByText("US")).toBeInTheDocument();
-    expect(screen.getByText("GB")).toBeInTheDocument();
+    expect(screen.getByText("美国")).toBeInTheDocument();
+    expect(screen.getByText("英国")).toBeInTheDocument();
     expect(screen.getByText("报纸")).toBeInTheDocument();
     expect(screen.getByText("网络媒体")).toBeInTheDocument();
     expect(screen.getByText("正常")).toBeInTheDocument();

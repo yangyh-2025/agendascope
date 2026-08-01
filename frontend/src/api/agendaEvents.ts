@@ -136,6 +136,7 @@ export function getAgendaEvent(id: string): Promise<AgendaEventDetail> {
 
 export interface AgendaEventChainFollower {
   country: string;
+  /** 首发媒体名（后端取自 follower_sequence.first_media_name，非 source_id）。 */
   first_media: string | null;
   first_article_id: string | null;
   first_published_at: string | null;

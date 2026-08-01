@@ -113,7 +113,7 @@ class AgendaSettings(BaseSettings):
     snapshot_interval_minutes: int = 15        # 快照刷新周期（15min 滚动）
     snapshot_window_hours: int = 24            # 每次计算覆盖时间窗（近 24h）
     snapshot_timeout_seconds: int = 300        # 单次计算 ≤5 min，超时保留上版
-    snapshot_max_countries: int = 30           # 最多覆盖 N 国（按窗内文章量排序）
+    snapshot_max_countries: int = 57           # 最多覆盖 N 国（按窗内文章量排序）
     snapshot_max_topics_per_country: int = 50  # 每国 Top 议题上限
     snapshot_failure_alert_threshold: int = 3  # 连续 N 次失败写 P1 告警（详细设计 2.130）
     snapshot_top_attributes_limit: int = 20    # 实质属性 top 词上限（写 top_attributes JSONB）

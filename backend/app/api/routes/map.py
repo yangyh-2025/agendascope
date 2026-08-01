@@ -1,4 +1,4 @@
-"""地图聚合 API（T4.5）：30 国×Top 议题一次性下发，首屏 ≤3s 预算。"""
+"""地图聚合 API（T4.5）：57 国×Top 议题一次性下发，首屏 ≤3s 预算。"""
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ROLE_REGISTERED, get_db, require_role
+from app.core.countries import all_name_zh_map
 from app.core.errors import ok
 from app.models.article import Article
 from app.models.topic import AgendaSnapshot, Topic
@@ -13,14 +14,8 @@ from app.models.user import User
 
 router = APIRouter()
 
-_COUNTRY_NAMES = {
-    "CN": "中国", "US": "美国", "GB": "英国", "JP": "日本", "DE": "德国",
-    "FR": "法国", "KR": "韩国", "IN": "印度", "RU": "俄罗斯", "BR": "巴西",
-    "CA": "加拿大", "AU": "澳大利亚", "IT": "意大利", "ES": "西班牙", "TR": "土耳其",
-    "SA": "沙特阿拉伯", "AE": "阿联酋", "ID": "印度尼西亚", "ZA": "南非", "NG": "尼日利亚",
-    "EG": "埃及", "MX": "墨西哥", "AR": "阿根廷", "PL": "波兰", "SE": "瑞典",
-    "NO": "挪威", "CH": "瑞士", "NL": "荷兰", "BE": "比利时", "VN": "越南",
-}
+# 国家中文名统一从 countries.py 派生（单一事实源）
+_COUNTRY_NAMES = all_name_zh_map()
 
 _MAX_TOP_TOPICS = 5
 _MIN_COVERAGE = 0.7

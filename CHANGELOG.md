@@ -4,6 +4,33 @@
 
 ---
 
+## 全球覆盖扩展（2026-08-01）
+
+> **本轮范围**：监控国家从 31 国扩展至 57 国（G20 全部 + 全球南方典型国家），媒体源 39 → 57 个，统一国家清单单一事实源，前端全量中文国家名，并修复源健康状态机 bug 与付费墙反爬能力。
+
+### 统一国家清单
+
+- **新增 `backend/app/core/countries.py` 单一事实源**：57 国（ISO 码 → 中文名/地区/G20 标记/全球南方标记），`map.py`/`topics.py`/`setup.py`/`config.py` 全部改为从它派生，消除散落重复清单
+- **前端 `meta.ts` 扩展至 57 国**，`countryLabel()` 全量覆盖；`worldMap.ts` 补全新增国（MM/KH/LK/NP/KW/JO/LB/CL/CO/PE/NZ/MA/GH/TZ/UG/KZ）到地图要素名映射
+- **GDELT 采集面**：`gdelt_countries` 从 13 国扩至 45+ 国；`snapshot_max_countries` 30 → 57
+
+### 源健康状态机修复
+
+- **修复 `governance.py` failed 状态永不恢复 bug**：成功分支原仅处理 `degraded`，`failed` 源成功采集后卡死——现 failed/degraded 连续 2 次成功均恢复 active
+- **Al Riyadh SSL 证书链异常**：新增 `crawl_config.insecure_ssl` 按源关闭校验（`RequestsFetcher.verify`），健康巡检 `probe_source` 同步支持
+- 删除测试残留源 CRUD Test Media（含关联 collection_jobs）
+- 全部 11 个 failed 源经修复后恢复 active
+
+### 付费墙反爬增强
+
+- **`fetcher.py` 借鉴 bypass-paywalls-chrome-clean 思路**：Playwright route 拦截付费脚本域名（piano.io/poool/cxense/sophi.io/ampproject 等）、bot UA 伪装（googlebot/facebookbot）按源配置、Google Cache 兜底
+
+### 媒体源扩展（39 → 57）
+
+- **新增 18 个实测可达源**：日本 Mainichi、英国 Guardian、俄罗斯 Sputnik 中文、土耳其 Hürriyet/Milliyet/TRT/CNN Türk、韩国 Yonhap EN、挪威 NRK、荷兰 NOS、瑞典 Dagens Nyheter、坦桑尼亚 Daily News、乌干达 Daily Monitor、新西兰 RNZ、摩洛哥 Hespress、波兰 Polsat News、哈萨克 Astana Times、瑞士 NZZ
+
+---
+
 ## 云 API 改造（2026-08-01）
 
 > **本轮范围**：LLM 与嵌入从本地模型全面切换为云端 API——消除本地大模型权重与推理占用，镜像瘦身、并发限流对齐供应商配额，并同步全部工程文档。

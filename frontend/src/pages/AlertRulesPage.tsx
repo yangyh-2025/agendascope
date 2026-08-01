@@ -11,7 +11,7 @@ import {
   type NotifyChannel,
 } from "../api/alertRules";
 import { ApiError } from "../api/client";
-import { COUNTRIES } from "../api/meta";
+import { COUNTRIES, countryLabel } from "../api/meta";
 import { CONDITION_TYPE_LABEL, describeRuleConditions } from "../utils/alertConditions";
 import "./AlertRulesPage.css";
 
@@ -229,7 +229,7 @@ export default function AlertRulesPage() {
               <b className="rule-name">{r.name}</b>
               <span className="rule-cond">{describeRuleConditions(r)}</span>
               <span className="rule-meta">
-                {r.country_codes.join(", ")} · 通知：{r.notify_channels.map((c) => CHANNEL_LABEL[c] ?? c).join("/")}
+                {r.country_codes.map(countryLabel).join("、")} · 通知：{r.notify_channels.map((c) => CHANNEL_LABEL[c] ?? c).join("/")}
                 {r.last_triggered_at && ` · 最近触发 ${r.last_triggered_at.slice(0, 16).replace("T", " ")}`}
               </span>
             </div>

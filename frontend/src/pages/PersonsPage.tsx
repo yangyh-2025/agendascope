@@ -1,7 +1,7 @@
 /** 人物/机构监测页（T4.11）：发起信号列表（新表述、首发时间、跟进媒体数）。 */
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "../api/client";
-import { COUNTRIES } from "../api/meta";
+import { COUNTRIES, countryLabel } from "../api/meta";
 import {
   listPersonsOrgs,
   type EntityType,
@@ -87,7 +87,7 @@ export default function PersonsPage() {
                 <span className={`entity-type-tag et-${e.entity_type}`}>{ENTITY_TYPE_LABEL[e.entity_type] ?? e.entity_type}</span>
                 <span className="entity-name">{e.name_zh || e.name}</span>
                 {e.role_title && <span className="entity-role">{e.role_title}</span>}
-                <span className="entity-country">{e.country_code}</span>
+                <span className="entity-country">{countryLabel(e.country_code)}</span>
                 {e.monitored && <span className="monitored-tag">重点监测</span>}
                 <span className="entity-signal-count">发起信号 {signals.length} 条 {expanded ? "▲" : "▼"}</span>
               </button>

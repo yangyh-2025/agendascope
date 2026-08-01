@@ -52,6 +52,22 @@ export const ISO2_TO_MAP_NAME: Record<string, string> = {
   CH: "Switzerland",
   NL: "Netherlands",
   BE: "Belgium",
+  MM: "Myanmar",
+  KH: "Cambodia",
+  LK: "Sri Lanka",
+  NP: "Nepal",
+  KW: "Kuwait",
+  JO: "Jordan",
+  LB: "Lebanon",
+  CL: "Chile",
+  CO: "Colombia",
+  PE: "Peru",
+  NZ: "New Zealand",
+  MA: "Morocco",
+  GH: "Ghana",
+  TZ: "Tanzania",
+  UG: "Uganda",
+  KZ: "Kazakhstan",
 };
 
 interface GeoFeature {

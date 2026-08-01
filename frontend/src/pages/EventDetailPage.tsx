@@ -276,7 +276,7 @@ export default function EventDetailPage() {
               {event.follower_sequence.map((f) => (
                 <tr key={f.country_code}>
                   <td>{countryLabel(f.country_code)}</td>
-                  <td>{f.first_media ?? f.first_media_name ?? "—"}</td>
+                  <td>{f.first_media_name ?? f.first_media ?? "—"}</td>
                   <td>{f.lag_hours.toFixed(1)}</td>
                 </tr>
               ))}

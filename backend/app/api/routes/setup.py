@@ -121,7 +121,7 @@ def setup_step(body: SetupStepInput, db: Session = Depends(get_db)):
 
     if body.step == 3:
         if not body.countries:
-            raise BizError(CODE_PARAM_INVALID, "监控范围不能为空：请勾选至少一个国家（或全选 30 国）")
+            raise BizError(CODE_PARAM_INVALID, "监控范围不能为空：请勾选至少一个国家")
         try:
             countries = setup_service.normalize_countries(body.countries)
         except ValueError as exc:

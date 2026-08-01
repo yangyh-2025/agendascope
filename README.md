@@ -2,7 +2,7 @@
 
 面向国家安全机关与国际关系、国际政治、国家安全研究机构的全球主流媒体舆情实时监控与议程设置识别系统。
 
-平台持续监控约 30 个主要经济体与全球南方代表性国家的主流新闻媒体（每国合计受众覆盖率 ≥70% 口径），实时识别"议程设置"行为：某国媒体、官员或重要人士率先提出议题，多国媒体随后跟随报道——平台自动判定首发源、跟随国序列与时滞，呈现完整传播链路，并随证据积累自我纠错（议题演化、次日归并、首发判定自动修正并全程留痕）。
+平台持续监控约 57 个主要经济体与全球南方代表性国家的主流新闻媒体（每国合计受众覆盖率 ≥70% 口径），实时识别"议程设置"行为：某国媒体、官员或重要人士率先提出议题，多国媒体随后跟随报道——平台自动判定首发源、跟随国序列与时滞，呈现完整传播链路，并随证据积累自我纠错（议题演化、次日归并、首发判定自动修正并全程留痕）。
 
 ## 核心能力
 
@@ -41,7 +41,7 @@ Python 3.11 + FastAPI。配置项集中在 `backend/app/config.py`（`.env` 注�
 python -m venv .venv && .venv/Scripts/python.exe -m pip install -r backend/requirements.txt
 docker compose -f deploy/docker-compose.yml up -d db redis elasticsearch rsshub  # 基础设施
 cd backend && alembic upgrade head                                             # 建表（14 张核心表）
-cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      # 种子源（31 国 39 源）+ 初始管理员
+cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      # 种子源（57 国 57 源）+ 初始管理员
 cd backend && uvicorn app.main:app --port 8000                                 # API 服务
 python -m app.collector.worker                                                 # 采集调度 worker（另开终端）
 python -m app.worker.nlp_worker                                                # NLP worker：语言识别→向量化→ES 同步→延迟埋点（另开终端）
