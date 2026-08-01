@@ -56,7 +56,7 @@ class LLMSettings(BaseSettings):
         env_prefix="LLM_", env_file=(".env", "../.env"), env_file_encoding="utf-8", extra="ignore"
     )
 
-    profile: str = "cpu-dev"
+    profile: str = "api"  # 默认云 API（LLM_PROFILE=api）；本地模式可显式设为 cpu-dev/cuda
     model_dir: str = ""  # 空则按 profile 默认
     device: str = ""  # 空则自动检测
     torch_dtype: str = ""  # 空则按 profile 默认

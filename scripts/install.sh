@@ -173,10 +173,16 @@ else
   "${COMPOSE[@]}" -f "${COMPOSE_FILE}" pull || die "基础镜像拉取失败（db/redis/elasticsearch/rsshub）"
 fi
 
-# 模型权重检查（nlp-worker / naming-worker 经卷挂载 ../models，缺失会导致这两个服务起不来）
-for required in models/lid.176.bin models/sentence-transformers models/Qwen2.5-0.5B-Instruct; do
+# 模型权重检查（云 API 模式：仅 lid.176.bin 必需——语言识别无 API 替代；
+# sentence-transformers/Qwen 仅在本地嵌入/LLM 模式需要，云 API 模式缺失是正常，给提示）
+for required in models/lid.176.bin; do
   if [ ! -e "${REPO_ROOT}/${required}" ]; then
-    warn "缺少模型文件 ${REPO_ROOT}/${required} —— NLP/命名 worker 将无法启动，请参考 docs/ 补齐 models/ 后重启"
+    warn "缺少模型文件 ${REPO_ROOT}/${required} —— NLP worker 语言识别将无法启动，请参考 docs/ 补齐 models/ 后重启"
+  fi
+done
+for optional in models/sentence-transformers models/Qwen2.5-0.5B-Instruct; do
+  if [ ! -e "${REPO_ROOT}/${optional}" ]; then
+    info "未发现 ${REPO_ROOT}/${optional} —— 云 API 模式（LLM_PROFILE=api / NLP_EMBEDDING_PROFILE=api）下不需要本地权重，可忽略"
   fi
 done
 

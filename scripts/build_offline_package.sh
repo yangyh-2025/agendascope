@@ -19,7 +19,7 @@
 #     install.sh              安装入口（scripts/install.sh 的副本，INSTALL_MODE=local 即可用）
 #     images/agendascope-images.tar   全部服务镜像（backend + db/redis/es/rsshub）
 #     images/SHA256SUMS       镜像 tar 校验清单（install.sh 离线模式校验此文件）
-#     models/                 fastText lid.176.bin、sentence-transformers、Qwen2.5-0.5B-Instruct
+#     models/                 fastText lid.176.bin（必需）；sentence-transformers/Qwen 仅本地模式可选
 #     models/argos/           argos 翻译语言包（若构建机存在；缺失则警告，需自行下载放入）
 #     maps/                   前端地图/tiles 资产（若源码树内存在；缺失则警告）
 #     deploy/ scripts/ backend/ frontend/   源码（frontend 排除 node_modules/dist 等构建缓存）
@@ -59,9 +59,11 @@ else
 fi
 [ -f "${COMPOSE_FILE}" ] || die "未找到 ${COMPOSE_FILE}"
 
-# 模型权重为硬需求（nlp/naming worker 卷挂载），缺失即报错
-for required in lid.176.bin sentence-transformers Qwen2.5-0.5B-Instruct; do
-  [ -e "${MODELS_DIR}/${required}" ] || die "缺少模型文件 ${MODELS_DIR}/${required}（可用 MODELS_DIR 指定模型目录）"
+# 模型权重：lid.176.bin 为硬需求（语言识别，nlp-worker 卷挂载，无 API 替代）；
+# sentence-transformers/Qwen 仅本地嵌入/LLM 模式需要，云 API 模式可缺失（提示而非报错）
+[ -e "${MODELS_DIR}/lid.176.bin" ] || die "缺少模型文件 ${MODELS_DIR}/lid.176.bin（可用 MODELS_DIR 指定模型目录）"
+for optional in sentence-transformers Qwen2.5-0.5B-Instruct; do
+  [ -e "${MODELS_DIR}/${optional}" ] || info "未发现 ${MODELS_DIR}/${optional} —— 云 API 模式（LLM_PROFILE=api / NLP_EMBEDDING_PROFILE=api）下不需要本地权重"
 done
 
 STAGE="${OUTPUT_DIR}/${PKG_NAME}"
@@ -97,7 +99,13 @@ docker save -o "${STAGE}/images/agendascope-images.tar" "${IMAGES[@]}" || die "d
 
 # ---------- Step 3: 打包模型权重 ----------
 info "打包模型权重: ${MODELS_DIR}"
-cp -a "${MODELS_DIR}/lid.176.bin" "${MODELS_DIR}/sentence-transformers" "${MODELS_DIR}/Qwen2.5-0.5B-Instruct" "${STAGE}/models/"
+cp -a "${MODELS_DIR}/lid.176.bin" "${STAGE}/models/"
+for optional in sentence-transformers Qwen2.5-0.5B-Instruct; do
+  if [ -d "${MODELS_DIR}/${optional}" ] || [ -f "${MODELS_DIR}/${optional}" ]; then
+    cp -a "${MODELS_DIR}/${optional}" "${STAGE}/models/"
+    info "已打包 ${optional}"
+  fi
+done
 if [ -d "${MODELS_DIR}/argos" ]; then
   cp -a "${MODELS_DIR}/argos" "${STAGE}/models/"
   info "已打包 argos 语言包: ${MODELS_DIR}/argos"

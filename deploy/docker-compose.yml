@@ -131,7 +131,7 @@ services:
       NLP_MODEL_DIR: /models   # 模型权重经卷挂载（镜像不含模型，控制体积）
       NLP_DEVICE: ${NLP_DEVICE:-cpu}
       # 云嵌入 API 模式（设 NLP_EMBEDDING_PROFILE=api 时启用，无需本地嵌入权重）
-      NLP_EMBEDDING_PROFILE: ${NLP_EMBEDDING_PROFILE:-local}
+      NLP_EMBEDDING_PROFILE: ${NLP_EMBEDDING_PROFILE:-api}
       NLP_EMBEDDING_API_BASE_URL: ${NLP_EMBEDDING_API_BASE_URL:-}
       NLP_EMBEDDING_API_KEY: ${NLP_EMBEDDING_API_KEY:-}
       NLP_EMBEDDING_API_MODEL: ${NLP_EMBEDDING_API_MODEL:-text-embedding-3-small}
@@ -174,7 +174,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       REDIS_STREAM_URL: redis://redis:6379/1
       # LLM API 模式（设 LLM_PROFILE=api + LLM_API_* 时启用，无需本地 Qwen 权重）
-      LLM_PROFILE: ${LLM_PROFILE:-cpu-dev}
+      LLM_PROFILE: ${LLM_PROFILE:-api}
       LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
@@ -235,7 +235,7 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       AGENDA_DETECTION_INTERVAL_MINUTES: ${AGENDA_DETECTION_INTERVAL_MINUTES:-30}
       # LLM API 模式（设 LLM_PROFILE=api + LLM_API_* 时启用，无需本地 Qwen 权重）
-      LLM_PROFILE: ${LLM_PROFILE:-cpu-dev}
+      LLM_PROFILE: ${LLM_PROFILE:-api}
       LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
