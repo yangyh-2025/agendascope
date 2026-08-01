@@ -16,6 +16,7 @@ prompt 内嵌 JSON Schema 指令（双重保险，与本地 LLMEngine 同口径�
 from __future__ import annotations
 
 import json
+import threading
 import time
 from typing import Any
 
@@ -35,6 +36,9 @@ class OpenAICompatibleEngine:
         self._client: httpx.Client | None = None
         self._model_name: str = ""
         self._load_error: str | None = None
+        # API 并发上限（LLM_MAX_CONCURRENCY，默认 2）：线程信号量，跨命名/检测等
+        # 所有调用方统一限流，对齐讯飞星辰等外部服务的 QPS/并发配额
+        self._concurrency = threading.Semaphore(max(1, self.settings.max_concurrency))
         # 会话内缓存 token 统计近似值（API 层无法精确 count；按 2 字符≈1 token 粗估）
         self._token_cache: dict[str, int] = {}
 
@@ -147,7 +151,9 @@ class OpenAICompatibleEngine:
                     "max_tokens": self.settings.resolved_max_new_tokens(),
                     "response_format": {"type": "json_object"},
                 }
-                resp = client.post("/chat/completions", json=body)
+                # 限并发：信号量阻塞直至有空闲配额（对齐外部 API QPS/并发限制）
+                with self._concurrency:
+                    resp = client.post("/chat/completions", json=body)
                 if resp.status_code == 401 or resp.status_code == 403:
                     self._load_error = f"API 鉴权失败 ({resp.status_code}): {resp.text[:200]}"
                     raise LLMUnavailableError(self._load_error)

@@ -67,6 +67,7 @@ class LLMSettings(BaseSettings):
     api_base_url: str = ""   # 如 https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: str = ""        # 留空则读 LLM_API_KEY 环境变量；也可直接写 .env
     api_model: str = ""      # 如 qwen-max / qwen-plus / deepseek-chat / gpt-4o
+    max_concurrency: int = 2  # API 并发上限（线程信号量；讯飞星辰 QPS 2/并发 2 对齐）
 
     max_context_tokens: int = 2000  # 命名 prompt 上下文预算（估算，T2.13）
     queue_maxsize: int = 1000
