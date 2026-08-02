@@ -44,3 +44,9 @@ coverage.xml
 
 # 离线安装包构建产物（体积大，构建机本地生成，不入库）
 deploy/offline/
+
+# SSL 证书（私钥/证书链绝不应入库；部署时 scp 到服务器 deploy/certs/）
+deploy/certs/
+*.pem
+*.key
+*.pfx

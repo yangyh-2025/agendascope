@@ -1,0 +1,59 @@
+# AgendaScope 精简部署 override（适配低内存服务器）
+#
+# 用法:
+#   docker compose -f deploy/docker-compose.yml -f deploy/compose.deploy.yml up -d
+#
+# 仅启用核心链路服务（采集→理解→聚类→前端），停用非核心 worker
+# （naming/agenda/snapshot/detection/alerting），并给容器加内存上限防 OOM。
+# 内存预算（1.2GB 物理 + 1GB swap）:
+#   ES 384m + PG 384m + Redis 128m + backend 384m + worker 256m + nlp 256m + cluster 256m + frontend 128m
+services:
+  # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
+  naming-worker:
+    profiles: ["disabled"]
+  agenda-worker:
+    profiles: ["disabled"]
+  snapshot-worker:
+    profiles: ["disabled"]
+  detection-worker:
+    profiles: ["disabled"]
+  alerting-worker:
+    profiles: ["disabled"]
+  rsshub:
+    profiles: ["disabled"]   # 无原生 RSS 补源依赖时禁用（避免拉慢镜像源）
+
+  elasticsearch:
+    environment:
+      ES_JAVA_OPTS: "-Xms192m -Xmx192m"   # 缩减 ES 堆，适配低内存
+    mem_limit: 384m
+
+  db:
+    mem_limit: 384m
+
+  redis:
+    mem_limit: 128m
+
+  backend:
+    image: agendascope-backend:latest   # 用已 load 的镜像（up 时加 --no-build 跳过 build）
+    restart: unless-stopped
+    mem_limit: 192m   # backend 实际用 ~70MB，减额匀给 cluster
+
+  worker:
+    restart: unless-stopped
+    mem_limit: 256m
+
+  nlp-worker:
+    restart: unless-stopped
+    mem_limit: 256m
+
+  cluster-worker:
+    restart: unless-stopped
+    mem_limit: 512m   # 聚类内存密集，加大上限防 Redis 超时
+
+  frontend:
+    image: agendascope-frontend:latest  # 用已 load 的镜像
+    restart: unless-stopped
+    mem_limit: 64m    # 静态 nginx，4MB 足够
+
+  db:
+    mem_limit: 256m   # PG 实际 ~50MB，减额
