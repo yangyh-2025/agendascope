@@ -178,6 +178,8 @@ services:
       LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
+      # 多模型池（可选，配置后启用 ModelPool 调度 + 失败转移）
+      LLM_POOL: ${LLM_POOL:-}
     volumes:
       - ../models:/models:ro
     depends_on:
@@ -239,6 +241,8 @@ services:
       LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
+      # 多模型池（可选，配置后启用 ModelPool 调度 + 失败转移）
+      LLM_POOL: ${LLM_POOL:-}
     volumes:
       - ../models:/models:ro
     depends_on:

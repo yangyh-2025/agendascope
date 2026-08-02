@@ -11,8 +11,6 @@ services:
   # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
   agenda-worker:
     profiles: ["disabled"]
-  snapshot-worker:
-    profiles: ["disabled"]
   alerting-worker:
     profiles: ["disabled"]
   rsshub:
@@ -55,6 +53,16 @@ services:
       LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
+      # 多模型池（可选，配置后启用 ModelPool 调度 + 失败转移）
+      LLM_POOL: ${LLM_POOL:-}
+
+  snapshot-worker:
+    restart: unless-stopped
+    mem_limit: 256m   # 国家×议题显著性 15min 刷新（热点 TOP10/地图下钻的数据源）
+    environment:
+      # 低内存适配：延长快照间隔减少瞬时负载（默认 15min）
+      AGENDA_SNAPSHOT_INTERVAL_MINUTES: ${AGENDA_SNAPSHOT_INTERVAL_MINUTES:-30}
+      AGENDA_SNAPSHOT_TIMEOUT_SECONDS: ${AGENDA_SNAPSHOT_TIMEOUT_SECONDS:-300}
 
   naming-worker:
     restart: unless-stopped

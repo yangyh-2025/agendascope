@@ -69,6 +69,11 @@ class LLMSettings(BaseSettings):
     api_model: str = ""      # 如 qwen-max / qwen-plus / deepseek-chat / gpt-4o
     max_concurrency: int = 2  # API 并发上限（线程信号量；讯飞星辰 QPS 2/并发 2 对齐）
 
+    # 多模型池配置（JSON 数组，每项含 name/base_url/api_key/model/max_concurrency/qps）。
+    # 对应环境变量 LLM_POOL；配置后 ModelPool 按 per-model 限流 + 调度 + 失败转移；
+    # 未配置退化为单模型（LLM_API_*）。
+    pool: str = ""
+
     max_context_tokens: int = 2000  # 命名 prompt 上下文预算（估算，T2.13）
     queue_maxsize: int = 1000
     queue_batch_size: int = 8

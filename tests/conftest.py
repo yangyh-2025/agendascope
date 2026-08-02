@@ -29,6 +29,15 @@ os.environ.setdefault("SEED_ADMIN_USERNAME", "admin")
 os.environ.setdefault("SEED_ADMIN_PASSWORD", "Admin12345")
 os.environ.setdefault("LICENSE_SECRET_KEY", "test-license-secret")
 
+# 隔离 LLM 相关 env：测试用显式注入的 settings，避免开发机 .env 的 LLM_POOL/LLM_API_*
+# 污染单元测试（pydantic-settings 会读仓库根 .env；env 变量优先级高于 env_file，
+# 故置空串可覆盖 .env 值）。LLM_MAX_CONCURRENCY 是 int 字段，空串会校验失败，pop 掉走默认。
+for _k in (
+    "LLM_POOL", "LLM_API_BASE_URL", "LLM_API_KEY", "LLM_API_MODEL", "LLM_PROFILE",
+):
+    os.environ[_k] = ""
+os.environ.pop("LLM_MAX_CONCURRENCY", None)
+
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
