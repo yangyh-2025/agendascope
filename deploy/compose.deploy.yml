@@ -5,8 +5,8 @@
 #
 # 仅启用核心链路服务（采集→理解→聚类→前端），停用非核心 worker
 # （naming/agenda/snapshot/detection/alerting），并给容器加内存上限防 OOM。
-# 内存预算（1.2GB 物理 + 1GB swap）:
-#   ES 384m + PG 384m + Redis 128m + backend 384m + worker 256m + nlp 256m + cluster 256m + frontend 128m
+# 内存预算（1.2GB 物理 + 3GB swap）:
+#   ES 384m + PG 384m + Redis 128m + backend 192m + worker 256m + nlp 256m + cluster 512m + frontend 64m
 services:
   # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
   naming-worker:
@@ -54,6 +54,3 @@ services:
     image: agendascope-frontend:latest  # 用已 load 的镜像
     restart: unless-stopped
     mem_limit: 64m    # 静态 nginx，4MB 足够
-
-  db:
-    mem_limit: 256m   # PG 实际 ~50MB，减额
