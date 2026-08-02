@@ -39,6 +39,14 @@ class OpenAICompatibleEngine:
         # API 并发上限（LLM_MAX_CONCURRENCY，默认 2）：线程信号量，跨命名/检测等
         # 所有调用方统一限流，对齐讯飞星辰等外部服务的 QPS/并发配额
         self._concurrency = threading.Semaphore(max(1, self.settings.max_concurrency))
+        # QPS 限流（并发信号量 ≠ QPS）：并发 2 下连续快速请求仍会超外部 QPS 配额
+        # （如讯飞星辰 QPS 2/并发 2），触发 AppIdQpsOverFlowError 导致降级。
+        # 这里加最小请求间隔，跨线程共享（引擎单例）。
+        self._qps_lock = threading.Lock()
+        self._last_request_ts = 0.0
+        # 最小请求间隔（秒）：讯飞星辰 QPS 2/并发 2 硬配额，实测 0.5s（QPS2）仍会
+        # 瞬时触顶（计时误差/重试），取 1.0s（QPS1）保守限流，命名慢但稳定不降级
+        self._min_request_interval = 1.0
         # 会话内缓存 token 统计近似值（API 层无法精确 count；按 2 字符≈1 token 粗估）
         self._token_cache: dict[str, int] = {}
 
@@ -153,6 +161,13 @@ class OpenAICompatibleEngine:
                 }
                 # 限并发：信号量阻塞直至有空闲配额（对齐外部 API QPS/并发限制）
                 with self._concurrency:
+                    # QPS 限流：与上一请求至少间隔 min_interval（QPS ≤2），
+                    # 防并发 2 下连续快速请求超外部 QPS 配额触发降级
+                    with self._qps_lock:
+                        elapsed = time.monotonic() - self._last_request_ts
+                        if elapsed < self._min_request_interval:
+                            time.sleep(self._min_request_interval - elapsed)
+                        self._last_request_ts = time.monotonic()
                     resp = client.post("/chat/completions", json=body)
                 if resp.status_code == 401 or resp.status_code == 403:
                     self._load_error = f"API 鉴权失败 ({resp.status_code}): {resp.text[:200]}"

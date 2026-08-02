@@ -3,14 +3,12 @@
 # 用法:
 #   docker compose -f deploy/docker-compose.yml -f deploy/compose.deploy.yml up -d
 #
-# 仅启用核心链路服务（采集→理解→聚类→前端），停用非核心 worker
-# （naming/agenda/snapshot/detection/alerting），并给容器加内存上限防 OOM。
+# 仅启用核心链路服务（采集→理解→聚类→命名→前端），停用非核心 worker
+# （agenda/snapshot/detection/alerting），并给容器加内存上限防 OOM。
 # 内存预算（1.2GB 物理 + 3GB swap）:
-#   ES 384m + PG 384m + Redis 128m + backend 192m + worker 256m + nlp 256m + cluster 512m + frontend 64m
+#   ES 384m + PG 384m + Redis 128m + backend 192m + worker 256m + nlp 256m + cluster 512m + naming 256m + frontend 64m
 services:
   # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
-  naming-worker:
-    profiles: ["disabled"]
   agenda-worker:
     profiles: ["disabled"]
   snapshot-worker:
@@ -49,6 +47,14 @@ services:
   cluster-worker:
     restart: unless-stopped
     mem_limit: 512m   # 聚类内存密集，加大上限防 Redis 超时
+
+  naming-worker:
+    restart: unless-stopped
+    mem_limit: 256m   # LLM 议题命名（解决"LLM 降级中"标签）
+    environment:
+      # 低配讯飞配额（QPS 2/并发 2）：降 batch 防命名风暴触顶并发超限
+      LLM_NAMING_WORKER_BATCH_SIZE: ${LLM_NAMING_WORKER_BATCH_SIZE:-4}
+      LLM_NAMING_WORKER_POLL_SECONDS: ${LLM_NAMING_WORKER_POLL_SECONDS:-60}
 
   frontend:
     image: agendascope-frontend:latest  # 用已 load 的镜像
