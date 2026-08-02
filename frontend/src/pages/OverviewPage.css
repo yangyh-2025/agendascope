@@ -148,6 +148,9 @@
 }
 
 .side-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding-bottom: var(--as-spacing-sm);
   border-bottom: 1px solid var(--as-colors-border);
 }
@@ -157,6 +160,74 @@
   font-size: var(--as-fontSize-md);
   font-weight: var(--as-fontWeight-semibold);
   color: var(--as-colors-textPrimary);
+}
+
+.side-card-more {
+  font-size: var(--as-fontSize-xs);
+  color: var(--as-colors-primary);
+  text-decoration: none;
+  font-weight: var(--as-fontWeight-medium);
+}
+
+/* ============ 热点议题 TOP10 ============ */
+.hot-topic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hot-topic-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--as-spacing-sm);
+  padding: var(--as-spacing-sm) var(--as-spacing-xs);
+  border-radius: var(--as-radius-sm);
+  transition: var(--as-transition-fast);
+}
+
+.hot-topic-item.clickable {
+  cursor: pointer;
+}
+
+.hot-topic-item.clickable:hover {
+  background: var(--as-colors-bgHover);
+}
+
+.hot-topic-item.clickable:focus-visible {
+  outline: 2px solid var(--as-colors-primary);
+  outline-offset: 2px;
+}
+
+.hot-topic-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hot-topic-name {
+  font-size: var(--as-fontSize-md);
+  font-weight: var(--as-fontWeight-medium);
+  color: var(--as-colors-textPrimary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hot-topic-meta {
+  font-size: var(--as-fontSize-xs);
+  color: var(--as-colors-textMuted);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hot-topic-list .rank-no {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .country-rank-list {

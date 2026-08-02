@@ -146,6 +146,24 @@ export interface TopicDetail {
   updated_at: string;
 }
 
+export interface HotTopicItem {
+  id: string;
+  name: string;
+  name_zh: string | null;
+  topic_category: string;
+  salience_score: number;
+  salience_country: string | null;
+  article_count: number;
+  media_count: number;
+  has_agenda_event: boolean;
+  country_scope: string[];
+}
+
+/** 全局热点议题 TOP N（GET /topics/hot，总览页右侧卡片）。 */
+export function listHotTopics(limit = 10): Promise<{ items: HotTopicItem[]; total: number }> {
+  return request(`/api/v1/topics/hot?limit=${limit}`);
+}
+
 export function getTopic(id: string): Promise<TopicDetail> {
   return request<TopicDetail>(`/api/v1/topics/${encodeURIComponent(id)}`);
 }

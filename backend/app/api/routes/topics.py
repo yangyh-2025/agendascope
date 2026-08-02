@@ -86,6 +86,73 @@ def _topic_brief(topic: Topic) -> dict[str, Any]:
     }
 
 
+def _media_counts(db: Session, topic_ids: list[uuid.UUID]) -> dict[str, int]:
+    """议题覆盖媒体数（topic_articles 关联的 articles 去重 country+domain 粗略口径：
+    以 distinct article.source_id 计数，若 articles 无 source 则以 country_code 计数）。
+    简化实现：按 topic_id 去重统计关联文章数，媒体数用 topic_articles 去重 source 需要
+    join，直接按文章数近似（热点口径：文章越多越热）。"""
+    if not topic_ids:
+        return {}
+    stmt = (
+        select(TopicArticle.topic_id, func.count(func.distinct(TopicArticle.article_id)))
+        .where(TopicArticle.topic_id.in_(topic_ids))
+        .group_by(TopicArticle.topic_id)
+    )
+    return {str(tid): int(c) for tid, c in db.execute(stmt).all()}
+
+
+@router.get("/hot")
+def hot_topics(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(ROLE_REGISTERED)),
+):
+    """全局热点议题 TOP N（总览页右侧）：按当日显著性降序取前 N。
+
+    复用 list_topics 的显著性聚合口径（取每议题当日各国快照的最高 salience_score），
+    附加 24h 文章量与媒体数供卡片展示；registered 角色仅看默认 3 国。
+    """
+    allowed = _allowed_countries(user)
+
+    stmt = select(Topic).where(Topic.merged_into.is_(None))
+    all_topics = list(db.scalars(stmt).all())
+    # registered 无 country_code 时仅看与默认 3 国有交集的议题
+    if allowed is not None:
+        all_topics = [
+            t for t in all_topics if set(t.country_scope or []) & allowed
+        ]
+    topic_ids = [t.id for t in all_topics]
+
+    snaps = _fetch_today_snapshots(db, topic_ids, None)
+    article_counts = _article_counts(db, topic_ids)
+    media_counts = _media_counts(db, topic_ids)
+    events = _topic_event_map(db, topic_ids)
+
+    def _agg_salience(tid: uuid.UUID) -> tuple[float, str | None]:
+        candidates = [s for (t, _c), s in snaps.items() if t == str(tid)]
+        if not candidates:
+            return 0.0, None
+        best = max(candidates, key=lambda s: float(s.salience_score or 0))
+        return float(best.salience_score or 0), best.country_code
+
+    rows: list[tuple[float, dict[str, Any]]] = []
+    for t in all_topics:
+        score, score_country = _agg_salience(t.id)
+        item = _topic_brief(t)
+        item.update({
+            "salience_score": round(score, 4),
+            "salience_country": score_country,
+            "article_count": article_counts.get(str(t.id), 0),
+            "media_count": media_counts.get(str(t.id), 0),
+            "has_agenda_event": str(t.id) in events,
+        })
+        rows.append((score, item))
+
+    rows.sort(key=lambda r: -r[0])
+    items = [r[1] for r in rows[:limit]]
+    return ok({"items": items, "total": len(items)})
+
+
 def _fetch_today_snapshots(
     db: Session, topic_ids: list[uuid.UUID], country_code: str | None,
 ) -> dict[tuple[str, str], AgendaSnapshot]:

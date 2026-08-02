@@ -118,17 +118,25 @@ def _register_topic_entities(
     redis_client: redis.Redis | None,
     settings: AgendaSettings,
 ) -> int:
-    """对议题内报道跑轻量 NER，把人名实体登记进 persons_orgs（find_or_create_entity 查重）。
+    """对议题内报道跑轻量 NER，把实体登记进 persons_orgs（find_or_create_entity 查重）。
 
     口径与限制：
-      - 仅 PEOPLE→'person'：jieba/规则 NER 对人名召回可靠；ORG 无法区分
-        智库/国际组织/政府机构（persons_orgs.entity_type CHECK 四类），
-        自动登记会误标类型污染实体库，故跳过（已由人工/种子数据登记的实体
-        仍可通过 match_entities_in_text 命中参与首发判定）；
+      - NER 类别 → entity_type 映射：
+          PEOPLE   → 'person'    （jieba/规则对人名召回可靠，置信高）
+          ORG      → 'thinktank' （机构类型无法可靠区分智库/国际组织/政府机构，
+                                   统一先按 thinktank 占位登记，供后续 LLM/人工复核
+                                   修正类型——避免全部归为"人物"的偏差）
+          LOCATION → 不登记      （监测对象是人物/机构，不含地理）
+          OTHER    → 不登记      （无法可靠归类）
       - 命中 entity:blacklist 的实体不登记（防超级节点灌入实体库）；
       - 单议题单轮上限 detection_entity_register_limit；
       - 返回本轮 find_or_create_entity 调用次数（含命中已有实体的查重）。
     """
+    # NER 类别 → persons_orgs.entity_type（四类 CHECK；机构无法细分先按 thinktank 占位）
+    _KIND_TO_ENTITY_TYPE = {
+        "PEOPLE": "person",
+        "ORG": "thinktank",
+    }
     cutoff = datetime.now(UTC) - timedelta(days=settings.echo_lookback_days)
     stmt = (
         select(Article)
@@ -150,8 +158,9 @@ def _register_topic_entities(
         for entity_text, kind in extract_entities(text):
             if registered >= settings.detection_entity_register_limit:
                 break
-            if kind != "PEOPLE":
-                continue  # ORG/LOCATION/OTHER 类型不可靠，不自动登记（见 docstring）
+            entity_type = _KIND_TO_ENTITY_TYPE.get(kind)
+            if entity_type is None:
+                continue  # LOCATION/OTHER 不是监测对象，不自动登记（见 docstring）
             if not is_valid_entity(entity_text):
                 continue
             key = entity_text.strip().lower()
@@ -167,7 +176,7 @@ def _register_topic_entities(
             find_or_create_entity(
                 db,
                 name=entity_text,
-                entity_type="person",
+                entity_type=entity_type,
                 country_code=article.country_code,
             )
             registered += 1

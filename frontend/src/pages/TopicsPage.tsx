@@ -35,9 +35,11 @@ export default function TopicsPage() {
   const [sort, setSort] = useState<TopicSort>("salience");
   const [error, setError] = useState<string | null>(null);
   const [listDegraded, setListDegraded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(() => {
     setError(null);
+    setLoading(true);
     listTopics({
       country_code: country || undefined,
       lifecycle_state: (lifecycle || undefined) as LifecycleState | undefined,
@@ -51,7 +53,7 @@ export default function TopicsPage() {
       setListDegraded(Boolean(r.degraded));
     }).catch((err) => {
       setError(err instanceof ApiError ? err.message : "议题列表加载失败,请稍后重试");
-    });
+    }).finally(() => setLoading(false));
   }, [country, lifecycle, category, sort, page]);
 
   useEffect(() => {
@@ -137,7 +139,8 @@ export default function TopicsPage() {
         ))}
       </div>
 
-      {items.length === 0 && !error && (
+      {loading && !error && <p className="page-loading">加载中…</p>}
+      {items.length === 0 && !error && !loading && (
         <div className="empty-state">
           <p>暂无议题,请调整筛选条件。</p>
         </div>

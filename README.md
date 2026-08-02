@@ -1,17 +1,36 @@
 # AgendaScope 观澜 · 全球议程设置监控平台
 
-面向国家安全机关与国际关系、国际政治、国家安全研究机构的全球主流媒体舆情实时监控与议程设置识别系统。
+<div align="center">
 
-平台持续监控约 57 个主要经济体与全球南方代表性国家的主流新闻媒体（每国合计受众覆盖率 ≥70% 口径），实时识别"议程设置"行为：某国媒体、官员或重要人士率先提出议题，多国媒体随后跟随报道——平台自动判定首发源、跟随国序列与时滞，呈现完整传播链路，并随证据积累自我纠错（议题演化、次日归并、首发判定自动修正并全程留痕）。
+**面向国家安全与国际关系研究机构的全球主流媒体舆情实时监控与议程设置识别系统**
 
-## 核心能力
+[![License](https://img.shields.io/badge/License-Proprietary-1A4FA0)](#许可)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](backend/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](backend/app/main.py)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](frontend/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](deploy/)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](deploy/)
+[![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571?logo=elasticsearch&logoColor=white)](deploy/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](deploy/)
+[![AI](https://img.shields.io/badge/LLM%20%2B%20Embedding-Cloud%20API-7C3AED)](#llm-服务backendappllmm2-3)
 
-- **实时监控**：重点源 RSS 高频轮询 + GDELT 兜底，新闻发布到平台可见 P95 ≤ 30 分钟（红线 ≤ 2 小时）
-- **议程溯源**：回声消除折叠多国跟风报道，识别首发源与跨国传播链路，自动判定议程设置事件
-- **自我纠错**：议题生命周期管理（萌芽→形成中→已确认→演化→消亡）、次日自动归并、判定修正留痕、人工否决优先
-- **多语言分析**：跨语言向量聚类 + 云端大模型（议题命名/分类/摘要/终审，LLM 走讯飞星辰 MaaS、嵌入走 SiliconFlow bge-m3），数据经机构批准的出网通道
-- **小白可用**：零编程基础用户可用的可视化看板（全球议程地图、议程时间线、传播链路图）
-- **私有化部署**：Docker Compose 单机交付；LLM 与嵌入经机构批准的出网通道走云端 API（数据不出域，仅文本出域推理）
+</div>
+
+平台持续监控 **108 个主要经济体与全球南方代表性国家**的主流新闻媒体（每国合计受众覆盖率 ≥70% 口径），实时识别"议程设置"行为：某国媒体、官员或重要人士率先提出议题，多国媒体随后跟随报道——平台自动判定**首发源、跟随国序列与时滞**，呈现完整传播链路，并随证据积累自我纠错（议题演化、次日归并、首发判定自动修正并全程留痕）。
+
+## ✨ 特性
+
+| 能力 | 说明 |
+| --- | --- |
+| 🗺️ 全球议程地图 | 108 国×今日报道量热力分布，点击国家下钻 Top 议题 |
+| 🔥 热点议题排行 | 全球/按国显著性 TOP 10，一眼掌握当日议程 |
+| 📡 实时采集 | 重点源 RSS 高频轮询 + GDELT 兜底，发布到可见 P95 ≤30 分钟 |
+| 🔗 议程溯源 | 回声消除折叠多国跟风报道，识别首发源与跨国传播链路 |
+| 🧠 多语言 AI 分析 | 跨语言向量聚类 + 云端大模型命名/分类/摘要/终审 |
+| 🔁 自我纠错 | 议题生命周期管理、次日归并、判定修正留痕、人工否决优先 |
+| 👤 人物/机构监测 | 关键人物、智库、国际组织首发信号跟踪 |
+| 🚨 智能预警 | 规则评估、订阅推送、报告导出 |
+| 📦 私有化部署 | Docker Compose 单机交付，LLM/嵌入走经批准的云通道 |
 
 ## 文档
 
@@ -31,7 +50,7 @@
 
 ## 快速开始
 
-全 5 阶段开发完成（`v1.0.0`）。详见 [`CHANGELOG.md`](CHANGELOG.md)。
+全 5 阶段开发完成（`v1.0.0`），性能与体验优化至 `v1.1.0`。详见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ### 后端（backend/）
 

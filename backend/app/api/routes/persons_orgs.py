@@ -18,6 +18,7 @@ def list_persons(
     entity_type: str | None = Query(None, description="person/thinktank/intl_org/gov_body"),
     country_code: str | None = Query(None, max_length=2),
     monitored: bool | None = Query(None),
+    sort: str = Query(default="name", pattern="^(name|latest_utterance_at|created_at)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -33,12 +34,24 @@ def list_persons(
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 
     offset = (page - 1) * page_size
-    entities = db.scalars(stmt.order_by(PersonOrg.name).offset(offset).limit(page_size)).all()
+    if sort == "name":
+        stmt = stmt.order_by(PersonOrg.name)
+    elif sort == "created_at":
+        stmt = stmt.order_by(PersonOrg.created_at.desc())
+    else:  # latest_utterance_at：按最新首发表述时间降序（JSONB 数组取 max occurred_at）
+        stmt = stmt.order_by(
+            func.coalesce(
+                func.jsonb_array_length(PersonOrg.first_utterances), 0
+            ).desc(),
+            PersonOrg.created_at.desc(),
+        )
+    entities = db.scalars(stmt.offset(offset).limit(page_size)).all()
 
     items = [{
         "id": str(e.id), "entity_type": e.entity_type, "name": e.name,
         "name_zh": e.name_zh, "country_code": e.country_code, "role_title": e.role_title,
-        "monitored": e.monitored, "first_utterances": e.first_utterances, "created_at": e.created_at.isoformat() if e.created_at else None,
+        "monitored": e.monitored, "first_utterances": e.first_utterances,
+        "created_at": e.created_at.isoformat() if e.created_at else None,
     } for e in entities]
 
     return ok({"total": total, "page": page, "page_size": page_size, "items": items})

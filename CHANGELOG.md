@@ -4,6 +4,33 @@
 
 ---
 
+## 性能与体验优化（2026-08-03）
+
+> **本轮范围**：修复服务器"人物监测加载不出来"（精简部署禁用 detection-worker 导致实体从不在服务器登记）、总览页右侧改为热点议题 TOP10、页面切换秒开（后端 Redis 响应缓存 + 前端加载态）、人物监测类型分类与排序、LLM 调用自适应限流提速、命名积压消化加速。
+
+### 人物监测修复（服务器加载不出来 + 类型分类 + 排序）
+
+- **启用 detection-worker**（`compose.deploy.yml`）：此前精简部署仅启核心链路 worker，`detection-worker` 被 profiles:disabled 禁用，而实体登记（NER 入 `persons_orgs`）完全在该 worker——服务器上实体表恒为空，前端显示"暂无监测对象"。现启用（mem_limit 256m + LLM API env），实体开始持续登记。
+- **实体类型分类**（`detection.py`）：此前轻量 NER 仅自动登记 PEOPLE→person，ORG/LOCATION/OTHER 全部跳过——所有自动登记实体全是"人物"，机构类型缺失。现扩展映射：PEOPLE→person、ORG→thinktank（机构无法可靠细分先按智库占位，供 LLM/人工复核修正）、LOCATION/OTHER 不登记（非监测对象）。
+- **persons 列表排序**（`persons_orgs.py` + 前端）：新增 `sort` 参数（name / latest_utterance_at / created_at），前端加排序下拉。
+
+### 总览页热点议题 TOP10
+
+- **新增 `GET /api/v1/topics/hot`**：复用显著性聚合口径，返回当日全局显著性 TOP N（含 24h 报道量/媒体数/议程事件标记）。
+- **前端右侧卡片**：原"国家媒体源 TOP 10"替换为"热点议题 TOP 10"，点击跳议题详情，卡片含显著性/报道量/媒体数/国家/议程事件标记。
+
+### 页面加载优化（消除"暂无监测对象"闪烁）
+
+- **后端 Redis 响应缓存**（新增 `app/core/response_cache.py` + `api_cache_middleware.py`）：GET 列表类接口（persons-orgs/topics/map/sources/agenda-events/alerts/snapshots）缓存 30s，按用户角色+国家权限+query 隔离，命中直接返回（X-Cache: HIT），Redis 异常静默降级。
+- **前端加载态**：persons/topics 页加载中显示"加载中…"而非误导性的"暂无监测对象/暂无议题"。
+
+### LLM 调用性能（自适应限流）
+
+- **`api_engine.py` 自适应 QPS 限流**：基线间隔从固定 1.0s 降为 0.5s（QPS2 理论边界），遇 QPS 超限（429/AppIdQpsOverFlow）自动 +0.25s 退避（上限 1.5s），连续 50 次成功回调 -0.05s（下限 0.35s）——稳定在"接近配额上限但不再触发降级"区间，命名/判定吞吐提升约 2 倍。
+- **naming-worker 提速**：batch 4→8、poll 60→30s，配合自适应限流消化命名积压。
+
+---
+
 ## 覆盖扩至 108 国（2026-08-02）
 
 > **本轮范围**：监控国家从 57 国扩展至 108 国（G20 全覆盖 + 全球南方大幅补足 + 欧洲/拉美/中亚/非洲/中东补齐），媒体源 57 → 124 个，全部新源经代理实测可达（HTTP 200 + RSS 结构）。原 0 源国家（16 国）补足主流媒体直达源（部分反爬严格国家用 Google News `site:` 聚合兜底）。

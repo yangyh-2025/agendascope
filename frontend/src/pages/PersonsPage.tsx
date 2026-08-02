@@ -16,6 +16,12 @@ const ENTITY_TYPE_LABEL: Record<EntityType, string> = {
   gov_body: "政府机构",
 };
 
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "name", label: "按名称" },
+  { value: "latest_utterance_at", label: "按最新表述" },
+  { value: "created_at", label: "按登记时间" },
+];
+
 function errMsg(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
 }
@@ -27,15 +33,19 @@ export default function PersonsPage() {
   const [entityType, setEntityType] = useState<string>("");
   const [country, setCountry] = useState("");
   const [monitoredOnly, setMonitoredOnly] = useState(false);
+  const [sort, setSort] = useState("name");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
     setError(null);
+    setLoading(true);
     listPersonsOrgs({
       entity_type: (entityType || undefined) as EntityType | undefined,
       country_code: country || undefined,
       monitored: monitoredOnly ? true : undefined,
+      sort: (sort || undefined) as "name" | "latest_utterance_at" | "created_at" | undefined,
       page,
       page_size: 20,
     })
@@ -43,8 +53,9 @@ export default function PersonsPage() {
         setItems(r.items);
         setTotal(r.total);
       })
-      .catch((err) => setError(errMsg(err, "人物/机构数据加载失败")));
-  }, [entityType, country, monitoredOnly, page]);
+      .catch((err) => setError(errMsg(err, "人物/机构数据加载失败")))
+      .finally(() => setLoading(false));
+  }, [entityType, country, monitoredOnly, sort, page]);
 
   useEffect(() => {
     load();
@@ -69,6 +80,9 @@ export default function PersonsPage() {
           <option value="">全部国家</option>
           {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
         </select>
+        <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
+          {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
         <label className="monitored-toggle">
           <input
             type="checkbox"
@@ -80,7 +94,8 @@ export default function PersonsPage() {
       </div>
 
       {error && <p className="page-error" role="alert">{error}</p>}
-      {!error && items.length === 0 && <p className="page-loading">暂无监测对象</p>}
+      {!error && loading && items.length === 0 && <p className="page-loading">加载中…</p>}
+      {!error && !loading && items.length === 0 && <p className="page-loading">暂无监测对象</p>}
 
       <div className="entity-list">
         {items.map((e) => {

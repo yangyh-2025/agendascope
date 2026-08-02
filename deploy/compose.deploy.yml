@@ -13,8 +13,6 @@ services:
     profiles: ["disabled"]
   snapshot-worker:
     profiles: ["disabled"]
-  detection-worker:
-    profiles: ["disabled"]
   alerting-worker:
     profiles: ["disabled"]
   rsshub:
@@ -48,13 +46,23 @@ services:
     restart: unless-stopped
     mem_limit: 512m   # 聚类内存密集，加大上限防 Redis 超时
 
+  detection-worker:
+    restart: unless-stopped
+    mem_limit: 256m   # 实体登记 + 事件检测（本地轻量 NER，LLM 首发判定走云 API）
+    environment:
+      # LLM API 模式（首发判定/终审走云 API，无需本地 Qwen 权重）
+      LLM_PROFILE: ${LLM_PROFILE:-api}
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
+
   naming-worker:
     restart: unless-stopped
     mem_limit: 256m   # LLM 议题命名（解决"LLM 降级中"标签）
     environment:
-      # 低配讯飞配额（QPS 2/并发 2）：降 batch 防命名风暴触顶并发超限
-      LLM_NAMING_WORKER_BATCH_SIZE: ${LLM_NAMING_WORKER_BATCH_SIZE:-4}
-      LLM_NAMING_WORKER_POLL_SECONDS: ${LLM_NAMING_WORKER_POLL_SECONDS:-60}
+      # 讯飞配额（QPS 2/并发 2）+ 引擎自适应限流：batch 8 利用闲时吞吐
+      LLM_NAMING_WORKER_BATCH_SIZE: ${LLM_NAMING_WORKER_BATCH_SIZE:-8}
+      LLM_NAMING_WORKER_POLL_SECONDS: ${LLM_NAMING_WORKER_POLL_SECONDS:-30}
 
   frontend:
     image: agendascope-frontend:latest  # 用已 load 的镜像

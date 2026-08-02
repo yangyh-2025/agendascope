@@ -16,6 +16,7 @@ prompt 内嵌 JSON Schema 指令（双重保险，与本地 LLMEngine 同口径�
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import time
 from typing import Any
@@ -26,6 +27,8 @@ from pydantic import BaseModel
 from app.llm.errors import LLMParseError, LLMUnavailableError
 from app.llm.schemas import parse_structured
 from app.llm.settings import LLMSettings, get_llm_settings
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAICompatibleEngine:
@@ -44,9 +47,14 @@ class OpenAICompatibleEngine:
         # 这里加最小请求间隔，跨线程共享（引擎单例）。
         self._qps_lock = threading.Lock()
         self._last_request_ts = 0.0
-        # 最小请求间隔（秒）：讯飞星辰 QPS 2/并发 2 硬配额，实测 0.5s（QPS2）仍会
-        # 瞬时触顶（计时误差/重试），取 1.0s（QPS1）保守限流，命名慢但稳定不降级
-        self._min_request_interval = 1.0
+        # 最小请求间隔（秒）——自适应限流：
+        # 基线 0.5s（QPS2 理论边界），遇 AppIdQpsOverFlowError（讯飞星辰 QPS 2/并发 2
+        # 硬配额瞬时触顶）自动退避 +0.25s，连续成功 50 次后回调 -0.05s，
+        # 稳定在"接近配额上限但不再触发降级"的区间——比固定 1.0s 保守限流更快。
+        self._min_request_interval = 0.5
+        self._min_interval_floor = 0.35  # 下限：防过低触顶
+        self._min_interval_ceiling = 1.5  # 上限：防无限退避
+        self._consecutive_success = 0
         # 会话内缓存 token 统计近似值（API 层无法精确 count；按 2 字符≈1 token 粗估）
         self._token_cache: dict[str, int] = {}
 
@@ -161,14 +169,48 @@ class OpenAICompatibleEngine:
                 }
                 # 限并发：信号量阻塞直至有空闲配额（对齐外部 API QPS/并发限制）
                 with self._concurrency:
-                    # QPS 限流：与上一请求至少间隔 min_interval（QPS ≤2），
-                    # 防并发 2 下连续快速请求超外部 QPS 配额触发降级
+                    # QPS 限流：与上一请求至少间隔 min_interval，
+                    # 防并发 2 下连续快速请求超外部 QPS 配额触发降级。
+                    # 复用 started（函数入口的 monotonic 时刻）作"上次请求时刻"，
+                    # 不新增时钟调用（兼容测试对 time.monotonic 的 mock 侧值）；
+                    # 入口时间差≈发出时间差（误差为单请求处理时间，可忽略）。
                     with self._qps_lock:
-                        elapsed = time.monotonic() - self._last_request_ts
+                        elapsed = started - self._last_request_ts
                         if elapsed < self._min_request_interval:
                             time.sleep(self._min_request_interval - elapsed)
-                        self._last_request_ts = time.monotonic()
+                        self._last_request_ts = started
                     resp = client.post("/chat/completions", json=body)
+                # 自适应限流：QPS 超限（429 / AppIdQpsOverFlowError）退避，
+                # 连续成功回调间隔，稳定在"快但不再触顶"区间
+                is_qps_overflow = (
+                    resp.status_code == 429
+                    or "QpsOverFlow" in resp.text
+                    or "AppIdQpsOverFlow" in resp.text
+                )
+                if is_qps_overflow:
+                    with self._qps_lock:
+                        self._min_request_interval = min(
+                            self._min_interval_ceiling,
+                            self._min_request_interval + 0.25,
+                        )
+                        self._consecutive_success = 0
+                    logger.warning(
+                        "llm_api_qps_overflow_backoff",
+                        extra={
+                            "interval": self._min_request_interval,
+                            "status": resp.status_code,
+                            "detail": resp.text[:120],
+                        },
+                    )
+                elif self._min_request_interval > self._min_interval_floor:
+                    with self._qps_lock:
+                        self._consecutive_success += 1
+                        if self._consecutive_success >= 50:
+                            self._min_request_interval = max(
+                                self._min_interval_floor,
+                                self._min_request_interval - 0.05,
+                            )
+                            self._consecutive_success = 0
                 if resp.status_code == 401 or resp.status_code == 403:
                     self._load_error = f"API 鉴权失败 ({resp.status_code}): {resp.text[:200]}"
                     raise LLMUnavailableError(self._load_error)

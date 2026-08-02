@@ -42,6 +42,7 @@ export interface ListPersonsOrgsParams {
   country_code?: string;
   monitored?: boolean;
   keyword?: string;
+  sort?: "name" | "latest_utterance_at" | "created_at";
   page?: number;
   page_size?: number;
 }
@@ -54,6 +55,7 @@ export function listPersonsOrgs(
   if (params.country_code) qs.set("country_code", params.country_code);
   if (typeof params.monitored === "boolean") qs.set("monitored", String(params.monitored));
   if (params.keyword) qs.set("keyword", params.keyword);
+  if (params.sort) qs.set("sort", params.sort);
   qs.set("page", String(params.page ?? 1));
   qs.set("page_size", String(params.page_size ?? 20));
   return request<PersonOrgListPage>(`/api/v1/persons-orgs?${qs.toString()}`);

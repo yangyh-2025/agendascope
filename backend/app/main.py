@@ -5,6 +5,7 @@ from app.api.routes import health
 from app.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
+from app.core.api_cache_middleware import ResponseCacheMiddleware
 from app.core.middleware import TraceIdMiddleware
 
 
@@ -17,6 +18,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url="/docs" if settings.app_debug else None,
     )
+    app.add_middleware(ResponseCacheMiddleware)
     app.add_middleware(TraceIdMiddleware)
     register_exception_handlers(app)
 

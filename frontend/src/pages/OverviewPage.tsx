@@ -5,6 +5,7 @@ import ReactECharts from "echarts-for-react";
 import { ApiError } from "../api/client";
 import { listSources, type SourceListItem } from "../api/sources";
 import { mapApi } from "../api/map";
+import { listHotTopics, type HotTopicItem } from "../api/topics";
 import { countryLabel } from "../api/meta";
 import DegradedBadge from "../components/DegradedBadge";
 import { mapNameOf, registerWorldMap } from "../map/worldMap";
@@ -25,13 +26,6 @@ type MapData = {
   data_delay_minutes: number;
   coverage_confidence: number;
 };
-
-interface SourceAgg {
-  total: number;
-  active: number;
-  degraded: number;
-  failed: number;
-}
 
 const PAGE_SIZE = 100;
 
@@ -108,6 +102,8 @@ export default function OverviewPage() {
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CountryItem | null>(null);
+  const [hotTopics, setHotTopics] = useState<HotTopicItem[] | null>(null);
+  const [hotError, setHotError] = useState<string | null>(null);
 
   const geoReady = useMemo(() => {
     registerWorldMap();
@@ -135,6 +131,15 @@ export default function OverviewPage() {
           setMapError(err instanceof ApiError ? err.message : "地图数据加载失败");
         }
       });
+    listHotTopics(10)
+      .then((d) => {
+        if (!cancelled) setHotTopics(d.items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setHotError(err instanceof ApiError ? err.message : "热点议题加载失败");
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -157,26 +162,6 @@ export default function OverviewPage() {
       active,
       failed,
     };
-  }, [sources]);
-
-  /* ========== 按国家聚合媒体源,算健康度 TOP10 ========== */
-  const countryHealth = useMemo(() => {
-    if (!sources) return [];
-    const map = new Map<string, SourceAgg>();
-    for (const s of sources) {
-      const agg = map.get(s.country_code) ?? { total: 0, active: 0, degraded: 0, failed: 0 };
-      agg.total += 1;
-      agg[s.status] += 1;
-      map.set(s.country_code, agg);
-    }
-    return [...map.entries()]
-      .map(([code, agg]) => ({
-        code,
-        ...agg,
-        healthPct: agg.total > 0 ? Math.round((agg.active / agg.total) * 100) : 0,
-      }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
   }, [sources]);
 
   /* ========== 世界地图 ECharts ========== */
@@ -333,38 +318,46 @@ export default function OverviewPage() {
         <aside className="overview-side">
           <div className="side-card">
             <div className="side-card-head">
-              <h3 className="side-card-title">国家媒体源 TOP 10</h3>
+              <h3 className="side-card-title">热点议题 TOP 10</h3>
+              <a className="side-card-more" href="/topics">查看全部 →</a>
             </div>
-            <ul className="country-rank-list">
-              {countryHealth.map((c, idx) => (
-                <li
-                  key={c.code}
-                  className="country-rank-item clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/sources?country=${c.code}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      navigate(`/sources?country=${c.code}`);
-                    }
-                  }}
-                >
-                  <span className={`rank-no rank-${idx + 1 <= 3 ? idx + 1 : "n"}`}>{idx + 1}</span>
-                  <span className="rank-country">{countryLabel(c.code)}</span>
-                  <span className="rank-total">{c.total} 源</span>
-                  <span className="rank-health">
-                    <span className="rank-health-bar">
-                      <span
-                        className="rank-health-bar-fill"
-                        style={{ width: `${c.healthPct}%` }}
-                      />
-                    </span>
-                    <span className="rank-health-pct">{c.healthPct}%</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {hotError && <p className="page-error">{hotError}</p>}
+            {!hotTopics && !hotError && <p className="page-loading">热点议题加载中…</p>}
+            {hotTopics && hotTopics.length === 0 && (
+              <p className="drawer-empty">今日暂无热点议题</p>
+            )}
+            {hotTopics && hotTopics.length > 0 && (
+              <ul className="hot-topic-list">
+                {hotTopics.map((t, idx) => (
+                  <li
+                    key={t.id}
+                    className="hot-topic-item clickable"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/topics/${t.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigate(`/topics/${t.id}`);
+                      }
+                    }}
+                    title={`查看议题「${t.name}」详情`}
+                  >
+                    <span className={`rank-no rank-${idx + 1 <= 3 ? idx + 1 : "n"}`}>{idx + 1}</span>
+                    <div className="hot-topic-body">
+                      <span className="hot-topic-name">{t.name}</span>
+                      <span className="hot-topic-meta">
+                        显著性 {t.salience_score.toFixed(2)}
+                        {t.article_count > 0 ? ` · ${t.article_count} 篇` : ""}
+                        {t.media_count > 0 ? ` · ${t.media_count} 源` : ""}
+                        {t.salience_country ? ` · ${countryLabel(t.salience_country)}` : ""}
+                        {t.has_agenda_event ? " · 议程事件" : ""}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </aside>
       </div>
