@@ -1,3 +1,5 @@
+/* 初始化设置:浅灰底 + 白卡片浮起 + 步骤指示。 */
+
 .setup-page {
   min-height: 100%;
   display: flex;
@@ -5,25 +7,28 @@
   justify-content: center;
   padding: var(--as-spacing-xxl) var(--as-spacing-md);
   background:
-    radial-gradient(1200px 600px at 70% -10%, var(--as-colors-blue) 0%, transparent 60%),
-    var(--as-colors-navy);
+    radial-gradient(1200px 600px at 70% -10%, rgba(26, 79, 160, 0.08) 0%, transparent 60%),
+    var(--as-colors-bgSubtle);
 }
 
 .setup-card {
-  width: 640px;
+  width: 680px;
   max-width: 100%;
   padding: var(--as-spacing-xl);
-  background: var(--as-colors-navyPanel);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-lg);
   display: flex;
   flex-direction: column;
   gap: var(--as-spacing-md);
+  box-shadow: var(--as-shadow-lg);
 }
 
 .setup-title {
   margin: 0;
   font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-bold);
+  color: var(--as-colors-textPrimary);
   text-align: center;
 }
 
@@ -53,24 +58,30 @@
 }
 
 .setup-step-no {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bgSubtle);
   border: 1px solid var(--as-colors-border);
   font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textMuted);
+  transition: var(--as-transition-base);
 }
 
 .setup-step-item.active {
-  color: var(--as-colors-textPrimary);
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-medium);
 }
 
 .setup-step-item.active .setup-step-no {
-  background: var(--as-colors-blue);
-  border-color: var(--as-colors-blueBright);
+  background: var(--as-colors-primary);
+  border-color: var(--as-colors-primary);
+  color: var(--as-colors-textInverse);
+  box-shadow: var(--as-shadow-sm);
 }
 
 .setup-step-item.done {
@@ -80,6 +91,7 @@
 .setup-step-item.done .setup-step-no {
   border-color: var(--as-colors-success);
   color: var(--as-colors-success);
+  background: var(--as-colors-successSoft);
 }
 
 .setup-panel {
@@ -91,6 +103,8 @@
 .setup-panel h2 {
   margin: 0;
   font-size: var(--as-fontSize-lg);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
 }
 
 .setup-hint {
@@ -104,6 +118,7 @@
   flex-direction: column;
   gap: var(--as-spacing-xs);
   font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
   color: var(--as-colors-textSecondary);
 }
 
@@ -120,23 +135,33 @@
 .country-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--as-spacing-xs);
 }
 
 .country-chip {
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bgSubtle);
   color: var(--as-colors-textSecondary);
   border: 1px solid var(--as-colors-border);
-  padding: 4px 10px;
-  border-radius: var(--as-radius-sm);
-  font-size: var(--as-fontSize-xs);
+  padding: 4px var(--as-spacing-md);
+  border-radius: 999px;
+  font-size: var(--as-fontSize-sm);
   cursor: pointer;
+  box-shadow: none;
+  transition: var(--as-transition-fast);
+}
+
+.country-chip:hover:not(.active) {
+  background: var(--as-colors-bgHover);
+  color: var(--as-colors-primary);
+  border-color: var(--as-colors-primary);
+  transform: none;
+  box-shadow: none;
 }
 
 .country-chip.active {
-  background: var(--as-colors-blue);
-  color: var(--as-colors-textPrimary);
-  border-color: var(--as-colors-blueBright);
+  background: var(--as-colors-primary);
+  color: var(--as-colors-textInverse);
+  border-color: var(--as-colors-primary);
 }
 
 .env-list {
@@ -151,25 +176,34 @@
 .env-item {
   padding: var(--as-spacing-sm) var(--as-spacing-md);
   border-radius: var(--as-radius-sm);
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bgSubtle);
   border: 1px solid var(--as-colors-border);
   font-size: var(--as-fontSize-sm);
+  color: var(--as-colors-textPrimary);
 }
 
 .env-item.ok { border-left: 3px solid var(--as-colors-success); }
 .env-item.warn { border-left: 3px solid var(--as-colors-warning); }
-.env-item.fail { border-left: 3px solid var(--as-colors-red); }
+.env-item.fail { border-left: 3px solid var(--as-colors-danger); }
 
 .env-warnings {
   margin: 0;
-  padding-left: var(--as-spacing-lg);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  padding-left: var(--as-spacing-xl);
+  background: var(--as-colors-warningSoft);
+  border-left: 3px solid var(--as-colors-warning);
+  border-radius: var(--as-radius-sm);
   color: var(--as-colors-warning);
   font-size: var(--as-fontSize-sm);
 }
 
 .env-blocking {
   margin: 0;
-  color: var(--as-colors-red);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
   font-size: var(--as-fontSize-sm);
 }
 
@@ -179,9 +213,27 @@
   font-size: var(--as-fontSize-sm);
 }
 
-.status-msg { color: #60A5FA; font-size: var(--as-fontSize-sm); margin: 0; }
-.page-error { color: var(--as-colors-red); margin: 0; }
-.page-loading { color: var(--as-colors-textSecondary); margin: 0; }
+.status-msg {
+  color: var(--as-colors-success);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.page-error {
+  margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
+}
+
+.page-loading {
+  color: var(--as-colors-textSecondary);
+  margin: 0;
+  font-size: var(--as-fontSize-sm);
+}
 
 .setup-progress {
   border-top: 1px solid var(--as-colors-border);
@@ -200,15 +252,20 @@
 
 .setup-progress-bar {
   height: 8px;
-  border-radius: var(--as-radius-sm);
-  background: var(--as-colors-navyDeep);
+  border-radius: 999px;
+  background: var(--as-colors-bgSubtle);
   overflow: hidden;
 }
 
 .setup-progress-fill {
   height: 100%;
-  background: var(--as-colors-blue);
+  background: linear-gradient(
+    90deg,
+    var(--as-colors-primary) 0%,
+    var(--as-colors-primaryHover) 100%
+  );
   transition: width 0.4s ease;
+  border-radius: 999px;
 }
 
 .setup-stages {

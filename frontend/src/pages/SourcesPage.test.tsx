@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SourceListItem } from "../api/sources";
 import SourcesPage from "./SourcesPage";
@@ -68,17 +69,22 @@ describe("媒体源管理页", () => {
       },
     });
 
-    render(<SourcesPage />);
+    render(
+      <MemoryRouter>
+        <SourcesPage />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText("The Example Times")).toBeInTheDocument();
     expect(screen.getByText("Daily Sample")).toBeInTheDocument();
     expect(screen.getByText("每日样例")).toBeInTheDocument();
-    expect(screen.getByText("美国")).toBeInTheDocument();
-    expect(screen.getByText("英国")).toBeInTheDocument();
-    expect(screen.getByText("报纸")).toBeInTheDocument();
-    expect(screen.getByText("网络媒体")).toBeInTheDocument();
-    expect(screen.getByText("正常")).toBeInTheDocument();
-    expect(screen.getByText("失败")).toBeInTheDocument();
+    // 国家/类型/状态中文标签至少出现一次(表格行 + 筛选下拉)
+    expect(screen.getAllByText("美国").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("英国").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("报纸").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("网络媒体").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("正常").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("失败").length).toBeGreaterThan(0);
     // 表头齐全
     for (const col of ["名称", "国家", "类型", "健康状态", "最近采集时间"]) {
       expect(screen.getByText(col)).toBeInTheDocument();
@@ -88,7 +94,11 @@ describe("媒体源管理页", () => {
   it("接口报错时展示后端 message", async () => {
     stubSourcesPage({ code: 9001, data: null, message: "服务器内部错误" }, 500);
 
-    render(<SourcesPage />);
+    render(
+      <MemoryRouter>
+        <SourcesPage />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("服务器内部错误");
   });

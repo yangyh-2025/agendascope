@@ -1,35 +1,68 @@
+/* 登录页:浅灰底 + 白卡片浮起。 */
+
 .login-page {
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(1200px 600px at 70% -10%, var(--as-colors-blue) 0%, transparent 60%),
-    var(--as-colors-navy);
+    radial-gradient(1200px 600px at 70% -10%, rgba(26, 79, 160, 0.08) 0%, transparent 60%),
+    var(--as-colors-bgSubtle);
 }
 
 .login-card {
-  width: 380px;
-  padding: var(--as-spacing-xl);
-  background: var(--as-colors-navyPanel);
+  width: 400px;
+  padding: var(--as-spacing-xxl) var(--as-spacing-xl);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-lg);
   display: flex;
   flex-direction: column;
   gap: var(--as-spacing-md);
+  box-shadow: var(--as-shadow-lg);
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--as-spacing-xs);
+  margin-bottom: var(--as-spacing-md);
+}
+
+.login-brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--as-radius-md);
+  background: linear-gradient(
+    135deg,
+    var(--as-colors-primary) 0%,
+    var(--as-colors-primaryActive) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--as-colors-textInverse);
+  font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-bold);
+  box-shadow: var(--as-shadow-md);
 }
 
 .login-title {
   margin: 0;
   font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-bold);
+  color: var(--as-colors-textPrimary);
   text-align: center;
+  letter-spacing: 0.02em;
 }
 
 .login-subtitle {
-  margin: calc(-1 * var(--as-spacing-sm)) 0 var(--as-spacing-sm);
+  margin: 0 0 var(--as-spacing-sm);
   text-align: center;
   color: var(--as-colors-textMuted);
   font-size: var(--as-fontSize-sm);
+  letter-spacing: 0.04em;
 }
 
 .login-field {
@@ -37,11 +70,16 @@
   flex-direction: column;
   gap: var(--as-spacing-xs);
   font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
   color: var(--as-colors-textSecondary);
 }
 
 .login-error {
   margin: 0;
-  color: var(--as-colors-red);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
   font-size: var(--as-fontSize-sm);
 }

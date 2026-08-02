@@ -1,40 +1,44 @@
+/* 降级/提示徽章:浅底色 + 深文字的现代胶囊风格。 */
 .degraded-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px var(--as-spacing-sm);
-  border-radius: var(--as-radius-sm);
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
   font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-medium);
   line-height: 18px;
   border: 1px solid transparent;
   cursor: help;
   white-space: nowrap;
+  transition: var(--as-transition-fast);
 }
 
-/* 警示（LLM/聚类降级）：橙 #D97706 */
+.degraded-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--as-shadow-xs);
+}
+
+/* 警示(LLM/聚类降级):橙 */
 .degraded-badge-warn {
-  background: rgba(217, 119, 6, 0.18);
-  border-color: #d97706;
-  color: #fbbf24;
+  background: var(--as-colors-warningSoft);
+  color: var(--as-colors-warning);
 }
 
-/* 提醒（首发源待核实）：黄 #EAB308 */
+/* 提醒(首发源待核实):黄 */
 .degraded-badge-caution {
-  background: rgba(234, 179, 8, 0.16);
-  border-color: #eab308;
-  color: #fde047;
+  background: var(--as-colors-warningSoft);
+  color: var(--as-colors-warning);
 }
 
-/* 信息（快照校正中）：主蓝 */
+/* 信息(快照校正中):主蓝 */
 .degraded-badge-info {
-  background: rgba(29, 78, 158, 0.25);
-  border-color: var(--as-colors-blue);
-  color: var(--as-colors-blueBright);
+  background: var(--as-colors-infoSoft);
+  color: var(--as-colors-info);
 }
 
-/* 弱化（跨语言不可用 / 覆盖不足）：灰 */
+/* 弱化(跨语言不可用 / 覆盖不足):灰 */
 .degraded-badge-mute {
-  background: rgba(100, 124, 158, 0.18);
-  border-color: var(--as-colors-textMuted);
+  background: var(--as-colors-bgSubtle);
   color: var(--as-colors-textSecondary);
 }

@@ -4,18 +4,15 @@ import RequireAuth from "./components/RequireAuth";
 import SetupGuard from "./components/SetupGuard";
 import AlertRulesPage from "./pages/AlertRulesPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
-import DashboardPage from "./pages/DashboardPage";
 import EventDetailPage from "./pages/EventDetailPage";
-import EventsPage from "./pages/EventsPage";
 import LoginPage from "./pages/LoginPage";
-import MapPage from "./pages/MapPage";
+import OverviewPage from "./pages/OverviewPage";
 import PersonsPage from "./pages/PersonsPage";
 import ReportsPage from "./pages/ReportsPage";
 import RevisionsPage from "./pages/RevisionsPage";
 import SetupPage from "./pages/SetupPage";
 import SourcesPage from "./pages/SourcesPage";
 import SystemPage from "./pages/SystemPage";
-import TimelinePage from "./pages/TimelinePage";
 import TopicDetailPage from "./pages/TopicDetailPage";
 import TopicsPage from "./pages/TopicsPage";
 
@@ -28,12 +25,18 @@ export default function App() {
         <Route element={<RequireAuth />}>
           <Route element={<SetupGuard />}>
             <Route element={<Layout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="map" element={<MapPage />} />
+              <Route index element={<OverviewPage />} />
+              {/* 看板+地图已合并到 /,旧路由重定向 */}
+              <Route path="map" element={<Navigate to="/" replace />} />
+              <Route path="dashboard" element={<Navigate to="/" replace />} />
+              {/* 议题分析(议题+议程事件 Tab 整合) */}
               <Route path="topics" element={<TopicsPage />} />
               <Route path="topics/:id" element={<TopicDetailPage />} />
-              <Route path="timeline" element={<TimelinePage />} />
-              <Route path="events" element={<EventsPage />} />
+              {/* 时间线已合并到议题页"对比模式",旧路由重定向 */}
+              <Route path="timeline" element={<Navigate to="/topics" replace />} />
+              {/* 议程事件已合并到议题页 Tab,旧路由重定向到 /topics?tab=events */}
+              <Route path="events" element={<Navigate to="/topics?tab=events" replace />} />
+              {/* 事件详情独立路由保留,供外链/书签跳转 */}
               <Route path="events/:id" element={<EventDetailPage />} />
               <Route path="revisions" element={<RevisionsPage />} />
               <Route path="persons" element={<PersonsPage />} />

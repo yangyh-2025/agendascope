@@ -126,7 +126,12 @@ export default function ReportsPage() {
 
   return (
     <div className="reports-page">
-      <h1>报告中心</h1>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">报告中心</h1>
+          <p className="page-desc">生成议题深度报告、跨国对比简报、周期摘要,支持 PDF 与 Word 格式。</p>
+        </div>
+      </header>
       <div className="report-form">
         <label>
           报告类型

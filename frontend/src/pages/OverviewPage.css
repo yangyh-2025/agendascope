@@ -1,0 +1,449 @@
+/* 总览页:KPI + 地图 + 健康度 TOP10 + 国家下钻抽屉。 */
+
+.overview-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-lg);
+}
+
+.overview-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--as-spacing-sm);
+  flex-wrap: wrap;
+}
+
+.coverage-tier {
+  font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-medium);
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
+}
+
+.coverage-high {
+  background: var(--as-colors-successSoft);
+  color: var(--as-colors-success);
+}
+
+.coverage-mid {
+  background: var(--as-colors-warningSoft);
+  color: var(--as-colors-warning);
+}
+
+.coverage-low {
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textSecondary);
+}
+
+.data-delay {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-xs);
+}
+
+/* ============ KPI 卡片 ============ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--as-spacing-md);
+}
+
+.kpi-card {
+  position: relative;
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  padding-left: calc(var(--as-spacing-lg) + 4px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-xs);
+  box-shadow: var(--as-shadow-card);
+  transition: var(--as-transition-base);
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--as-shadow-cardHover);
+}
+
+.kpi-primary::before { background: var(--as-colors-primary); }
+.kpi-success::before { background: var(--as-colors-success); }
+.kpi-warning::before { background: var(--as-colors-warning); }
+.kpi-accent::before { background: var(--as-colors-accent); }
+
+.kpi-label {
+  font-size: var(--as-fontSize-sm);
+  color: var(--as-colors-textSecondary);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.kpi-value {
+  font-size: var(--as-fontSize-display);
+  font-weight: var(--as-fontWeight-bold);
+  color: var(--as-colors-textPrimary);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-suffix {
+  font-size: var(--as-fontSize-md);
+  font-weight: var(--as-fontWeight-regular);
+  color: var(--as-colors-textMuted);
+  margin-left: var(--as-spacing-xs);
+}
+
+/* ============ 主区域:地图 + 右侧栏 ============ */
+.overview-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--as-spacing-md);
+  align-items: stretch;
+}
+
+.overview-map-card {
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  overflow: hidden;
+  box-shadow: var(--as-shadow-card);
+  min-height: 480px;
+}
+
+.map-loading {
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--as-colors-textSecondary);
+}
+
+/* 右侧栏 */
+.overview-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+}
+
+.side-card {
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  box-shadow: var(--as-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-sm);
+  flex: 1;
+}
+
+.side-card-head {
+  padding-bottom: var(--as-spacing-sm);
+  border-bottom: 1px solid var(--as-colors-border);
+}
+
+.side-card-title {
+  margin: 0;
+  font-size: var(--as-fontSize-md);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.country-rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.country-rank-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  grid-template-areas:
+    "no country total"
+    "no health health";
+  align-items: center;
+  gap: 2px var(--as-spacing-sm);
+  padding: var(--as-spacing-sm) var(--as-spacing-xs);
+  border-radius: var(--as-radius-sm);
+  transition: var(--as-transition-fast);
+}
+
+.country-rank-item.clickable {
+  cursor: pointer;
+}
+
+.country-rank-item.clickable:hover {
+  background: var(--as-colors-bgHover);
+}
+
+.country-rank-item.clickable:focus-visible {
+  outline: 2px solid var(--as-colors-primary);
+  outline-offset: 2px;
+}
+
+.rank-no {
+  grid-area: no;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-no.rank-1 {
+  background: var(--as-colors-accent);
+  color: var(--as-colors-textInverse);
+}
+
+.rank-no.rank-2 {
+  background: var(--as-colors-warning);
+  color: var(--as-colors-textInverse);
+}
+
+.rank-no.rank-3 {
+  background: var(--as-colors-primary);
+  color: var(--as-colors-textInverse);
+}
+
+.rank-country {
+  grid-area: country;
+  font-size: var(--as-fontSize-md);
+  font-weight: var(--as-fontWeight-medium);
+  color: var(--as-colors-textPrimary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-total {
+  grid-area: total;
+  font-size: var(--as-fontSize-sm);
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-health {
+  grid-area: health;
+  display: flex;
+  align-items: center;
+  gap: var(--as-spacing-sm);
+  margin-top: 2px;
+}
+
+.rank-health-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--as-colors-bgSubtle);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rank-health-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--as-colors-primary) 0%,
+    var(--as-colors-primaryHover) 100%
+  );
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rank-health-pct {
+  font-size: var(--as-fontSize-xs);
+  color: var(--as-colors-textMuted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ============ 国家下钻抽屉 ============ */
+.country-drawer-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+  z-index: 99;
+  animation: drawer-mask-in 0.25s ease-out;
+}
+
+@keyframes drawer-mask-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.country-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  max-width: 90vw;
+  height: 100vh;
+  background: var(--as-colors-bgPanel);
+  border-left: 1px solid var(--as-colors-border);
+  padding: var(--as-spacing-lg);
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: -8px 0 32px rgba(15, 61, 138, 0.12);
+  animation: drawer-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+}
+
+@keyframes drawer-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.country-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--as-spacing-md);
+}
+
+.country-drawer-head h2 {
+  margin: 0;
+  font-size: var(--as-fontSize-xl);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.country-drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--as-colors-textMuted);
+  font-size: 18px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: var(--as-radius-sm);
+  box-shadow: none;
+  transition: var(--as-transition-fast);
+}
+
+.country-drawer-close:hover {
+  background: var(--as-colors-bgHover);
+  color: var(--as-colors-textPrimary);
+  transform: none;
+  box-shadow: none;
+}
+
+.country-drawer-meta {
+  display: flex;
+  gap: var(--as-spacing-lg);
+  padding: var(--as-spacing-md);
+  background: var(--as-colors-bgSubtle);
+  border-radius: var(--as-radius-sm);
+}
+
+.country-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.country-stat-label {
+  font-size: var(--as-fontSize-xs);
+  color: var(--as-colors-textMuted);
+}
+
+.country-stat-value {
+  font-size: var(--as-fontSize-xl);
+  font-weight: var(--as-fontWeight-bold);
+  color: var(--as-colors-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.country-drawer-section {
+  margin: var(--as-spacing-sm) 0 0;
+  font-size: var(--as-fontSize-md);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.drawer-empty {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.country-topic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-sm);
+}
+
+.country-topic-list li {
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-bgSubtle);
+  border-radius: var(--as-radius-sm);
+  border: 1px solid transparent;
+  transition: var(--as-transition-fast);
+}
+
+.country-topic-list li:hover {
+  border-color: var(--as-colors-primary);
+  background: var(--as-colors-primarySoft);
+}
+
+.country-topic-list li a {
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-medium);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.country-topic-list li span {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-xs);
+  display: block;
+}
+
+.drawer-jump-btn {
+  align-self: flex-end;
+  margin-top: auto;
+}
+
+/* 窄屏时侧栏换行 */
+@media (max-width: 1200px) {
+  .overview-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.page-error {
+  margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
+}
+
+.page-loading {
+  margin: 0;
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}

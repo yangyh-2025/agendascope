@@ -35,7 +35,7 @@ export default function LoginPage() {
       }
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "登录失败，请稍后重试");
+      setError(err instanceof ApiError ? err.message : "登录失败,请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -61,7 +61,7 @@ export default function LoginPage() {
       await login(username.trim(), newPassword);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "修改密码失败，请稍后重试");
+      setError(err instanceof ApiError ? err.message : "修改密码失败,请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -71,8 +71,11 @@ export default function LoginPage() {
     return (
       <div className="login-page">
         <form className="login-card" onSubmit={handleChangePassword}>
-          <h1 className="login-title">首次登录请修改密码</h1>
-          <p className="login-subtitle">初始密码仅限首次使用，请设置新密码（≥10 位，含大小写字母与数字）</p>
+          <div className="login-brand">
+            <div className="login-brand-mark" aria-hidden="true">观</div>
+            <h1 className="login-title">首次登录请修改密码</h1>
+            <p className="login-subtitle">初始密码仅限首次使用,请设置新密码(≥10 位,含大小写字母与数字)</p>
+          </div>
 
           <label className="login-field">
             <span>新密码</span>
@@ -116,8 +119,11 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1 className="login-title">AgendaScope 观澜</h1>
-        <p className="login-subtitle">全球议程设置监控平台</p>
+        <div className="login-brand">
+          <div className="login-brand-mark" aria-hidden="true">观</div>
+          <h1 className="login-title">观澜</h1>
+          <p className="login-subtitle">AgendaScope · 全球议程设置监控平台</p>
+        </div>
 
         <label className="login-field">
           <span>账号</span>

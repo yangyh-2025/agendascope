@@ -52,7 +52,12 @@ export default function PersonsPage() {
 
   return (
     <div className="persons-page">
-      <h1>人物 / 机构监测</h1>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">人物 / 机构监测</h1>
+          <p className="page-desc">跟踪关键人物、智库与国际组织的首次发声信号。</p>
+        </div>
+      </header>
       <div className="filters">
         <select value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(1); }}>
           <option value="">全部类型</option>
@@ -96,11 +101,11 @@ export default function PersonsPage() {
                   {signals.length === 0 && <p className="drawer-empty">暂无发起信号</p>}
                   {signals.map((s, i) => (
                     <div key={i} className="signal-item">
-                      <p className="signal-quote">“{s.quote_zh || s.quote}”</p>
+                      <p className="signal-quote">"{s.quote_zh || s.quote}"</p>
                       <div className="signal-meta">
                         <span>首发 {s.first_seen_at?.slice(0, 16).replace("T", " ") ?? "—"}</span>
                         <span>跟进媒体 {s.media_follow_count} 家</span>
-                        {s.topic_name && <span>关联议题：{s.topic_name}</span>}
+                        {s.topic_name && <span>关联议题:{s.topic_name}</span>}
                         <span>置信度 {s.confidence}</span>
                       </div>
                     </div>

@@ -115,13 +115,18 @@ export default function AlertRulesPage() {
 
   return (
     <div className="alert-rules-page">
-      <h1>预警配置</h1>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">预警配置</h1>
+          <p className="page-desc">基于议题、国家与阈值规则配置预警通知。</p>
+        </div>
+      </header>
 
       <div className="rule-builder">
         <h2>新建规则</h2>
         <label>
           规则名称
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如：中美议题异常增幅" maxLength={100} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如:中美议题异常增幅" maxLength={100} />
         </label>
         <div className="builder-row">
           <span className="builder-label">监测国家</span>

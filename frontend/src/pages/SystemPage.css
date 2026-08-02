@@ -1,68 +1,99 @@
-/* 系统页：管理后台（概览/用户/审计/日志/许可）与普通用户会话信息视图。 */
+/* 系统页:管理后台(概览/用户/审计/日志/许可)与普通用户会话信息视图。 */
+
 .system-page {
-  padding: var(--as-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-lg);
   max-width: 1080px;
 }
 
 .page-title {
-  margin: 0 0 var(--as-spacing-sm);
+  margin: 0 0 var(--as-spacing-xs);
   font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
 }
 
 .page-desc {
-  color: var(--as-colors-textSecondary);
-  margin: 0 0 var(--as-spacing-md);
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
 }
 
 .page-error {
-  color: var(--as-colors-red);
   margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
 }
 
 .page-loading {
   color: var(--as-colors-textSecondary);
   margin: 0;
+  font-size: var(--as-fontSize-sm);
 }
 
 .status-msg {
-  color: #60a5fa;
+  color: var(--as-colors-success);
   font-size: var(--as-fontSize-sm);
   margin: 0;
 }
 
 .cell-danger {
-  color: var(--as-colors-red);
+  color: var(--as-colors-danger);
 }
 
-/* 管理后台页签 */
+/* 管理后台页签:胶囊式 */
 .sys-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--as-spacing-sm);
-  margin-bottom: var(--as-spacing-lg);
+  gap: var(--as-spacing-xs);
+  padding: 4px;
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  width: fit-content;
+  box-shadow: var(--as-shadow-xs);
 }
 
 .sys-tab {
-  background: var(--as-colors-navyDeep);
-  border: 1px solid var(--as-colors-border);
+  background: transparent;
+  border: none;
   color: var(--as-colors-textSecondary);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  border-radius: var(--as-radius-sm);
+  font-weight: var(--as-fontWeight-medium);
+  font-size: var(--as-fontSize-sm);
+  box-shadow: none;
+  transition: var(--as-transition-fast);
+}
+
+.sys-tab:hover:not(.active) {
+  background: var(--as-colors-bgHover);
+  color: var(--as-colors-primary);
+  transform: none;
+  box-shadow: none;
 }
 
 .sys-tab.active {
-  background: var(--as-colors-blue);
-  border-color: var(--as-colors-blueBright);
-  color: var(--as-colors-textPrimary);
+  background: var(--as-colors-primary);
+  color: var(--as-colors-textInverse);
+  box-shadow: var(--as-shadow-xs);
 }
 
 /* 面板通用结构 */
 .sys-panel {
-  background: var(--as-colors-navyPanel);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-md);
-  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  padding: var(--as-spacing-lg);
   display: flex;
   flex-direction: column;
   gap: var(--as-spacing-md);
+  box-shadow: var(--as-shadow-card);
 }
 
 .sys-panel-head {
@@ -70,17 +101,22 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--as-spacing-md);
+  padding-bottom: var(--as-spacing-sm);
+  border-bottom: 1px solid var(--as-colors-border);
 }
 
 .sys-panel-head h3 {
   margin: 0;
   font-size: var(--as-fontSize-lg);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
 }
 
 .sys-sub-title {
   margin: var(--as-spacing-sm) 0 0;
   font-size: var(--as-fontSize-md);
-  color: var(--as-colors-textSecondary);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
 }
 
 .sys-hint {
@@ -103,6 +139,7 @@
   gap: var(--as-spacing-xs);
   color: var(--as-colors-textSecondary);
   font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
 }
 
 .sys-filters input,
@@ -113,16 +150,18 @@
 .sys-field textarea {
   font: inherit;
   color: var(--as-colors-textPrimary);
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bg);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-sm);
   padding: var(--as-spacing-sm) var(--as-spacing-md);
   outline: none;
   resize: vertical;
+  transition: border-color var(--as-transition-fast), box-shadow var(--as-transition-fast);
 }
 
 .sys-field textarea:focus {
-  border-color: var(--as-colors-blueBright);
+  border-color: var(--as-colors-primary);
+  box-shadow: 0 0 0 3px var(--as-colors-primarySoft);
 }
 
 .sys-actions {
@@ -133,18 +172,24 @@
 /* 概览指标卡 */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--as-spacing-md);
 }
 
 .metric-card {
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bgSubtle);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-md);
   padding: var(--as-spacing-md);
   display: flex;
   flex-direction: column;
   gap: var(--as-spacing-xs);
+  transition: var(--as-transition-base);
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--as-shadow-sm);
 }
 
 .metric-label {
@@ -153,11 +198,14 @@
 }
 
 .metric-value {
-  font-size: var(--as-fontSize-xl);
+  font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-bold);
+  color: var(--as-colors-textPrimary);
+  font-variant-numeric: tabular-nums;
 }
 
 .metric-value.metric-danger {
-  color: var(--as-colors-red);
+  color: var(--as-colors-danger);
 }
 
 .metric-sub {
@@ -167,7 +215,7 @@
 
 /* 表格与分页 */
 .sys-table {
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-md);
   overflow: hidden;
@@ -189,6 +237,7 @@
 /* 日志查看器 */
 .sys-notice {
   border: 1px solid var(--as-colors-warning);
+  background: var(--as-colors-warningSoft);
   border-radius: var(--as-radius-md);
   padding: var(--as-spacing-md);
   color: var(--as-colors-warning);
@@ -210,35 +259,40 @@
 }
 
 .log-viewer {
-  background: var(--as-colors-navyDeep);
-  border: 1px solid var(--as-colors-border);
+  background: #1F2D3D;
+  color: #E5F0FB;
+  border: 1px solid var(--as-colors-borderStrong);
   border-radius: var(--as-radius-md);
   padding: var(--as-spacing-md);
   margin: 0;
   max-height: 480px;
   overflow: auto;
   font-size: var(--as-fontSize-xs);
+  font-family: "SF Mono", Consolas, "Courier New", monospace;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
-/* 许可提醒横幅：30d 警示黄，7d/1d/到期 预警红 */
+/* 许可提醒横幅 */
 .license-banner {
   margin: 0;
   border-radius: var(--as-radius-md);
   padding: var(--as-spacing-sm) var(--as-spacing-md);
   font-size: var(--as-fontSize-sm);
+  border-left: 3px solid;
 }
 
 .license-banner.warn {
-  border: 1px solid var(--as-colors-warning);
+  background: var(--as-colors-warningSoft);
+  border-color: var(--as-colors-warning);
   color: var(--as-colors-warning);
 }
 
 .license-banner.danger {
-  border: 1px solid var(--as-colors-red);
-  color: var(--as-colors-red);
+  background: var(--as-colors-dangerSoft);
+  border-color: var(--as-colors-danger);
+  color: var(--as-colors-danger);
 }
 
 .license-info {
@@ -255,11 +309,12 @@
 /* 普通用户会话信息 */
 .system-info {
   margin: 0;
-  background: var(--as-colors-navyPanel);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-md);
   padding: var(--as-spacing-md) var(--as-spacing-lg);
   max-width: 560px;
+  box-shadow: var(--as-shadow-card);
 }
 
 .system-info div {
@@ -277,8 +332,10 @@
   width: 96px;
   color: var(--as-colors-textSecondary);
   font-size: var(--as-fontSize-sm);
+  flex-shrink: 0;
 }
 
 .system-info dd {
   margin: 0;
+  color: var(--as-colors-textPrimary);
 }

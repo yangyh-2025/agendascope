@@ -1,26 +1,166 @@
-.topics-page { padding: 24px; }
-.topics-page h1 { color: #E2E8F0; margin-bottom: 16px; }
-.filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.filters select { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 6px 12px; border-radius: 4px; }
-.topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-.topic-card { background: #0f1f3d; border: 1px solid #1e3a5f; border-radius: 8px; padding: 16px; cursor: pointer; transition: border-color 0.2s; }
-.topic-card:hover { border-color: #1D4E9E; }
-.topic-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-.topic-card-header h3 { color: #E2E8F0; font-size: 1rem; margin: 0; flex: 1; }
-.category-tag { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: #1e3a5f; color: #60A5FA; }
-.topic-summary { color: #94A3B8; font-size: 0.85rem; margin-bottom: 8px; }
-.topic-card-footer { display: flex; gap: 8px; align-items: center; font-size: 0.8rem; }
-.lifecycle-tag { padding: 2px 6px; border-radius: 4px; }
-.lifecycle-tag.nascent { background: #172554; color: #60A5FA; }
-.lifecycle-tag.forming { background: #1e3a5f; color: #3B82F6; }
-.lifecycle-tag.confirmed { background: #14532d; color: #22c55e; }
-.lifecycle-tag.evolving { background: #4a1d96; color: #a78bfa; }
-.lifecycle-tag.archived { background: #374151; color: #9CA3AF; }
-.country-scope { color: #64748B; }
-.agenda-event-tag { background: #7f1d1d; color: #C8102E; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-.page-error { color: #C8102E; padding: 12px 0; }
-.list-degraded-row { margin: 0 0 12px; }
-.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 24px; }
-.pagination button { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-.pagination button:disabled { opacity: 0.4; cursor: default; }
-.pagination span { color: #94A3B8; }
+/* 议题主页:筛选 + 议题卡片网格;点击卡片跳转详情页。 */
+
+.topics-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-lg);
+}
+
+.filter-bar {
+  display: flex;
+  gap: var(--as-spacing-sm);
+  flex-wrap: wrap;
+  padding: var(--as-spacing-md);
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  box-shadow: var(--as-shadow-xs);
+}
+
+.filter-bar select {
+  min-width: 140px;
+}
+
+.page-error {
+  margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
+}
+
+.list-degraded-row {
+  margin: 0;
+}
+
+.empty-state {
+  background: var(--as-colors-bgPanel);
+  border: 1px dashed var(--as-colors-borderStrong);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-xxl);
+  text-align: center;
+  color: var(--as-colors-textSecondary);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+/* ============ 议题卡片网格 ============ */
+.topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--as-spacing-md);
+}
+
+.topic-card {
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  cursor: pointer;
+  box-shadow: var(--as-shadow-card);
+  transition: var(--as-transition-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-sm);
+}
+
+.topic-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--as-shadow-cardHover);
+  border-color: var(--as-colors-primary);
+}
+
+.topic-card.clickable:focus-visible {
+  outline: 2px solid var(--as-colors-primary);
+  outline-offset: 2px;
+}
+
+.topic-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--as-spacing-sm);
+}
+
+.topic-card-header h3 {
+  color: var(--as-colors-textPrimary);
+  font-size: var(--as-fontSize-md);
+  font-weight: var(--as-fontWeight-semibold);
+  margin: 0;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.topic-summary {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.topic-salience {
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.topic-card-footer {
+  display: flex;
+  gap: var(--as-spacing-xs);
+  align-items: center;
+  font-size: var(--as-fontSize-xs);
+  flex-wrap: wrap;
+}
+
+.category-tag {
+  font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-medium);
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
+  background: var(--as-colors-primarySoft);
+  color: var(--as-colors-primary);
+}
+
+.lifecycle-tag {
+  font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-medium);
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textSecondary);
+  flex-shrink: 0;
+}
+
+.lifecycle-tag.nascent { background: var(--as-colors-infoSoft); color: var(--as-colors-info); }
+.lifecycle-tag.forming { background: var(--as-colors-primarySoft); color: var(--as-colors-primary); }
+.lifecycle-tag.confirmed { background: var(--as-colors-successSoft); color: var(--as-colors-success); }
+.lifecycle-tag.evolving { background: #F3E8FF; color: #8B5CF6; }
+.lifecycle-tag.archived { background: var(--as-colors-bgSubtle); color: var(--as-colors-textMuted); }
+
+.country-scope {
+  color: var(--as-colors-textMuted);
+}
+
+.agenda-event-tag {
+  background: var(--as-colors-accentSoft);
+  color: var(--as-colors-accent);
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
+  font-weight: var(--as-fontWeight-semibold);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--as-spacing-md);
+  margin-top: var(--as-spacing-md);
+}
+
+.pagination-info {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}

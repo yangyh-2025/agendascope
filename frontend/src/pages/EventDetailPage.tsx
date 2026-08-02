@@ -13,11 +13,29 @@ import DegradedBadge from "../components/DegradedBadge";
 import { countryCenter, registerWorldMap } from "../map/worldMap";
 import "./EventDetailPage.css";
 
-/** 议程设置事件高亮色：中国红（视觉规范中红色仅用于预警与议程设置事件）。 */
+/** 议程设置事件高亮色:中国红(视觉规范中红色仅用于预警与议程设置事件)。 */
 const EVENT_RED = "#C8102E";
-const FOLLOWER_BLUE = "#3B82F6";
-/** 统计检验样本量下限：低于该值视为数据量不足，不下显著性结论。 */
+const FOLLOWER_BLUE = "#1A4FA0";
+/** 统计检验样本量下限:低于该值视为数据量不足,不下显著性结论。 */
 const MIN_SAMPLE_SIZE = 30;
+
+const ORIGIN_TYPE_LABEL: Record<string, string> = {
+  media: "媒体首发",
+  person: "人物首发",
+  gov: "政府首发",
+  org: "机构首发",
+  official: "官方首发",
+  social: "社交媒体首发",
+};
+
+const DETECTION_METHOD_LABEL: Record<string, string> = {
+  llm: "LLM 判定",
+  llm_judged: "LLM 判定",
+  heuristic: "规则判定",
+  manual: "人工标注",
+  auto: "自动检测",
+  statistical: "统计检测",
+};
 
 interface FlowEdge {
   from: string;
@@ -93,8 +111,14 @@ export default function EventDetailPage() {
       }));
     return {
       backgroundColor: "transparent",
+      animationDuration: 600,
       tooltip: {
         trigger: "item",
+        backgroundColor: "#FFFFFF",
+        borderColor: "#E4E9F2",
+        borderWidth: 1,
+        textStyle: { color: "#1F2D3D", fontSize: 13 },
+        extraCssText: "box-shadow: 0 4px 16px rgba(15, 61, 138, 0.12); border-radius: 8px;",
         formatter: (params: { seriesType: string; data?: { lag_hours?: number; from?: string; to?: string; name?: string } }) => {
           if (params.seriesType === "lines" && params.data) {
             return `${countryLabel(params.data.from)} → ${countryLabel(params.data.to)}<br/>时滞 ${params.data.lag_hours?.toFixed(1)} 小时`;
@@ -104,9 +128,9 @@ export default function EventDetailPage() {
       },
       geo: {
         map: "world",
-        roam: true,
+        roam: false,
         silent: true,
-        itemStyle: { areaColor: "#132743", borderColor: "#274B84", borderWidth: 0.5 },
+        itemStyle: { areaColor: "#F0F4FA", borderColor: "#FFFFFF", borderWidth: 0.6 },
         emphasis: { disabled: true },
       },
       series: [
@@ -136,11 +160,14 @@ export default function EventDetailPage() {
             show: true,
             position: "right",
             formatter: (p: { data: { label: string } }) => p.data.label,
-            color: "#F0F4FA",
+            color: "#1F2D3D",
             fontSize: 11,
+            fontWeight: 600,
+            textBorderColor: "#FFFFFF",
+            textBorderWidth: 2,
           },
           data: points.has(origin)
-            ? [{ name: countryLabel(origin), value: points.get(origin)!, label: `首发：${countryLabel(origin)}` }]
+            ? [{ name: countryLabel(origin), value: points.get(origin)!, label: `首发:${countryLabel(origin)}` }]
             : [],
         },
         {
@@ -153,8 +180,10 @@ export default function EventDetailPage() {
             show: true,
             position: "right",
             formatter: (p: { data: { label: string } }) => p.data.label,
-            color: "#9DB2D0",
+            color: "#5E6D82",
             fontSize: 10,
+            textBorderColor: "#FFFFFF",
+            textBorderWidth: 2,
           },
           data: [...points.entries()]
             .filter(([code]) => code !== origin)
@@ -182,8 +211,8 @@ export default function EventDetailPage() {
   const sampleInsufficient = !stats || (stats.sample_size ?? 0) < MIN_SAMPLE_SIZE;
   const tests: { name: string; p: number | null; extra?: string }[] = stats
     ? [
-        { name: "互相关（xcorr）", p: stats.xcorr?.p ?? null, extra: stats.xcorr ? `最佳时滞 ${stats.xcorr.best_lag_days} 天 · r=${stats.xcorr.r?.toFixed(3)}` : undefined },
-        { name: "格兰杰检验", p: stats.granger?.p ?? null, extra: stats.granger?.direction ? `方向：${stats.granger.direction}` : undefined },
+        { name: "互相关(xcorr)", p: stats.xcorr?.p ?? null, extra: stats.xcorr ? `最佳时滞 ${stats.xcorr.best_lag_days} 天 · r=${stats.xcorr.r?.toFixed(3)}` : undefined },
+        { name: "格兰杰检验", p: stats.granger?.p ?? null, extra: stats.granger?.direction ? `方向:${stats.granger.direction}` : undefined },
         { name: "QAP 相关", p: stats.qap?.p ?? null, extra: stats.qap ? `r=${stats.qap.r?.toFixed(3)}` : undefined },
       ]
     : [];
@@ -201,22 +230,22 @@ export default function EventDetailPage() {
         <div className="event-meta-grid">
           <div><span>首发国</span><b className="origin-red">{countryLabel(event.origin_country_code)}</b></div>
           <div><span>首发时间</span><b>{event.origin_at?.slice(0, 16).replace("T", " ") ?? "—"}</b></div>
-          <div><span>首发类型</span><b>{event.origin_type}</b></div>
+          <div><span>首发类型</span><b>{ORIGIN_TYPE_LABEL[event.origin_type] ?? event.origin_type}</b></div>
           <div><span>首发媒体</span><b>{event.origin_source?.name ?? "—"}</b></div>
           <div><span>首发实体</span><b>{event.origin_entity?.name ?? "—"}</b></div>
-          <div><span>检测方式</span><b>{event.detection_method}</b></div>
+          <div><span>检测方式</span><b>{DETECTION_METHOD_LABEL[event.detection_method] ?? event.detection_method}</b></div>
           <div><span>跟随国数</span><b>{event.follower_sequence?.length ?? 0}</b></div>
           <div><span>判定轮次</span><b>第 {event.round_no} 轮</b></div>
         </div>
-        {event.origin_quote && <blockquote className="origin-quote">“{event.origin_quote}”</blockquote>}
+        {event.origin_quote && <blockquote className="origin-quote">"{event.origin_quote}"</blockquote>}
         {event.topic_id && (
-          <p className="topic-link-row">关联议题：<Link to={`/topics/${event.topic_id}`}>{event.topic_name ?? event.topic_id}</Link></p>
+          <p className="topic-link-row">关联议题:<Link to={`/topics/${event.topic_id}`}>{event.topic_name ?? event.topic_id}</Link></p>
         )}
       </div>
 
       {flowOption && edges.length > 0 && (
         <div className="event-detail-card">
-          <h2>跨国传播流向（首发国 → 跟随国，箭头标注时滞）</h2>
+          <h2>跨国传播流向(首发国 → 跟随国,箭头标注时滞)</h2>
           <ReactECharts option={flowOption} style={{ height: "52vh" }} />
         </div>
       )}
@@ -224,16 +253,16 @@ export default function EventDetailPage() {
       <div className="event-detail-card">
         <h2>统计检验结果</h2>
         {sampleInsufficient ? (
-          <p className="insufficient">数据量不足（样本 {stats?.sample_size ?? 0}，需 ≥{MIN_SAMPLE_SIZE}），暂不下显著性结论。</p>
+          <p className="insufficient">数据量不足(样本 {stats?.sample_size ?? 0},需 ≥{MIN_SAMPLE_SIZE}),暂不下显著性结论。</p>
         ) : (
           <div className="stats-grid">
             {tests.map((t) => (
               <div key={t.name} className="stat-test">
                 <span className="stat-test-name">{t.name}</span>
                 {t.p != null && t.p < 0.05 ? (
-                  <span className="sig-yes">显著（p={t.p.toFixed(4)} &lt; 0.05）</span>
+                  <span className="sig-yes">显著(p={t.p.toFixed(4)} &lt; 0.05)</span>
                 ) : (
-                  <span className="sig-no">不显著{t.p != null ? `（p=${t.p.toFixed(4)}）` : ""}</span>
+                  <span className="sig-no">不显著{t.p != null ? `(p=${t.p.toFixed(4)})` : ""}</span>
                 )}
                 {t.extra && <span className="stat-extra">{t.extra}</span>}
               </div>
@@ -244,7 +273,7 @@ export default function EventDetailPage() {
             </div>
           </div>
         )}
-        <p className="causality-note">统计关联≠因果——检验结果仅反映报道曲线的统计相关性，不构成因果证据。</p>
+        <p className="causality-note">统计关联≠因果——检验结果仅反映报道曲线的统计相关性,不构成因果证据。</p>
         {stats?.disclaimer && <p className="stat-disclaimer">{stats.disclaimer}</p>}
       </div>
 

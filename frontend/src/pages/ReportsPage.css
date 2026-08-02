@@ -1,30 +1,207 @@
-.reports-page { padding: 24px; }
-.reports-page h1 { color: #E2E8F0; margin-bottom: 16px; }
-.report-form { display: flex; flex-direction: column; gap: 12px; max-width: 520px; }
-.report-form label { display: flex; flex-direction: column; gap: 4px; color: #9DB2D0; font-size: 0.85rem; }
-.report-form select, .report-form input { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 8px 12px; border-radius: 4px; }
-.report-form button { background: #1D4E9E; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer; }
-.report-form button:disabled { opacity: 0.5; cursor: default; }
-.time-range { display: flex; gap: 12px; }
-.time-range label { flex: 1; }
-.country-picker { display: flex; flex-direction: column; gap: 6px; }
-.picker-label { color: #9DB2D0; font-size: 0.85rem; }
-.country-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.country-chip { background: #1e3a5f; color: #9DB2D0; border: 1px solid #2a4a70; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
-.country-chip.active { background: #1D4E9E; color: #F0F4FA; border-color: #3D74C4; }
-.watermark-hint { color: #64748B; font-size: 0.8rem; }
-.status-msg { color: #60A5FA; font-size: 0.85rem; }
-.page-error { color: #C8102E; font-size: 0.9rem; }
-.export-list-title { color: #E2E8F0; font-size: 1.1rem; margin: 32px 0 12px; }
-.export-table { width: 100%; border-collapse: collapse; }
-.export-table th, .export-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #1e3a5f; color: #E2E8F0; font-size: 0.9rem; }
-.export-table th { color: #9DB2D0; font-weight: 500; }
-.export-empty { color: #64748B; text-align: center; }
-.export-status { padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
-.export-status-pending { background: #1e3a5f; color: #9DB2D0; }
-.export-status-processing { background: #1D4E9E; color: #F0F4FA; }
-.export-status-done { background: #14532d; color: #2FA96B; }
-.export-status-failed { background: #7A0A1E; color: #F0F4FA; }
-.export-error { color: #C8102E; font-size: 0.8rem; margin-left: 8px; }
-.download-link { color: #3D74C4; }
-.download-pending { color: #64748B; }
+/* 报告导出:左侧表单 + 右侧导出列表。 */
+
+.reports-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-lg);
+}
+
+.reports-page .page-title {
+  margin: 0 0 var(--as-spacing-xs);
+  font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.reports-page .page-desc {
+  margin: 0;
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+}
+
+.report-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+  max-width: 560px;
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  padding: var(--as-spacing-lg);
+  box-shadow: var(--as-shadow-card);
+}
+
+.report-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-xs);
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.report-form button {
+  align-self: flex-start;
+}
+
+.time-range {
+  display: flex;
+  gap: var(--as-spacing-md);
+}
+
+.time-range label {
+  flex: 1;
+}
+
+.country-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-xs);
+}
+
+.picker-label {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.country-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--as-spacing-xs);
+}
+
+.country-chip {
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textSecondary);
+  border: 1px solid var(--as-colors-border);
+  padding: 4px var(--as-spacing-md);
+  border-radius: 999px;
+  font-size: var(--as-fontSize-sm);
+  cursor: pointer;
+  box-shadow: none;
+  transition: var(--as-transition-fast);
+}
+
+.country-chip:hover:not(.active) {
+  background: var(--as-colors-bgHover);
+  color: var(--as-colors-primary);
+  border-color: var(--as-colors-primary);
+  transform: none;
+  box-shadow: none;
+}
+
+.country-chip.active {
+  background: var(--as-colors-primary);
+  color: var(--as-colors-textInverse);
+  border-color: var(--as-colors-primary);
+}
+
+.watermark-hint {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-xs);
+}
+
+.status-msg {
+  color: var(--as-colors-success);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.page-error {
+  margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
+}
+
+.export-list-title {
+  color: var(--as-colors-textPrimary);
+  font-size: var(--as-fontSize-lg);
+  font-weight: var(--as-fontWeight-semibold);
+  margin: 0;
+}
+
+.export-table-wrap {
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  overflow: hidden;
+  box-shadow: var(--as-shadow-card);
+}
+
+.export-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.export-table th,
+.export-table td {
+  text-align: left;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  border-bottom: 1px solid var(--as-colors-border);
+  color: var(--as-colors-textPrimary);
+  font-size: var(--as-fontSize-md);
+}
+
+.export-table th {
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textSecondary);
+  font-weight: var(--as-fontWeight-medium);
+  font-size: var(--as-fontSize-sm);
+}
+
+.export-table tbody tr:hover {
+  background: var(--as-colors-bgHover);
+}
+
+.export-empty {
+  color: var(--as-colors-textMuted);
+  text-align: center;
+  padding: var(--as-spacing-lg) !important;
+}
+
+.export-status {
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
+  font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.export-status-pending {
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textMuted);
+}
+
+.export-status-processing {
+  background: var(--as-colors-infoSoft);
+  color: var(--as-colors-info);
+}
+
+.export-status-done {
+  background: var(--as-colors-successSoft);
+  color: var(--as-colors-success);
+}
+
+.export-status-failed {
+  background: var(--as-colors-dangerSoft);
+  color: var(--as-colors-danger);
+}
+
+.export-error {
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-xs);
+  margin-left: var(--as-spacing-sm);
+}
+
+.download-link {
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.download-pending {
+  color: var(--as-colors-textMuted);
+}

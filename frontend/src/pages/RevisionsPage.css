@@ -1,34 +1,221 @@
-.revisions-page { padding: 24px; max-width: 1000px; }
-.revisions-page h1 { color: #E2E8F0; margin-bottom: 8px; }
-.page-desc { color: #64748B; font-size: 0.85rem; margin-bottom: 16px; }
-.page-error { color: #C8102E; }
-.page-loading { color: #9DB2D0; }
-.status-msg { color: #60A5FA; font-size: 0.85rem; }
-.revision-event-list { display: flex; flex-direction: column; gap: 10px; }
-.revision-event-card { background: #0f1f3d; border: 1px solid #1e3a5f; border-radius: 8px; overflow: hidden; }
-.event-head { display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: none; padding: 14px 16px; cursor: pointer; text-align: left; color: #E2E8F0; font: inherit; flex-wrap: wrap; }
-.event-head:hover { background: #10336E; }
-.event-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: #1e3a5f; color: #9DB2D0; }
-.event-status.st-confirmed { background: #7A0A1E; color: #F0F4FA; }
-.event-status.st-suspected { background: #4a2d06; color: #D9A02B; }
-.event-status.st-revised { background: #1D4E9E; color: #F0F4FA; }
-.event-topic { font-weight: 600; }
-.event-origin { color: #9DB2D0; font-size: 0.85rem; }
-.event-rev-count { margin-left: auto; color: #60A5FA; font-size: 0.85rem; }
-.event-body { border-top: 1px solid #1e3a5f; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
-.event-actions { display: flex; gap: 10px; align-items: center; }
-.event-actions button { font-size: 0.85rem; padding: 6px 14px; }
-.detail-link { color: #3D74C4; font-size: 0.85rem; }
-.revision-item { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
-.revision-item.rejected { opacity: 0.55; }
-.revision-main { display: flex; gap: 12px; align-items: baseline; flex: 1; flex-wrap: wrap; }
-.revision-field { color: #60A5FA; font-weight: 600; min-width: 90px; }
-.revision-change { color: #E2E8F0; flex: 1; min-width: 200px; word-break: break-all; }
-.revision-meta { color: #64748B; font-size: 0.8rem; }
-.reject-form { display: flex; gap: 8px; align-items: center; border-top: 1px dashed #274B84; padding-top: 10px; }
-.reject-form input { flex: 1; background: #071E42; color: #F0F4FA; border: 1px solid #274B84; border-radius: 4px; padding: 8px 12px; }
-.drawer-empty { color: #64748B; font-size: 0.85rem; margin: 0; }
-.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 24px; }
-.pagination button { background: #1e3a5f; color: #E2E8F0; border: 1px solid #2a4a70; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-.pagination button:disabled { opacity: 0.4; cursor: default; }
-.pagination span { color: #94A3B8; }
+/* 修正历史:事件卡折叠 + 修正条目。 */
+
+.revisions-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-lg);
+  max-width: 1080px;
+}
+
+.revisions-page .page-title {
+  margin: 0 0 var(--as-spacing-xs);
+  font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.page-desc {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.page-error {
+  margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
+}
+
+.page-loading {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.status-msg {
+  color: var(--as-colors-success);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.revision-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-sm);
+}
+
+.revision-event-card {
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  overflow: hidden;
+  box-shadow: var(--as-shadow-card);
+  transition: var(--as-transition-base);
+}
+
+.revision-event-card:hover {
+  box-shadow: var(--as-shadow-cardHover);
+}
+
+.event-head {
+  display: flex;
+  align-items: center;
+  gap: var(--as-spacing-sm);
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  cursor: pointer;
+  text-align: left;
+  color: var(--as-colors-textPrimary);
+  font: inherit;
+  flex-wrap: wrap;
+  box-shadow: none;
+  transition: var(--as-transition-fast);
+}
+
+.event-head:hover {
+  background: var(--as-colors-bgHover);
+  transform: none;
+  box-shadow: none;
+}
+
+.event-status {
+  font-size: var(--as-fontSize-xs);
+  font-weight: var(--as-fontWeight-medium);
+  padding: 2px var(--as-spacing-sm);
+  border-radius: 999px;
+  background: var(--as-colors-bgSubtle);
+  color: var(--as-colors-textSecondary);
+}
+
+.event-status.st-confirmed {
+  background: var(--as-colors-dangerSoft);
+  color: var(--as-colors-danger);
+}
+
+.event-status.st-suspected {
+  background: var(--as-colors-warningSoft);
+  color: var(--as-colors-warning);
+}
+
+.event-status.st-revised {
+  background: var(--as-colors-primarySoft);
+  color: var(--as-colors-primary);
+}
+
+.event-topic {
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.event-origin {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}
+
+.event-rev-count {
+  margin-left: auto;
+  color: var(--as-colors-primary);
+  font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.event-body {
+  border-top: 1px solid var(--as-colors-border);
+  padding: var(--as-spacing-md) var(--as-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+  background: var(--as-colors-bgSubtle);
+}
+
+.event-actions {
+  display: flex;
+  gap: var(--as-spacing-sm);
+  align-items: center;
+}
+
+.event-actions button {
+  font-size: var(--as-fontSize-sm);
+  padding: 6px var(--as-spacing-md);
+}
+
+.detail-link {
+  color: var(--as-colors-primary);
+  font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
+}
+
+.revision-item {
+  display: flex;
+  align-items: center;
+  gap: var(--as-spacing-md);
+  font-size: var(--as-fontSize-sm);
+}
+
+.revision-item.rejected {
+  opacity: 0.55;
+}
+
+.revision-main {
+  display: flex;
+  gap: var(--as-spacing-md);
+  align-items: baseline;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.revision-field {
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-semibold);
+  min-width: 90px;
+}
+
+.revision-change {
+  color: var(--as-colors-textPrimary);
+  flex: 1;
+  min-width: 200px;
+  word-break: break-all;
+}
+
+.revision-meta {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-xs);
+}
+
+.reject-form {
+  display: flex;
+  gap: var(--as-spacing-sm);
+  align-items: center;
+  border-top: 1px dashed var(--as-colors-borderStrong);
+  padding-top: var(--as-spacing-md);
+}
+
+.reject-form input {
+  flex: 1;
+}
+
+.drawer-empty {
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+  margin: 0;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--as-spacing-md);
+  margin-top: var(--as-spacing-md);
+}
+
+.pagination-info,
+.pagination span {
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}

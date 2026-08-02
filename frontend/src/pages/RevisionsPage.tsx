@@ -101,11 +101,15 @@ export default function RevisionsPage() {
 
   return (
     <div className="revisions-page">
-      <h1>修正历史</h1>
-      <p className="page-desc">
-        事件级修正留痕（revision_log）与人工处置入口；议题误并回滚请在
-        <Link to="/topics">议题详情页</Link>“已并入的源议题”处操作。
-      </p>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">修正历史</h1>
+          <p className="page-desc">
+            事件级修正留痕与人工处置入口;议题误并回滚请在
+            <Link to="/topics">议题详情页</Link>"已并入的源议题"处操作。
+          </p>
+        </div>
+      </header>
 
       {error && <p className="page-error" role="alert">{error}</p>}
       {actionMsg && <p className="status-msg">{actionMsg}</p>}
@@ -134,7 +138,7 @@ export default function RevisionsPage() {
                       <button onClick={() => handleConfirm(ev.id)}>人工确认</button>
                     )}
                     {ev.status !== "dismissed" && (
-                      <button className="as-btn-danger" onClick={() => handleDismiss(ev.id)}>排除（误报）</button>
+                      <button className="as-btn-danger" onClick={() => handleDismiss(ev.id)}>排除(误报)</button>
                     )}
                   </div>
                   {revs.length === 0 && <p className="drawer-empty">该事件暂无修正记录</p>}
@@ -144,7 +148,7 @@ export default function RevisionsPage() {
                         <span className="revision-field">#{r.seq} {r.field}</span>
                         <span className="revision-change">{String(r.before_value)} → {String(r.after_value)}</span>
                         <span className="revision-meta">
-                          {r.actor === "human" ? "人工" : `机器${r.model ? `（${r.model}）` : ""}`} · {r.revised_at?.slice(0, 16).replace("T", " ")}
+                          {r.actor === "human" ? "人工" : `机器${r.model ? `(${r.model})` : ""}`} · {r.revised_at?.slice(0, 16).replace("T", " ")}
                           {r.rejected && " · 已否决"}
                         </span>
                       </div>
@@ -161,7 +165,7 @@ export default function RevisionsPage() {
                   {rejecting && rejecting.eventId === ev.id && (
                     <div className="reject-form">
                       <input
-                        placeholder="否决原因（必填）"
+                        placeholder="否决原因(必填)"
                         value={rejecting.reason}
                         onChange={(e) => setRejecting({ ...rejecting, reason: e.target.value })}
                       />

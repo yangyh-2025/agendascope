@@ -1,4 +1,5 @@
-/* 全局样式：具体取值全部来自 theme/tokens.ts 注入的 CSS 变量（--as-*）。 */
+/* 全局样式:具体取值全部来自 theme/tokens.ts 注入的 CSS 变量(--as-*)。
+   亮色系"公安蓝 + 中国红"主题。 */
 * {
   box-sizing: border-box;
 }
@@ -11,82 +12,134 @@ body,
 }
 
 body {
-  background: var(--as-colors-navy);
+  background: var(--as-colors-bgSubtle);
   color: var(--as-colors-textPrimary);
   font-family:
     "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Helvetica Neue",
     Arial, sans-serif;
   font-size: var(--as-fontSize-md);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 页面切换 fade 动画 */
+@keyframes as-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.as-page-enter {
+  animation: as-fade-in 0.2s ease-out;
 }
 
 a {
-  color: var(--as-colors-blueBright);
+  color: var(--as-colors-primary);
   text-decoration: none;
+  transition: color var(--as-transition-fast, 0.15s ease);
+}
+
+a:hover {
+  color: var(--as-colors-primaryHover);
 }
 
 button {
   font: inherit;
+  font-weight: var(--as-fontWeight-medium, 500);
   cursor: pointer;
   border: none;
   border-radius: var(--as-radius-sm);
   padding: var(--as-spacing-sm) var(--as-spacing-md);
-  background: var(--as-colors-blue);
-  color: var(--as-colors-textPrimary);
-  transition: background 0.15s ease;
+  background: var(--as-colors-primary);
+  color: var(--as-colors-textInverse);
+  box-shadow: var(--as-shadow-xs);
+  transition: var(--as-transition-base, all 0.25s cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 button:hover:not(:disabled) {
-  background: var(--as-colors-blueBright);
+  background: var(--as-colors-primaryHover);
+  box-shadow: var(--as-shadow-sm);
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  background: var(--as-colors-primaryActive);
+  transform: translateY(0);
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 button.as-btn-ghost {
   background: transparent;
-  border: 1px solid var(--as-colors-border);
+  border: 1px solid var(--as-colors-borderStrong);
   color: var(--as-colors-textSecondary);
+  box-shadow: none;
 }
 
 button.as-btn-ghost:hover:not(:disabled) {
-  background: var(--as-colors-navyPanel);
-  color: var(--as-colors-textPrimary);
+  background: var(--as-colors-bgHover);
+  color: var(--as-colors-primary);
+  border-color: var(--as-colors-primary);
+  box-shadow: none;
+  transform: none;
 }
 
 button.as-btn-danger {
-  background: var(--as-colors-red);
+  background: var(--as-colors-accent);
 }
 
 button.as-btn-danger:hover:not(:disabled) {
-  background: var(--as-colors-redDeep);
+  background: var(--as-colors-accentHover);
+  box-shadow: var(--as-shadow-sm);
 }
 
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: var(--as-colors-textPrimary);
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bg);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-sm);
   padding: var(--as-spacing-sm) var(--as-spacing-md);
   outline: none;
+  transition: border-color var(--as-transition-fast, 0.15s ease),
+    box-shadow var(--as-transition-fast, 0.15s ease);
 }
 
 input:focus,
-select:focus {
-  border-color: var(--as-colors-blueBright);
+select:focus,
+textarea:focus {
+  border-color: var(--as-colors-primary);
+  box-shadow: 0 0 0 3px var(--as-colors-primarySoft);
 }
 
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--as-colors-textMuted);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--as-colors-bgSubtle);
+  cursor: not-allowed;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--as-colors-bgPanel);
 }
 
 th,
@@ -95,10 +148,78 @@ td {
   padding: var(--as-spacing-sm) var(--as-spacing-md);
   border-bottom: 1px solid var(--as-colors-border);
   font-size: var(--as-fontSize-md);
+  color: var(--as-colors-textPrimary);
 }
 
 th {
+  background: var(--as-colors-bgSubtle);
   color: var(--as-colors-textSecondary);
-  font-weight: 500;
+  font-weight: var(--as-fontWeight-medium, 500);
+  font-size: var(--as-fontSize-sm);
+  letter-spacing: 0.02em;
+}
+
+tbody tr {
+  transition: background var(--as-transition-fast, 0.15s ease);
+}
+
+tbody tr:hover {
+  background: var(--as-colors-bgHover);
+}
+
+/* 滚动条美化(webkit 内核) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--as-colors-borderStrong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--as-colors-textMuted);
+}
+
+/* ============ 通用页面头(所有列表/详情页统一) ============ */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--as-spacing-md);
+  flex-wrap: wrap;
+}
+
+.page-header .page-title {
+  margin: 0 0 var(--as-spacing-xs);
+  font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+  letter-spacing: -0.01em;
+}
+
+.page-header .page-desc {
+  margin: 0;
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+}
+
+/* 通用分页样式 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--as-spacing-md);
+  margin-top: var(--as-spacing-md);
+}
+
+.pagination-info,
+.pagination span {
+  color: var(--as-colors-textSecondary);
   font-size: var(--as-fontSize-sm);
 }

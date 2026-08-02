@@ -1,3 +1,5 @@
+/* 媒体源管理:表格卡片化。 */
+
 .sources-header {
   display: flex;
   align-items: flex-start;
@@ -6,15 +8,81 @@
   margin-bottom: var(--as-spacing-md);
 }
 
-.sources-table {
-  background: var(--as-colors-navyPanel);
+.sources-header .page-title {
+  margin: 0 0 var(--as-spacing-xs);
+  font-size: var(--as-fontSize-xxl);
+  font-weight: var(--as-fontWeight-semibold);
+  color: var(--as-colors-textPrimary);
+}
+
+.sources-header .page-desc {
+  margin: 0;
+  color: var(--as-colors-textMuted);
+  font-size: var(--as-fontSize-sm);
+}
+
+.sources-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-lg);
+}
+
+.filter-bar {
+  display: flex;
+  gap: var(--as-spacing-sm);
+  flex-wrap: wrap;
+  align-items: center;
+  padding: var(--as-spacing-md);
+  background: var(--as-colors-bgPanel);
+  border: 1px solid var(--as-colors-border);
+  border-radius: var(--as-radius-md);
+  box-shadow: var(--as-shadow-xs);
+}
+
+.filter-bar input[type="search"] {
+  flex: 1;
+  min-width: 220px;
+}
+
+.filter-bar select {
+  min-width: 140px;
+}
+
+.page-error {
+  margin: 0;
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  background: var(--as-colors-dangerSoft);
+  border-left: 3px solid var(--as-colors-danger);
+  border-radius: var(--as-radius-sm);
+  color: var(--as-colors-danger);
+  font-size: var(--as-fontSize-sm);
+}
+
+.page-loading {
+  margin: 0;
+  color: var(--as-colors-textSecondary);
+  font-size: var(--as-fontSize-sm);
+}
+
+.sources-table-wrap {
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-md);
   overflow: hidden;
+  box-shadow: var(--as-shadow-card);
+}
+
+.sources-table {
+  background: var(--as-colors-bgPanel);
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: none;
 }
 
 .source-name {
   color: var(--as-colors-textPrimary);
+  font-weight: var(--as-fontWeight-medium);
 }
 
 .source-name-zh {

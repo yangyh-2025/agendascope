@@ -1,12 +1,14 @@
+/* 自助配源面板:白卡片浮在浅灰背景上。 */
 .create-panel {
-  background: var(--as-colors-navyPanel);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-md);
-  padding: var(--as-spacing-md);
+  padding: var(--as-spacing-lg);
   margin-bottom: var(--as-spacing-lg);
   display: flex;
   flex-direction: column;
   gap: var(--as-spacing-md);
+  box-shadow: var(--as-shadow-card);
 }
 
 .create-preview-form {
@@ -18,23 +20,39 @@
   flex: 1;
 }
 
+.preview-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--as-spacing-md);
+}
+
 .preview-meta {
   margin: 0;
   color: var(--as-colors-textSecondary);
   font-size: var(--as-fontSize-sm);
 }
 
+.preview-meta strong {
+  color: var(--as-colors-primary);
+  font-weight: var(--as-fontWeight-semibold);
+}
+
 .preview-warnings {
   margin: 0;
-  padding-left: var(--as-spacing-lg);
+  padding: var(--as-spacing-sm) var(--as-spacing-md);
+  padding-left: var(--as-spacing-xl);
+  background: var(--as-colors-warningSoft);
+  border-left: 3px solid var(--as-colors-warning);
+  border-radius: var(--as-radius-sm);
   color: var(--as-colors-warning);
   font-size: var(--as-fontSize-sm);
 }
 
 .preview-samples {
-  background: var(--as-colors-navyDeep);
+  background: var(--as-colors-bgPanel);
   border: 1px solid var(--as-colors-border);
   border-radius: var(--as-radius-sm);
+  overflow: hidden;
 }
 
 .preview-sample-title {
@@ -54,7 +72,7 @@
 
 .create-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--as-spacing-md);
 }
 
@@ -63,6 +81,7 @@
   flex-direction: column;
   gap: var(--as-spacing-xs);
   font-size: var(--as-fontSize-sm);
+  font-weight: var(--as-fontWeight-medium);
   color: var(--as-colors-textSecondary);
 }
 
