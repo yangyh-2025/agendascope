@@ -72,7 +72,7 @@ export default function LoginPage() {
       <div className="login-page">
         <form className="login-card" onSubmit={handleChangePassword}>
           <div className="login-brand">
-            <div className="login-brand-mark" aria-hidden="true">观</div>
+            <img className="login-brand-mark" src="/logo.png" alt="观澜 Logo" aria-hidden="true" />
             <h1 className="login-title">首次登录请修改密码</h1>
             <p className="login-subtitle">初始密码仅限首次使用,请设置新密码(≥10 位,含大小写字母与数字)</p>
           </div>
@@ -120,7 +120,7 @@ export default function LoginPage() {
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-brand">
-          <div className="login-brand-mark" aria-hidden="true">观</div>
+          <img className="login-brand-mark" src="/logo.png" alt="观澜 Logo" aria-hidden="true" />
           <h1 className="login-title">观澜</h1>
           <p className="login-subtitle">AgendaScope · 全球议程设置监控平台</p>
         </div>

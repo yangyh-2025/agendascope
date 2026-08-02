@@ -31,20 +31,10 @@
 }
 
 .login-brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--as-radius-md);
-  background: linear-gradient(
-    135deg,
-    var(--as-colors-primary) 0%,
-    var(--as-colors-primaryActive) 100%
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--as-colors-textInverse);
-  font-size: var(--as-fontSize-xxl);
-  font-weight: var(--as-fontWeight-bold);
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  object-fit: cover;
   box-shadow: var(--as-shadow-md);
 }
 

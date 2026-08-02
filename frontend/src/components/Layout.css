@@ -26,14 +26,10 @@
 }
 
 .layout-brand-mark {
-  width: 6px;
+  width: 36px;
   height: 36px;
-  border-radius: 3px;
-  background: linear-gradient(
-    180deg,
-    var(--as-colors-primary) 0%,
-    var(--as-colors-primaryActive) 100%
-  );
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
   box-shadow: var(--as-shadow-xs);
 }
