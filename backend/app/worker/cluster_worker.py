@@ -49,7 +49,9 @@ class ClusterWorker:
         self.assigner = assigner or OnlineAssigner()
         self.recluster_job = recluster_job or ReclusterJob()
         self._attempts: dict[str, int] = {}
-        self._last_recluster = 0.0  # 启动即到期：首轮先校正一次再进入在线归簇循环
+        # 低内存适配：初始为当前时刻，首轮不立即跑全局重聚类（recluster 对大量文章
+        # 聚类内存密集，会占住进程饿死在线归簇；延迟到首个周期再校正，在线归簇先跑）
+        self._last_recluster = time.monotonic()
 
     def _reclaim_pending(self) -> list:
         try:
