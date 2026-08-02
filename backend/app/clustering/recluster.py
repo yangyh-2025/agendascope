@@ -15,6 +15,7 @@
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 import redis as redis_lib
 from sqlalchemy import select
@@ -33,10 +34,13 @@ from app.clustering.repository import (
     active_topics,
     archive_empty_topics,
     create_topic,
+    get_assignment,
     lifecycle_for_size,
+    load_no_merge_pairs,
     load_window_docs,
     move_assignment,
     nearest_active_topic,
+    norm_pair,
     representative_titles,
     topic_size,
     unassign_article,
@@ -46,8 +50,32 @@ from app.clustering.snapshot import mark_correcting, mark_ready, publish_snapsho
 from app.clustering.types import ClusterDoc, StrategyResult
 from app.core.logging import get_logger
 from app.models.article import Article
+from app.models.topic import Topic
 
 logger = get_logger("clustering.recluster")
+
+
+def _cluster_quality_metrics(result: StrategyResult) -> tuple[float, float]:
+    """本轮聚类质量统计：簇内凝聚度均值 + 簇间分离度均值。
+
+    - 凝聚度（cohesion）：簇成员对质心平均 cosine（ClusterInfo.cohesion 已算），
+      越高说明簇内文章越同质；
+    - 分离度（separation）：两两簇质心 cosine 的最小值取平均，越低说明簇间越可分。
+    无簇/单簇时返回 (0.0, 0.0)。供快照与日志观测阈值漂移（质量监控闭环）。
+    """
+    clusters = result.clusters
+    if not clusters:
+        return 0.0, 0.0
+    avg_cohesion = sum(c.cohesion for c in clusters) / len(clusters)
+    if len(clusters) < 2:
+        return avg_cohesion, 0.0
+    sep_values: list[float] = []
+    for i in range(len(clusters)):
+        for j in range(i + 1, len(clusters)):
+            a, b = clusters[i].centroid, clusters[j].centroid
+            dot = sum(x * y for x, y in zip(a, b, strict=True))
+            sep_values.append(dot)  # 质心已 L2 归一化，dot = cosine
+    return avg_cohesion, min(sep_values)
 
 
 @dataclass
@@ -70,6 +98,8 @@ class ReclusterReport:
     singletons: int = 0
     noise: int = 0
     largest_share: float = 0.0
+    avg_cohesion: float = 0.0      # 簇内凝聚度均值（成员-质心平均 cosine）
+    avg_separation: float = 0.0    # 簇间分离度均值（最近邻簇质心 cosine，越低越好）
     duration_ms: float = 0.0
 
 
@@ -122,6 +152,7 @@ class ReclusterJob:
                 self._coarse_split_stale_pool(db, report)
                 report.archived_topics = archive_empty_topics(db)
                 db.commit()
+                self._alert_quality_drift(db, redis_client, report)
                 if redis_client is not None:
                     publish_snapshot(redis_client, self._build_snapshot(db, docs, chosen, agglom_result, report))
         except Exception:
@@ -140,6 +171,7 @@ class ReclusterJob:
             merges=report.reused_topics, splits=report.moved_articles,
             method=report.method, guardrail=report.guardrail_triggered, degraded=report.degraded,
             pooled=report.pooled_articles, archived=report.archived_topics,
+            avg_cohesion=round(report.avg_cohesion, 4), avg_separation=round(report.avg_separation, 4),
             duration_ms=round(report.duration_ms, 1),
         )
         return report
@@ -164,14 +196,26 @@ class ReclusterJob:
             return agglom_result, agglom_result, True
 
     def _persist(self, db: Session, docs: list[ClusterDoc], result: StrategyResult, report: ReclusterReport) -> None:
+        """校正落库：复用/新建议题 + 迁移成员；尊重人工锁定与 no_merge 名单。
+
+        可靠性护栏（T2.10 人工修正回流）：
+          - 命中议题 human_locked_fields 含 centroid/keywords → 跳过字段覆盖
+            （人工调过的质心/关键词不被机器每轮重算推平）；
+          - 成员当前归属议题 human_locked_fields 含 merged_into 或命中全局
+            no_merge 名单 → 该成员不自动迁入本簇（保留原归属，防止人工拆开
+            的议题被每小时重聚类重新并回）。
+        """
         report.clusters_before = len(active_topics(db))
         now = datetime.now(UTC)
+        no_merge_pairs = load_no_merge_pairs(db)
         for cluster in result.clusters:
             members = [docs[i] for i in cluster.member_indices]
             hit = nearest_active_topic(db, cluster.centroid, min_score=self.settings.t_event)
             if hit is not None:
                 topic, _ = hit
-                topic.keywords = cluster.keywords
+                locked = set(topic.human_locked_fields or [])
+                if "keywords" not in locked:
+                    topic.keywords = cluster.keywords
                 report.reused_topics += 1
             else:
                 topic = create_topic(
@@ -189,9 +233,14 @@ class ReclusterJob:
             countries = set(topic.country_scope or [])
             countries.update(m.country_code for m in members)
             topic.country_scope = sorted(countries)
-            topic.centroid = cluster.centroid  # 校正以本轮窗内质心为准（已是加权池化对象）
+            # 质心覆盖：命中议题锁定 centroid 则跳过（人工质心优先）
+            if "centroid" not in locked:
+                topic.centroid = cluster.centroid  # 校正以本轮窗内质心为准（已是加权池化对象）
             topic.last_seen_at = now
             for member in members:
+                if not self._can_move(db, member.article_id, topic, no_merge_pairs):
+                    report.pooled_articles += 1  # 人工锁定的归属不迁移，视作保留
+                    continue
                 weight = sum(a * b for a, b in zip(member.embedding, cluster.centroid, strict=True))
                 if move_assignment(db, member.article_id, topic, weight, "recluster"):
                     report.moved_articles += 1
@@ -200,8 +249,73 @@ class ReclusterJob:
         for idx in result.noise_indices:
             if unassign_article(db, docs[idx].article_id):
                 report.pooled_articles += 1
+        report.avg_cohesion, report.avg_separation = _cluster_quality_metrics(result)
         db.flush()
         report.clusters_after = len(active_topics(db))
+
+    @staticmethod
+    def _can_move(
+        db: Session,
+        article_id: UUID,
+        new_topic: Topic,
+        no_merge_pairs: set[tuple[UUID, UUID]],
+    ) -> bool:
+        """成员是否允许从当前归属迁入 new_topic（人工锁定/误并回滚名单豁免）。
+
+        返回 False 表示保留原归属：当前归属议题 locked merged_into，或 (旧,新)
+        落在 no_merge_with 名单（人工拆开过的两个议题不再自动合并）。
+        """
+        current = get_assignment(db, article_id)
+        if current is None:
+            return True
+        old_topic = db.get(Topic, current.topic_id)
+        if old_topic is None or old_topic.id == new_topic.id:
+            return True
+        if "merged_into" in (old_topic.human_locked_fields or []):
+            return False
+        pair = norm_pair(old_topic.id, new_topic.id)
+        return pair not in no_merge_pairs
+
+    def _alert_quality_drift(
+        self, db: Session, redis_client: redis_lib.Redis | None, report: ReclusterReport
+    ) -> None:
+        """聚类质量漂移告警（质量监控闭环）：凝聚度/分离度跌破阈值写 P1，防抖 6h。
+
+        无簇或降级轮不告警（质量指标仅对真实策略产物有意义）。
+        """
+        if not report.clusters_after or report.degraded:
+            return
+        reasons: list[str] = []
+        if 0 < report.avg_cohesion < self.settings.cohesion_alert_threshold:
+            reasons.append(f"avg_cohesion={report.avg_cohesion:.3f} < {self.settings.cohesion_alert_threshold}")
+        if report.avg_separation > 0 and report.avg_separation < self.settings.separation_alert_threshold:
+            reasons.append(f"avg_separation={report.avg_separation:.3f} < {self.settings.separation_alert_threshold}")
+        if not reasons:
+            return
+        from app.collector.governance import write_system_alert
+
+        triggered = write_system_alert(
+            db, redis_client,
+            payload={
+                "kind": "cluster_quality_drift",
+                "severity": "P1",
+                "reasons": reasons,
+                "avg_cohesion": round(report.avg_cohesion, 4),
+                "avg_separation": round(report.avg_separation, 4),
+                "method": report.method,
+                "window_docs": report.window_docs,
+                "checked_at": datetime.now(UTC).isoformat(),
+            },
+            debounce_key="alert:cluster_quality_drift",
+            debounce_seconds=self.settings.quality_alert_debounce_seconds,
+        )
+        if triggered:
+            logger.warning(
+                "cluster_quality_drift",
+                avg_cohesion=round(report.avg_cohesion, 4),
+                avg_separation=round(report.avg_separation, 4),
+                reasons=reasons,
+            )
 
     def _run_degraded(
         self,
@@ -261,6 +375,10 @@ class ReclusterJob:
             "window_docs": len(docs),
             "method": chosen.method,
             "guardrail_triggered": report.guardrail_triggered,
+            "quality": {
+                "avg_cohesion": round(report.avg_cohesion, 4),
+                "avg_separation": round(report.avg_separation, 4),
+            },
             "comparison": {
                 "bertopic": strategy_metrics(chosen) if chosen.method == "bertopic" else None,
                 "agglomerative": strategy_metrics(agglom_result),

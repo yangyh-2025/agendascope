@@ -411,6 +411,147 @@ class TestKeywordOverlapBlacklist:
         assert overlap["filtered_out"] == []
 
 
+class _FakeMergeLLM:
+    """LLM 归并确认替身：可控 same_event / confidence / reasoning，degraded 可开关。"""
+
+    class _Engine:
+        model_name = "test-model"
+        is_loaded = True
+
+        def __init__(self, parent):
+            self._parent = parent
+
+        def generate_structured(self, system, user, output_model):
+            from app.llm.schemas import MergeConfirmOutput
+
+            if self._parent._fail:
+                from app.llm.errors import LLMError
+
+                raise LLMError("注入失败")
+            return MergeConfirmOutput(**self._parent._result), 0.01
+
+    class _Monitor:
+        def __init__(self, degraded):
+            self.degraded = degraded
+
+        def record(self, *a, **k):
+            pass
+
+    def __init__(self, same_event=True, confidence="high", degraded=False, fail=False):
+        self._result = {"same_event": same_event, "confidence": confidence, "reasoning": "测试"}
+        self._degraded = degraded
+        self._fail = fail
+        self.engine = self._Engine(self)
+        self.monitor = self._Monitor(degraded)
+
+
+def _setup_merge_candidate(db):
+    """构造可归并候选 + 目标（高相似度），返回 (cand, target)。"""
+    now = datetime.now(UTC)
+    target = _make_topic(
+        db,
+        name="目标议题",
+        lifecycle_state="forming",
+        centroid=_unit(0),
+        first_seen_at=now - timedelta(days=2),
+        last_seen_at=now,
+    )
+    cand = _make_topic(
+        db,
+        name="候选议题",
+        lifecycle_state="nascent",
+        centroid=_vec_with_cosine(0.92),
+        first_seen_at=now - timedelta(hours=1),
+        last_seen_at=now - timedelta(hours=1),
+    )
+    db.commit()
+    return cand, target
+
+
+class TestMergeLLMConfirm:
+    """T3.3 增强：LLM 语义确认二次把关——same_event=False 阻止误并。"""
+
+    def test_llm_confirm_true_merges(self, db):
+        """LLM 确认同一事件 → 正常归并，MergeDecision.llm_confirmed=True。"""
+        cand, target = _setup_merge_candidate(db)
+        llm = _FakeMergeLLM(same_event=True)
+
+        report = nextday_merge(db, llm_annotator=llm)
+        db.commit()
+
+        assert len(report.merged) == 1
+        assert report.merged[0].llm_confirmed is True
+        assert report.skipped_llm == []
+        db.expire_all()
+        assert db.get(Topic, cand.id).merged_into == target.id
+
+    def test_llm_confirm_false_blocks_merge(self, db):
+        """LLM 高置信判定非同一事件 → 跳过归并，记录到 skipped_llm，保留独立议题。"""
+        cand, target = _setup_merge_candidate(db)
+        llm = _FakeMergeLLM(same_event=False, confidence="high")
+
+        report = nextday_merge(db, llm_annotator=llm)
+        db.commit()
+
+        assert report.merged == []
+        assert (cand.id, target.id) in report.skipped_llm
+        assert cand.id in report.new_topics
+        db.expire_all()
+        cand_db = db.get(Topic, cand.id)
+        assert cand_db.merged_into is None
+        assert cand_db.lifecycle_state == "nascent"
+
+    def test_llm_confirm_false_low_conf_does_not_block(self, db):
+        """LLM 判非同一事件但置信度 low/medium → 不拦截（防止误拒跨语言/多角度改写）。"""
+        cand, target = _setup_merge_candidate(db)
+        llm = _FakeMergeLLM(same_event=False, confidence="low")
+
+        report = nextday_merge(db, llm_annotator=llm)
+        db.commit()
+
+        # 低置信否定不拦截 → 维持向量归并
+        assert len(report.merged) == 1
+        assert report.merged[0].llm_confirmed is False  # 记录了 LLM 判定但不阻塞
+        assert report.skipped_llm == []
+        db.expire_all()
+        assert db.get(Topic, cand.id).merged_into == target.id
+
+    def test_llm_none_falls_back_to_vector(self, db):
+        """llm_annotator=None（未注入/回放）→ 纯向量阈值归并，llm_confirmed=None。"""
+        cand, target = _setup_merge_candidate(db)
+
+        report = nextday_merge(db, llm_annotator=None)
+        db.commit()
+
+        assert len(report.merged) == 1
+        assert report.merged[0].llm_confirmed is None
+        assert report.skipped_llm == []
+
+    def test_llm_degraded_falls_back_to_vector(self, db):
+        """LLM 降级（monitor.degraded）→ 回退纯向量阈值，不阻塞归并。"""
+        cand, target = _setup_merge_candidate(db)
+        llm = _FakeMergeLLM(same_event=False, degraded=True)  # 即使 same_event=False 也因降级忽略
+
+        report = nextday_merge(db, llm_annotator=llm)
+        db.commit()
+
+        assert len(report.merged) == 1
+        assert report.merged[0].llm_confirmed is None  # 降级未走 LLM
+        assert report.skipped_llm == []
+
+    def test_llm_failure_falls_back_to_vector(self, db):
+        """LLM 调用抛错 → 回退纯向量阈值，归并照常。"""
+        cand, target = _setup_merge_candidate(db)
+        llm = _FakeMergeLLM(fail=True)
+
+        report = nextday_merge(db, llm_annotator=llm)
+        db.commit()
+
+        assert len(report.merged) == 1
+        assert report.merged[0].llm_confirmed is None  # 失败未留下确认
+        assert report.skipped_llm == []
+
+
 class TestMergeTriggersReestimate:
     """T3.13：归并完成后对 target 议题触发增量重估（详细设计 4.2 算法 3 末段）。"""
 

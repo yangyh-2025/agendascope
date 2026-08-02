@@ -179,8 +179,13 @@ def _article_excerpt_rows(db: Session, topic_id: uuid.UUID, start: datetime, end
     return rows
 
 
-def build_topic_deep(db: Session, scope: dict) -> dict[str, Any]:
-    """议题深度报告：概览 + 分国显著性/报道量 + 情感 + 代表报道摘录。"""
+def build_topic_deep(db: Session, scope: dict, llm_annotator: Any = None) -> dict[str, Any]:
+    """议题深度报告：概览 + 分国显著性/报道量 + 情感 + 代表报道摘录。
+
+    llm_annotator：TopicAnnotator（依赖注入）。提供且未降级时，概览在模板句
+    摘要之后追加一段 LLM 生成的分析叙述（"分析要点：…"）；None 或降级时维持
+    现状（不报错，不含分析要点）。
+    """
     topic = db.get(Topic, uuid.UUID(scope["topic_id"]))
     if topic is None:
         raise BizError(CODE_NOT_FOUND, f"议题不存在: {scope['topic_id']}")
@@ -191,16 +196,17 @@ def build_topic_deep(db: Session, scope: dict) -> dict[str, Any]:
         f"议题深度报告：{topic.name_zh or topic.name}",
         scope_summary("topic_deep", scope, topic.name_zh or topic.name),
     )
+    overview_paragraphs = [
+        f"议题名称：{topic.name_zh or topic.name}（{topic.name_auto}）",
+        f"议题分类：{topic.topic_category or '未分类'}",
+        f"生命周期：{topic.lifecycle_state} / 置信度：{topic.confidence}",
+        f"关键词：{'、'.join(topic.keywords or []) or '无'}",
+        f"摘要：{topic.summary_zh or '暂无摘要'}",
+        f"统计窗口：{scope['from']} ~ {scope['to']}",
+    ]
     report["sections"].append({
         "heading": "一、议题概览",
-        "paragraphs": [
-            f"议题名称：{topic.name_zh or topic.name}（{topic.name_auto}）",
-            f"议题分类：{topic.topic_category or '未分类'}",
-            f"生命周期：{topic.lifecycle_state} / 置信度：{topic.confidence}",
-            f"关键词：{'、'.join(topic.keywords or []) or '无'}",
-            f"摘要：{topic.summary_zh or '暂无摘要'}",
-            f"统计窗口：{scope['from']} ~ {scope['to']}",
-        ],
+        "paragraphs": overview_paragraphs,
         "table": None,
     })
 
@@ -229,6 +235,18 @@ def build_topic_deep(db: Session, scope: dict) -> dict[str, Any]:
          f"{sum(a['pos'])/len(a['pos']):.2f}" if a["pos"] else "-"]
         for cc, a in sorted(by_country.items(), key=lambda kv: -kv[1]["articles"])[:_TOP_ROWS]
     ]
+
+    # 概览追加 LLM 生成的分析叙述（T4.17 增强；None/降级维持现状）
+    if llm_annotator is not None:
+        from app.services.report_narrative import generate_report_narrative
+
+        narrative = generate_report_narrative(
+            db, topic, by_country=by_country, llm_annotator=llm_annotator,
+        )
+        if narrative:
+            overview_paragraphs.append(f"分析要点：{narrative}")
+            report["sections"][0]["paragraphs"] = overview_paragraphs
+
     report["sections"].append({
         "heading": "二、分国报道量与显著性",
         "paragraphs": [] if rows else ["窗口内该议题无快照数据。"],
@@ -451,13 +469,22 @@ def generate_export(
     db: Session,
     export: ReportExport,
     export_dir: str | Path = DEFAULT_EXPORT_DIR,
+    llm_annotator: Any = None,
 ) -> ReportExport:
-    """执行生成：构建数据 → 渲染文件 → 更新行状态（done/failed）。"""
+    """执行生成：构建数据 → 渲染文件 → 更新行状态（done/failed）。
+
+    llm_annotator：TopicAnnotator（依赖注入，topic_deep 概览叙述用）；
+    None 时不注入（维持现状）。
+    """
     started = time.monotonic()
     export.status = "processing"
     db.flush()
     try:
-        report = _BUILDERS[export.template](db, dict(export.scope or {}))
+        builder = _BUILDERS[export.template]
+        if export.template == "topic_deep":
+            report = builder(db, dict(export.scope or {}), llm_annotator=llm_annotator)
+        else:
+            report = builder(db, dict(export.scope or {}))
         out_dir = Path(export_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         dest = out_dir / f"{export.id}.{export.format}"
@@ -549,6 +576,7 @@ def create_export(db: Session, user_id: uuid.UUID, payload: dict[str, Any]) -> R
 def process_pending_exports(
     db: Session,
     export_dir: str | Path = DEFAULT_EXPORT_DIR,
+    llm_annotator: Any = None,
 ) -> int:
     """worker 队列执行：pending 任务按创建序生成（单轮至多并发上限个）。返回处理数。"""
     waiting = list(db.scalars(
@@ -560,7 +588,7 @@ def process_pending_exports(
     processed = 0
     for export in waiting[: max(MAX_CONCURRENT_EXPORTS, 1)]:
         try:
-            generate_export(db, export, export_dir)
+            generate_export(db, export, export_dir, llm_annotator=llm_annotator)
             notify_export_finished(db, export)
             db.flush()
             processed += 1
@@ -589,8 +617,12 @@ def run_inline_with_timeout(
     session_factory,
     export_dir: str | Path = DEFAULT_EXPORT_DIR,
     timeout_seconds: int = SYNC_TIMEOUT_SECONDS,
+    llm_annotator: Any = None,
 ) -> InlineRunResult:
-    """60s 预算内联生成：超时转异步（线程继续，完成后站内通知）。"""
+    """60s 预算内联生成：超时转异步（线程继续，完成后站内通知）。
+
+    llm_annotator：TopicAnnotator（依赖注入，topic_deep 概览叙述用）；None 不注入。
+    """
     result = InlineRunResult()
 
     def target() -> None:
@@ -600,7 +632,7 @@ def run_inline_with_timeout(
             if export is None or export.status == "done":
                 result.export = export
                 return
-            generate_export(db, export, export_dir)
+            generate_export(db, export, export_dir, llm_annotator=llm_annotator)
             if result.async_mode:
                 notify_export_finished(db, export)
             db.commit()

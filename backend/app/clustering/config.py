@@ -44,6 +44,11 @@ class ClusterSettings(BaseSettings):
     recluster_min_docs: int = 6        # 窗内文章数低于此值不值得重聚类（UMAP/HDBSCAN 最小样本约束）
     snapshot_ttl_seconds: int = 86400  # 快照保留时长（覆盖至下次校正发布）
 
+    # 聚类质量监控（T2.9 增强）：簇内凝聚度/簇间分离度跌破阈值写 P1 漂移告警（防抖）
+    cohesion_alert_threshold: float = 0.4    # 簇内凝聚度均值下限（低于说明簇内异质）
+    separation_alert_threshold: float = 0.3  # 簇间分离度（最近邻簇质心 cosine）下限（低于说明簇间粘连）
+    quality_alert_debounce_seconds: int = 21600  # 质量告警防抖 6h
+
     # 关键词降级链（T2.11）：历史议题 keywords 重叠 ≥ 此值归入该议题
     keyword_min_overlap: int = 2
     alert_debounce_seconds: int = 3600  # P1 告警防抖（对齐源失败率告警 1h 口径）

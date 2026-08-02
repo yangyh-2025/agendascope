@@ -106,6 +106,33 @@ def test_near_identical_report_marked_duplicate(db, mpnet_embedder):
     assert topic_size(db, first_outcome.topic_id) == 2
 
 
+def test_title_fingerprint_fallback_catches_same_title_different_content(db, mpnet_embedder):
+    """标题指纹兜底：HNSW 判重漏判时，标题指纹完全一致直接判转载。
+
+    构造：canonical 与 copy 标题完全一致（指纹命中），但正文不同（向量不同，
+    使 HNSW 在 t_dup 阈值下不命中）——指纹兜底应仍判 duplicate。
+    """
+    source = make_source(db, language="en")
+    # 同一标题，正文差异大 → 指纹相同、向量不同
+    canonical = make_article(db, source, title="Breaking: Major Policy Shift")
+    _embed(mpnet_embedder, canonical, "Breaking: Major Policy Shift announced today by officials.")
+    db.commit()
+
+    assigner = OnlineAssigner(t_event=0.99, t_dup=0.99)  # 高阈值：向量判重必不命中
+    canonical_outcome = assigner.assign(db, canonical)
+    db.commit()
+
+    copy = make_article(db, source, title="Breaking: Major Policy Shift")  # 标题完全一致
+    _embed(mpnet_embedder, copy, "Completely unrelated content about a football match result.")
+    db.commit()
+    dup_outcome = assigner.assign(db, copy)
+    db.commit()
+
+    assert dup_outcome.outcome == OUTCOME_DUPLICATE
+    assert copy.is_duplicate is True and copy.canonical_id == canonical.id
+    assert dup_outcome.topic_id == canonical_outcome.topic_id
+
+
 def test_crosslingual_pair_not_merged_online_by_default(db, mpnet_embedder):
     """跨语言同事件报道实测相似度低于 T_event=0.85：在线不误并，各自孤证微簇待校正。"""
     source = make_source(db, language="en")

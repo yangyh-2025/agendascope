@@ -413,6 +413,7 @@ def replay_cases(
     *,
     embedder: Any,
     threshold_overrides: dict[str, float] | None = None,
+    llm_annotator: Any = None,
 ) -> ReplayReport:
     """回放全量案例集，汇总评估报告。
 
@@ -443,7 +444,7 @@ def replay_cases(
 
     for case in cases:
         try:
-            outcome = _replay_one_case(db, case, embedder, threshold_overrides or {})
+            outcome = _replay_one_case(db, case, embedder, threshold_overrides or {}, llm_annotator=llm_annotator)
         except Exception as exc:
             db.rollback()
             # 异常摘要只取首行（完整堆栈进日志），避免报告被多行 traceback 淹没
@@ -562,6 +563,7 @@ def _replay_one_case(
     case: ReplayCase,
     embedder: Any,
     overrides: dict[str, float],
+    llm_annotator: Any = None,
 ) -> CaseOutcome:
     """回放单案例：真实跑 向量化→在线归簇→次日归并→首发源判定→事件判定 全链路。
 
@@ -572,6 +574,9 @@ def _replay_one_case(
     3. 每个 UTC 日界触发 nextday_merge（真实次日归并；注入 now=日界时刻）
     4. 对案例涉及的每个议题 detect_media_origin + compute_follower_sequence
        + evaluate_conditions/upsert_event（真实首发源判定与事件判定）
+
+    llm_annotator：注入时 nextday_merge 走 LLM 语义确认（merge_confirm）；
+    None 时走纯向量阈值（默认，回放安全）。
 
     事务：本函数只 flush 不 commit——每案例在 replay_cases 的独立事务内回放，
     评估后整体回滚（案例间时间轴可能相互落入活跃窗口，必须隔离防跨案例误并）。
@@ -621,7 +626,7 @@ def _replay_one_case(
             # UTC 日界：触发次日归并（候选窗口覆盖案例全程；时间基准取新日 00:00Z）
             current_day = ca.published_at.date()
             day_start = datetime(current_day.year, current_day.month, current_day.day, tzinfo=UTC)
-            nextday_merge(db, candidate_since=case_start - timedelta(days=1), now=day_start)
+            nextday_merge(db, candidate_since=case_start - timedelta(days=1), now=day_start, llm_annotator=llm_annotator)
             db.flush()
         embedding = embedder.embed_article(ca.title, None, ca.content)
         article = Article(
@@ -647,7 +652,7 @@ def _replay_one_case(
         art_map[ca.article_id] = article
     # 收尾再跑一轮归并（末日微簇；时间基准取末日次日 00:00Z）
     last_day_end = datetime(current_day.year, current_day.month, current_day.day, tzinfo=UTC) + timedelta(days=1)
-    nextday_merge(db, candidate_since=case_start - timedelta(days=1), now=last_day_end)
+    nextday_merge(db, candidate_since=case_start - timedelta(days=1), now=last_day_end, llm_annotator=llm_annotator)
     db.flush()
 
     # 3) 汇总文章→议题归属
@@ -768,6 +773,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", default="", help="markdown 报告输出路径（默认只打印到 stdout）")
     parser.add_argument("--t-event", type=float, default=None, help="覆盖在线归簇阈值 T_event")
     parser.add_argument("--t-dup", type=float, default=None, help="覆盖判重阈值 T_dup")
+    parser.add_argument("--llm", action="store_true",
+                        help="开启后次日归并走真实 LLM 语义确认（merge_confirm）；默认纯向量阈值")
     args = parser.parse_args(argv)
 
     try:
@@ -798,9 +805,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.t_dup is not None:
         overrides["t_dup"] = args.t_dup
 
+    llm_annotator = None
+    if args.llm:
+        from app.llm.annotator import TopicAnnotator
+
+        llm_annotator = TopicAnnotator()
+        print(f"[信息] 开启 LLM 归并语义确认：{llm_annotator.engine.model_name}")
+
     with session_factory() as db:
         try:
-            report = replay_cases(db, cases, embedder=embedder, threshold_overrides=overrides)
+            report = replay_cases(db, cases, embedder=embedder, threshold_overrides=overrides, llm_annotator=llm_annotator)
         except RuntimeError as exc:
             print(f"[错误] {exc}", file=sys.stderr)
             return 1

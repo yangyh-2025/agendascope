@@ -119,6 +119,111 @@ class FinalReviewOutput(BaseModel):
     )
 
 
+class MergeConfirmOutput(BaseModel):
+    """LLM 议题归并语义确认输出（T3.3 增强：同日归并在向量阈值之外加 LLM 二次把关）。
+
+    向量相似度落入可疑区（或全量策略下每对候选）时，LLM 判断两个议题簇是否描述
+    **同一事件**。same_event=True 才允许归并；False 则保留独立议题。
+    reasoning ≤200 字，留痕供分析师复核。
+    """
+
+    same_event: bool = Field(description="两个议题簇是否描述同一事件（允许归并）")
+    confidence: str = Field(description="判定置信度：high/medium/low")
+    reasoning: str = Field(
+        default="",
+        max_length=200,
+        description="判定理由（≤200 字）：从议题名/关键词/代表性标题判断是否同一事件",
+    )
+
+    @field_validator("confidence")
+    @classmethod
+    def _normalize_confidence(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if cleaned not in ("high", "medium", "low"):
+            raise ValueError(f"confidence 必须为 high/medium/low: {value!r}")
+        return cleaned
+
+    @field_validator("reasoning")
+    @classmethod
+    def _cap_reasoning(cls, value: str) -> str:
+        return value.strip()[:200]
+
+
+class ReportNarrativeOutput(BaseModel):
+    """LLM 报告叙述性段输出（T4.17 增强：报告概览/小结用 LLM 生成）。
+
+    narrative 是给读者的分析性叙述段（非模板句）：说明该议题/对比的主要看点、
+    关键进展与显著性，基于给定数据，不编造事实。
+    """
+
+    narrative: str = Field(
+        min_length=10,
+        max_length=400,
+        description="3-5 句中文分析叙述（≤400 字）：主要看点 + 关键数据支撑，客观中立",
+    )
+
+    @field_validator("narrative")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
+
+
+class ReestimateConfirmOutput(BaseModel):
+    """LLM 重估佐证输出（T3.13 增强：增量重估的 LLM 复核）。
+
+    增量重估发现更早的新证据时，LLM 复核该证据是否**推翻**原首发源判定：
+    - overturns_origin=True：新证据与既有议题为同一事件、时间更早、来源可靠，
+      才允许推进 origin_at 修正（revision_log 附 llm_overturn 佐证）；
+    - overturns_origin=False：宁可保守不推翻，维持原判定；
+    - reasoning ≤200 字，留痕供分析师复核。
+    """
+
+    overturns_origin: bool = Field(description="新证据是否推翻原首发源判定")
+    reasoning: str = Field(
+        default="",
+        max_length=200,
+        description="判定理由（≤200 字）：是否同一事件/来源是否可靠/时间关系",
+    )
+
+    @field_validator("reasoning")
+    @classmethod
+    def _cap_reasoning(cls, value: str) -> str:
+        return value.strip()[:200]
+
+
+class AlertSummaryOutput(BaseModel):
+    """告警理由摘要输出（T4.14 增强：预警触发时 LLM 生成中文理由摘要）。
+
+    summary 客观陈述触发了什么条件（命中的规则条件、相关报道线索），≤200 字，
+    供前端预警卡片展示与用户快速定位。
+    """
+
+    summary: str = Field(
+        min_length=1,
+        max_length=200,
+        description="中文告警理由摘要（≤200 字）：客观陈述命中的规则条件与相关报道线索",
+    )
+
+    @field_validator("summary")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
+
+
+class TranslateOutput(BaseModel):
+    """LLM 翻译输出（T4.19 增强：订阅日报/周报摘要用 LLM 替代 argos 离线翻译）。
+
+    translated 为目标语言（简中）译文；保留专有名词音译、客观准确。
+    """
+
+    translated: str = Field(min_length=1, description="译文文本（简体中文）")
+
+    @field_validator("translated")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
+
+
 def parse_structured(raw_text: str, output_model: type[BaseModel]) -> Any:
     """从模型原始输出中提取首个 JSON 对象并按 schema 校验。
 

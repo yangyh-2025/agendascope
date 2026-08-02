@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.alerting import notifier
+from app.alerting.llm_translate import llm_translate
 from app.alerting.translate import translate_summary, translate_topic_name
 from app.core.logging import get_logger
 from app.models.subscription import Subscription, SubscriptionDelivery
@@ -58,10 +59,14 @@ def build_digest(
     now: datetime,
     translate_cfg=None,
     http_client=None,
+    llm_annotator=None,
 ) -> dict[str, Any]:
     """按订阅范围（国家 × 议题分类）聚合近 daily/weekly 窗口的 Top 议题。
 
-    议题名/摘要按 sub.locale 离线翻译；翻译失效 translate.py 内部回退原文。
+    议题名/摘要按 sub.locale 处理：
+    - zh 订阅：摘要优先用 LLM 翻译（llm_translate），LLM 不可用时回落原文；
+      议题名直接用 name_zh（已是中文，不强行 argos 英→中避免质量差）。
+    - 非 zh 订阅：维持 argos 离线翻译（translate.py 内部失效回退原文）。
     """
     days = _PERIOD_DAYS.get(sub.frequency, 1)
     window_start = now - timedelta(days=days)
@@ -79,6 +84,7 @@ def build_digest(
 
     items: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
+    target_lang = (sub.locale or "zh-CN").split("-")[0].lower()
     for snap, topic in db.execute(stmt).all():
         key = (snap.country_code, str(topic.id))
         if key in seen:
@@ -86,16 +92,24 @@ def build_digest(
         seen.add(key)
         if len(items) >= _DIGEST_TOP_N:
             break
+        # 摘要翻译：zh 订阅优先 LLM（llm_translate，不可用回落原文）；
+        # 非 zh 订阅维持 argos 离线翻译（内部失效回退原文）。
+        summary = topic.summary_zh or ""
+        if summary:
+            if target_lang == "zh":
+                summary = llm_translate(db, summary, target_lang="zh", llm_annotator=llm_annotator)
+            else:
+                summary = translate_summary(
+                    summary, sub.locale,
+                    cfg=translate_cfg, http_client=http_client,
+                )
         items.append({
             "country_code": snap.country_code,
             "topic_name": translate_topic_name(
                 topic.name_zh, topic.name_auto, sub.locale,
                 cfg=translate_cfg, http_client=http_client,
             ),
-            "summary": translate_summary(
-                topic.summary_zh, sub.locale,
-                cfg=translate_cfg, http_client=http_client,
-            ),
+            "summary": summary,
             "article_count": int(snap.article_count),
             "salience_rank": int(snap.salience_rank),
             "sentiment_neg": float(snap.sentiment_neg) if snap.sentiment_neg is not None else None,
@@ -153,6 +167,7 @@ def _attempt_delivery(
     unsubscribe_base_url: str,
     translate_cfg=None,
     http_client=None,
+    llm_annotator=None,
 ) -> bool:
     """执行一次投递尝试，更新 delivery 状态；返回是否成功。"""
     sub = db.get(Subscription, delivery.subscription_id)
@@ -175,7 +190,10 @@ def _attempt_delivery(
         delivery.next_retry_at = None
         return False
 
-    digest = build_digest(db, sub, now, translate_cfg=translate_cfg, http_client=http_client)
+    digest = build_digest(
+        db, sub, now, translate_cfg=translate_cfg, http_client=http_client,
+        llm_annotator=llm_annotator,
+    )
     unsubscribe_url = f"{unsubscribe_base_url.rstrip('/')}/api/v1/subscriptions/unsubscribe?token={sub.unsubscribe_token}"
     title, body = render_digest_text(sub, digest, unsubscribe_url)
     ok_flag, err = notifier.send_email(smtp_config, user.email, title, body)
@@ -205,8 +223,12 @@ def run_subscription_round(
     unsubscribe_base_url: str = "http://localhost:8000",
     translate_cfg=None,
     http_client=None,
+    llm_annotator=None,
 ) -> dict[str, int]:
-    """单轮订阅推送：到期生成 → 首发 → 退避重试 → 日终失败报告（alerts 给管理员）。"""
+    """单轮订阅推送：到期生成 → 首发 → 退避重试 → 日终失败报告（alerts 给管理员）。
+
+    llm_annotator 注入时，zh 订阅的摘要用 LLM 翻译（不可用回落原文），不阻塞发送。
+    """
     now = now or datetime.now(UTC)
     stats = {"generated": 0, "sent": 0, "retried": 0, "failed_final": 0}
 
@@ -247,7 +269,7 @@ def run_subscription_round(
             stats["retried"] += 1
         if _attempt_delivery(
             db, delivery, smtp_config, now, unsubscribe_base_url,
-            translate_cfg=translate_cfg, http_client=http_client,
+            translate_cfg=translate_cfg, http_client=http_client, llm_annotator=llm_annotator,
         ):
             stats["sent"] += 1
     db.flush()

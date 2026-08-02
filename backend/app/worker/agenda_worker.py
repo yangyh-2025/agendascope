@@ -30,10 +30,12 @@ logger = get_logger("worker.agenda")
 class AgendaWorker:
     """议程引擎周期任务编排：归并 / 消亡 / 实体黑名单。"""
 
-    def __init__(self, session_factory=None, redis_client=None):
+    def __init__(self, session_factory=None, redis_client=None, llm_annotator=None):
         self.settings = get_agenda_settings()
         self.session_factory = session_factory or get_session_factory()
         self.redis = redis_client if redis_client is not None else get_cache_redis()
+        self._llm_annotator = llm_annotator  # 默认 None=纯向量归并（回放验证最优）；
+                                            # 注入 TopicAnnotator 才启用 LLM merge 确认（opt-in）
         self._last_merge = 0.0
         self._last_sweep = 0.0
         self._last_blacklist = 0.0
@@ -50,7 +52,7 @@ class AgendaWorker:
             return False
         db = self.session_factory()
         try:
-            report = nextday_merge(db, redis_client=self.redis)
+            report = nextday_merge(db, redis_client=self.redis, llm_annotator=self._llm_annotator)
             db.commit()
             self._last_merge = time.monotonic()
             logger.info(
@@ -59,6 +61,7 @@ class AgendaWorker:
                 new_topics=len(report.new_topics),
                 skipped_no_merge=len(report.skipped_no_merge),
                 skipped_locked=len(report.skipped_locked),
+                skipped_llm=len(report.skipped_llm),
             )
             return True
         except Exception as exc:  # noqa: BLE001

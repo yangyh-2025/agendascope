@@ -35,7 +35,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session
 from app.agenda_engine.config import get_agenda_settings
 from app.agenda_engine.entity_blacklist import filter_blacklisted
 from app.agenda_engine.lifecycle import advance_for_size, topic_size
-from app.clustering.repository import assign_article, time_decay_pool
+from app.clustering.repository import assign_article, load_no_merge_pairs, norm_pair, time_decay_pool
 from app.core.logging import get_logger
 from app.models.agenda import AgendaEvent
 from app.models.topic import Topic, TopicArticle
@@ -63,6 +63,7 @@ class MergeDecision:
     target_topic_id: UUID
     similarity: float
     keyword_overlap: dict | None = None  # 黑名单剔除后的关键词重叠留痕（见 _keyword_overlap）
+    llm_confirmed: bool | None = None   # LLM 语义确认是否通过（None=未启用/降级，纯向量判定）
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,7 @@ class MergeReport:
     new_topics: list[UUID] = field(default_factory=list)  # 未命中归并、保留新 topic_id 的候选
     skipped_no_merge: list[tuple[UUID, UUID]] = field(default_factory=list)  # 命中 no_merge_with 跳过
     skipped_locked: list[UUID] = field(default_factory=list)  # human_locked_fields 阻止归并的源议题
+    skipped_llm: list[tuple[UUID, UUID]] = field(default_factory=list)  # LLM 判定非同一事件，保留独立议题
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
@@ -161,30 +163,6 @@ def _append_revision(
     new_log = list(topic.revision_log or [])
     new_log.append(entry)
     topic.revision_log = new_log
-
-
-def _load_no_merge_pairs(db: Session) -> set[tuple[UUID, UUID]]:
-    """∪ topics.no_merge_with 双向展开为无序对集合（frozenset 语义）。
-
-    返回 set of (min_id, max_id) 元组（按 UUID 字节序规范化），便于 O(1) 查 (c, target)。
-    """
-    stmt = select(Topic.id, Topic.no_merge_with).where(Topic.no_merge_with.is_not(None))
-    pairs: set[tuple[UUID, UUID]] = set()
-    for tid, partners in db.execute(stmt).all():
-        if not partners:
-            continue
-        for partner_raw in partners:
-            try:
-                partner = UUID(str(partner_raw))
-            except (ValueError, TypeError):
-                continue
-            pair = (tid, partner) if tid.bytes <= partner.bytes else (partner, tid)
-            pairs.add(pair)
-    return pairs
-
-
-def _norm_pair(a: UUID, b: UUID) -> tuple[UUID, UUID]:
-    return (a, b) if a.bytes <= b.bytes else (b, a)
 
 
 def _keyword_overlap(
@@ -406,6 +384,7 @@ def nextday_merge(
     batch_size: int | None = None,
     redis_client: redis.Redis | None = None,
     now: datetime | None = None,
+    llm_annotator: Any = None,
 ) -> MergeReport:
     """次日归并主入口（flush 由本函数完成；commit 由调用方负责）。
 
@@ -422,6 +401,9 @@ def nextday_merge(
               blacklist_applied=False（黑名单是优化而非正确性依赖）
     now：本轮归并的时间基准（缺省墙钟 now）；回放注入模拟时间（如日界时刻），
          使历史时间轴上的议题在自身时间轴内参与归并比对
+    llm_annotator：TopicAnnotator（依赖注入）。提供且未降级时，对向量命中阈值的
+         候选做 LLM 语义确认（merge_confirm：是否同一事件）；same_event=False
+         则跳过归并。None 或降级时回退纯向量阈值（行为与现状等价）。
 
     单轮内迭代至不动点：每次归并更新 target 质心后重评剩余低于阈值候选，
     消除单遍顺序伪影（先评估差之毫厘、同轮质心推高后无可追轮的误拆）。
@@ -433,7 +415,7 @@ def nextday_merge(
     merge_sim = settings.merge_sim
     active_days = settings.merge_active_days
 
-    no_merge_pairs = _load_no_merge_pairs(db)
+    no_merge_pairs = load_no_merge_pairs(db)
 
     # 候选集（昨日至今的新议题/微簇：nascent 孤证 + forming 已形成同伴的新议题）
     stmt = (
@@ -452,6 +434,7 @@ def nextday_merge(
     new_topics: list[UUID] = []
     skipped_no_merge: list[tuple[UUID, UUID]] = []
     skipped_locked: list[UUID] = []
+    skipped_llm: list[tuple[UUID, UUID]] = []
 
     # 单轮内迭代至不动点：候选按 first_seen_at 升序逐轮评估；每次归并会更新
     # target 质心（规模加权时间衰减池化），使"先评估时略低于阈值、同轮后续归并
@@ -503,7 +486,7 @@ def nextday_merge(
                 continue
 
             # 命中 no_merge_with 名单：跳过自动归并，保留独立 topic_id
-            pair = _norm_pair(cand.id, target.id)
+            pair = norm_pair(cand.id, target.id)
             if pair in no_merge_pairs:
                 skipped_no_merge.append((cand.id, target.id))
                 new_topics.append(cand.id)
@@ -516,6 +499,31 @@ def nextday_merge(
                 continue
 
             # 执行归并（单源议题事务内由本函数 flush，调用方统一 commit）
+            # LLM 语义确认（T3.3 增强）：向量命中阈值后，若注入 llm_annotator 且未降级，
+            # 让 LLM 判断两簇是否同一事件。**仅高置信否定才拦截**（防止 LLM 对跨语言/
+            # 多角度改写保守误拒，破坏本应归并的同事件对）；medium/low 或 same_event=True
+            # 均维持向量判定（向量已 ≥threshold 确认相似，宁可不漏并）。
+            llm_confirmed: bool | None = None
+            if llm_annotator is not None:
+                from app.agenda_engine.merge_confirm import confirm_same_event
+
+                confirm = confirm_same_event(db, cand, target, llm_annotator)
+                if confirm is not None:
+                    llm_confirmed = bool(confirm.same_event)
+                    if not confirm.same_event and confirm.confidence == "high":
+                        # LLM 高置信判定非同一事件：跳过归并，保留独立 topic_id
+                        skipped_llm.append((cand.id, target.id))
+                        new_topics.append(cand.id)
+                        logger.info(
+                            "nextday_merge_llm_reject",
+                            candidate_id=str(cand.id),
+                            target_id=str(target.id),
+                            similarity=round(sim, 6),
+                            confidence=confirm.confidence,
+                            reasoning=confirm.reasoning,
+                        )
+                        continue
+
             # 关键词重叠：剔除黑名单实体后计算（留痕与审计用，门槛仍只看语义向量）
             overlap_info = _keyword_overlap(cand, target, redis_client)
             merge_pair(db, cand, target, similarity=sim, keyword_overlap=overlap_info, now=now)
@@ -524,6 +532,7 @@ def nextday_merge(
                 target_topic_id=target.id,
                 similarity=sim,
                 keyword_overlap=overlap_info,
+                llm_confirmed=llm_confirmed,
             ))
             progress = True
 
@@ -558,10 +567,12 @@ def nextday_merge(
         new_topics=len(new_topics),
         skipped_no_merge=len(skipped_no_merge),
         skipped_locked=len(skipped_locked),
+        skipped_llm=len(skipped_llm),
     )
     return MergeReport(
         merged=merged,
         new_topics=new_topics,
         skipped_no_merge=skipped_no_merge,
         skipped_locked=skipped_locked,
+        skipped_llm=skipped_llm,
     )

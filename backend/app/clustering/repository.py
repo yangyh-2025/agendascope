@@ -236,6 +236,32 @@ def unclassified_articles(db: Session, older_than_hours: int | None = None) -> l
     return list(db.scalars(stmt.order_by(Article.published_at.asc())).all())
 
 
+def load_no_merge_pairs(db: Session) -> set[tuple[UUID, UUID]]:
+    """∪ topics.no_merge_with 双向展开为无序对集合（frozenset 语义）。
+
+    供次日归并（merge.py）与重聚类校正（recluster.py）共用：人工误并回滚名单
+    一律先排除，机器永不把已人工拆开的两个议题自动合并回去。
+    返回 set of (min_id, max_id) 元组（按 UUID 字节序规范化），便于 O(1) 查。
+    """
+    stmt = select(Topic.id, Topic.no_merge_with).where(Topic.no_merge_with.is_not(None))
+    pairs: set[tuple[UUID, UUID]] = set()
+    for tid, partners in db.execute(stmt).all():
+        if not partners:
+            continue
+        for partner_raw in partners:
+            try:
+                partner = UUID(str(partner_raw))
+            except (ValueError, TypeError):
+                continue
+            pair = (tid, partner) if tid.bytes <= partner.bytes else (partner, tid)
+            pairs.add(pair)
+    return pairs
+
+
+def norm_pair(a: UUID, b: UUID) -> tuple[UUID, UUID]:
+    return (a, b) if a.bytes <= b.bytes else (b, a)
+
+
 def archive_empty_topics(db: Session) -> int:
     """校正后空壳议题（文章被全部迁走）归档，保留可查不物理删除。"""
     topics = db.scalars(select(Topic).where(Topic.lifecycle_state != "archived")).all()

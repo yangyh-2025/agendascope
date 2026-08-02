@@ -9,11 +9,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.llm.schemas import (
+    AlertSummaryOutput,
     CategoryOutput,
     FinalReviewOutput,
     FirstUtteranceOutput,
+    MergeConfirmOutput,
     NamingOutput,
+    ReestimateConfirmOutput,
+    ReportNarrativeOutput,
     SummaryOutput,
+    TranslateOutput,
     schema_instruction,
 )
 
@@ -22,6 +27,11 @@ TASK_CATEGORY = "topic_category"
 TASK_SUMMARY = "topic_summary"
 TASK_FIRST_UTTERANCE = "first_utterance"
 TASK_FINAL_REVIEW = "final_review"
+TASK_MERGE_CONFIRM = "merge_confirm"
+TASK_REPORT_NARRATIVE = "report_narrative"
+TASK_REESTIMATE_CONFIRM = "reestimate_confirm"
+TASK_ALERT_SUMMARY = "alert_summary"
+TASK_TRANSLATE = "translate"
 
 # ---------------------------------------------------------------------------
 # 主题分类体系（T2.14）：预置 7 类，部署方可经 LLM_CATEGORIES 环境变量（JSON 数组）覆盖扩展
@@ -250,6 +260,174 @@ def _final_review_user_v1(payload: dict[str, Any]) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# 议题归并语义确认（T3.3 增强）：向量阈值判定后，LLM 二次确认两簇是否同一事件。
+# 解决 embedding 残余重叠带（如 suez a8=0.607 与独立洪灾 0.60-0.64 交叉）误并。
+# ---------------------------------------------------------------------------
+_MERGE_CONFIRM_SYSTEM_V1 = (
+    "你是全球新闻议题监控平台的议题归并裁决器。给定两个议题簇（各自含议题名、"
+    "关键词、代表性新闻标题），你要判断它们是否描述**同一个事件/议题**，决定是否允许归并。\n"
+    "判定规则：\n"
+    "1. 同一事件 = 两个簇围绕同一具体事件/议题展开（主体、事件类型、时间窗一致），"
+    "跨语言报道（如中英文转载）视为同一事件；\n"
+    "2. 同一议题的不同报道角度/面向 **也视为同一事件**：同一事件常有多个报道侧面"
+    "（如\"AUKUS 采购核潜艇\"与\"美英澳宣布 AUKUS 安全协定\"是同一协定；\"某国洪灾灾情\"与"
+    "\"某国洪灾救援进展\"是同一场洪灾），只要主体、事件、时间窗指向同一件事就允许归并；\n"
+    "3. 不同事件 = 主体或具体事件**确实不同**（如\"A国央行降息\"与\"B国央行降息\"是两回事；"
+    "\"某国洪灾\"与\"另一国独立洪灾\"不是同一事件）；\n"
+    "4. 只有当你**高置信**确定两个簇是不同的独立事件时才给 same_event=False；"
+    "若两者可能是同一事件的不同面向、或信息不足以确定，给 same_event=True（"
+    "向量已确认相似，宁可不漏并）；\n"
+    "5. reasoning ≤200 字，说明判断依据（主体/事件类型/时间窗/是否同一事件的不同面向）。\n"
+    + schema_instruction(MergeConfirmOutput)
+)
+
+
+_MERGE_CONFIRM_SYSTEM_V2 = (
+    "你是全球新闻议题监控平台的议题归并裁决器。给定两个议题簇（各自含议题名、"
+    "关键词、代表性新闻标题），你要判断它们是否描述**同一个事件/议题**，决定是否允许归并。\n"
+    "核心原则：**向量已确认两个簇高度相似（≥0.62），你只负责否决明显的误并，不负责裁决**——"
+    "绝大多数情况下应给 same_event=True。\n"
+    "判定规则：\n"
+    "1. 同一事件 = 两个簇围绕同一具体事件/议题展开；跨语言报道（中英文转载）视为同一事件；\n"
+    "2. **同一议题的不同报道角度/面向也算同一事件**：同一事件常有多个报道侧面"
+    "（\"AUKUS 采购核潜艇\"与\"美英澳宣布 AUKUS 安全协定\"是同一协定；\"某国洪灾灾情\"与"
+    "\"某国洪灾救援进展\"是同一场洪灾），只要主体、事件、时间窗指向同一件事就允许归并；\n"
+    "3. 只有**主体或具体事件确实不同**才是不同事件（\"A国央行降息\"与\"B国央行降息\"；"
+    "\"某国洪灾\"与\"另一国独立洪灾\"）；\n"
+    "4. same_event=False 仅当你能**明确且高置信**说明它们是两个独立事件时给出；"
+    "信息不足或可能是同一事件的不同面向时一律给 same_event=True；\n"
+    "5. reasoning ≤200 字。\n"
+    + schema_instruction(MergeConfirmOutput)
+)
+
+
+def _merge_confirm_user_v1(payload: dict[str, Any]) -> str:
+    def render_side(label: str, side: dict) -> str:
+        titles = side.get("titles") or []
+        titles_block = "\n".join(f"    {i + 1}. {t}" for i, t in enumerate(titles)) if titles else "    （无）"
+        return (
+            f"{label}：\n"
+            f"  议题名：{side.get('name') or '（未命名）'}\n"
+            f"  关键词：{_render_keywords(side.get('keywords') or [])}\n"
+            f"  代表性标题：\n{titles_block}"
+        )
+
+    return (
+        "请判断以下两个议题簇是否描述同一事件。\n\n"
+        f"{render_side('候选议题（将被归并）', payload.get('candidate') or {})}\n\n"
+        f"{render_side('目标议题（保留）', payload.get('target') or {})}\n"
+        "请输出符合 Schema 的 JSON。"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 报告叙述段（T4.17 增强）：议题深度报告概览 / 跨国对比简报小结的分析性叙述。
+# 只依据给定数据，不编造事实；客观中立。
+# ---------------------------------------------------------------------------
+_REPORT_NARRATIVE_SYSTEM_V1 = (
+    "你是全球新闻议题监控平台的报告分析师。根据给定议题/对比的数据（议题名、关键词、"
+    "摘要、分国显著性、情感占比），撰写 3-5 句中文分析叙述，供报告「概览/小结」引用。\n"
+    "要求：\n"
+    "1. 第一句点明议题/对比核心看点，后续句补充关键数据支撑（如报道量、显著性排名、情感倾向）；\n"
+    "2. 只依据给定数据撰写，不编造数据之外的事实、不发表超出数据的判断；\n"
+    "3. 语言客观中立、面向决策者，不使用情绪化或营销化措辞。\n"
+    + schema_instruction(ReportNarrativeOutput)
+)
+
+
+def _report_narrative_user_v1(payload: dict[str, Any]) -> str:
+    return (
+        f"议题名：{payload.get('topic_name') or '（未命名）'}\n"
+        f"关键词：{_render_keywords(payload.get('keywords') or [])}\n"
+        f"摘要：{payload.get('summary') or '（无）'}\n"
+        f"生命周期：{payload.get('lifecycle_state') or ''} / 置信度：{payload.get('confidence') or ''}\n"
+        f"分国数据：\n{payload.get('by_country') or '（无）'}\n"
+        "请撰写分析叙述。"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 重估 LLM 佐证（T3.13 增强）：增量重估发现更早新证据时，LLM 复核是否推翻原首发源判定。
+# 仅当新证据与既有议题为同一事件、时间更早、来源可靠时才允许推进 origin_at 修正。
+# ---------------------------------------------------------------------------
+_REESTIMATE_CONFIRM_SYSTEM_V1 = (
+    "你是全球新闻议题监控平台的重估复核官。给定一个议题当前的首发源判定依据，"
+    "以及一条在增量重估中发现的「更早」新报道，你要判断这条新证据是否**推翻**"
+    "原有首发源判定。\n"
+    "判定规则：\n"
+    "1. 仅当新报道与既有议题描述的是**同一个事件/议题**（主体、事件类型、时间窗一致），"
+    "且 published_at 早于当前首发锚点、来源可靠（非转载/非抓取时间兜底）时，"
+    "才判定 overturns_origin=True；\n"
+    "2. 仅主题相近但事件不同（如\"A国洪灾\"与\"B国洪灾\"）、或新报道只是转载/复述、"
+    "或时间并不更早，一律 overturns_origin=False——宁可保守不推翻，不冒险改判定；\n"
+    "3. reasoning ≤200 字，说明是否同一事件/来源可靠性/时间关系的判断依据。\n"
+    + schema_instruction(ReestimateConfirmOutput)
+)
+
+
+def _reestimate_confirm_user_v1(payload: dict[str, Any]) -> str:
+    return (
+        f"议题名：{payload.get('topic_name') or '（未命名）'}\n"
+        f"当前首发类型：{payload.get('origin_type')}\n"
+        f"当前首发国：{payload.get('origin_country_code')}\n"
+        f"当前首发时间：{payload.get('origin_at')}\n"
+        f"当前首发置信度：{payload.get('origin_confidence')}\n"
+        f"当前首发引文：{payload.get('origin_quote') or '（无）'}\n"
+        f"当前首发判定依据：{payload.get('origin_basis') or '（无）'}\n"
+        f"新证据标题：{payload.get('new_article_title') or '（无）'}\n"
+        f"新证据摘要：{payload.get('new_article_excerpt') or '（无）'}\n"
+        f"新证据发布时间：{payload.get('new_article_published_at') or '（无）'}\n"
+        "请判断这条新证据是否推翻原首发判定，并输出符合 Schema 的 JSON。"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 告警理由摘要（T4.14 增强）：预警规则命中触发时，LLM 生成中文理由摘要。
+# 输入命中规则、匹配条件/阈值、相关报道标题（≤5 条）；客观陈述触发原因。
+# ---------------------------------------------------------------------------
+_ALERT_SUMMARY_SYSTEM_V1 = (
+    "你是全球新闻议题监控平台的告警分析师。根据命中预警规则的规则名、匹配条件与阈值、"
+    "以及相关报道标题，生成一条中文告警理由摘要，供预警卡片展示。\n"
+    "要求：\n"
+    "1. 客观陈述触发了什么条件（如报道量增幅超过阈值、进入该国显著性 Top N、负面占比升高），"
+    "并点明涉及的国家/议题；\n"
+    "2. 只依据给定信息生成，不编造规则之外的事实；\n"
+    "3. 简洁 ≤200 字，一句话说清触发原因即可。\n"
+    + schema_instruction(AlertSummaryOutput)
+)
+
+
+def _alert_summary_user_v1(payload: dict[str, Any]) -> str:
+    titles = payload.get("matched_articles") or []
+    titles_block = _render_titles(titles) if titles else "（无）"
+    return (
+        f"规则名：{payload.get('rule_name') or '（未命名）'}\n"
+        f"匹配条件：{payload.get('rule_conditions') or '（无）'}\n"
+        f"国家/地区：{payload.get('country_code') or '（无）'}\n"
+        f"相关报道标题：\n{titles_block}\n"
+        "请生成中文告警理由摘要。"
+    )
+
+
+# ---------------------------------------------------------------------------
+# LLM 翻译（T4.19 增强）：订阅日报/周报摘要用 LLM 替代 argos 离线翻译。
+# 把给定文本译成简体中文，保留专有名词音译、客观准确。
+# ---------------------------------------------------------------------------
+_TRANSLATE_SYSTEM_V1 = (
+    "你是新闻翻译。把给定文本翻译成简体中文。\n"
+    "要求：\n"
+    "1. 保留专有名词（人名/地名/机构名/事件名）音译并尽量遵循中文通行译法；\n"
+    "2. 客观准确，忠实原文，不增删信息、不评论；\n"
+    "3. 若原文已是简体中文，直接原样输出。\n"
+    + schema_instruction(TranslateOutput)
+)
+
+
+def _translate_user_v1(payload: dict[str, Any]) -> str:
+    return f"待翻译文本：\n{payload.get('text') or ''}\n请翻译为简体中文。"
+
+
 @dataclass(frozen=True)
 class _Template(PromptTemplate):
     user_builder: Any = None
@@ -288,6 +466,40 @@ PROMPT_REGISTRY: dict[str, dict[str, PromptTemplate]] = {
         "final-review-v1": _Template(
             task_type=TASK_FINAL_REVIEW, version="final-review-v1",
             system=_FINAL_REVIEW_SYSTEM_V1, user_builder=_final_review_user_v1,
+        ),
+    },
+    TASK_MERGE_CONFIRM: {
+        "merge-confirm-v1": _Template(
+            task_type=TASK_MERGE_CONFIRM, version="merge-confirm-v1",
+            system=_MERGE_CONFIRM_SYSTEM_V1, user_builder=_merge_confirm_user_v1,
+        ),
+        "merge-confirm-v2": _Template(
+            task_type=TASK_MERGE_CONFIRM, version="merge-confirm-v2",
+            system=_MERGE_CONFIRM_SYSTEM_V2, user_builder=_merge_confirm_user_v1,
+        ),
+    },
+    TASK_REPORT_NARRATIVE: {
+        "report-narrative-v1": _Template(
+            task_type=TASK_REPORT_NARRATIVE, version="report-narrative-v1",
+            system=_REPORT_NARRATIVE_SYSTEM_V1, user_builder=_report_narrative_user_v1,
+        ),
+    },
+    TASK_REESTIMATE_CONFIRM: {
+        "reestimate-confirm-v1": _Template(
+            task_type=TASK_REESTIMATE_CONFIRM, version="reestimate-confirm-v1",
+            system=_REESTIMATE_CONFIRM_SYSTEM_V1, user_builder=_reestimate_confirm_user_v1,
+        ),
+    },
+    TASK_ALERT_SUMMARY: {
+        "alert-summary-v1": _Template(
+            task_type=TASK_ALERT_SUMMARY, version="alert-summary-v1",
+            system=_ALERT_SUMMARY_SYSTEM_V1, user_builder=_alert_summary_user_v1,
+        ),
+    },
+    TASK_TRANSLATE: {
+        "translate-v1": _Template(
+            task_type=TASK_TRANSLATE, version="translate-v1",
+            system=_TRANSLATE_SYSTEM_V1, user_builder=_translate_user_v1,
         ),
     },
 }

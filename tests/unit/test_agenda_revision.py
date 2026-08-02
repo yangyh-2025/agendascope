@@ -561,6 +561,143 @@ class TestRejectRevision:
         assert exc_info.value.code == 4002
 
 
+class _FakeReestimateLLM:
+    """重估 LLM 佐证替身：overturns_origin / reasoning 可控，degraded 可开关。"""
+
+    class _Engine:
+        model_name = "test-model"
+        is_loaded = True
+
+        def __init__(self, parent):
+            self._parent = parent
+
+        def generate_structured(self, system, user, output_model):
+            from app.llm.schemas import ReestimateConfirmOutput
+
+            return ReestimateConfirmOutput(**self._parent._result), 0.01
+
+    class _Monitor:
+        def __init__(self, degraded):
+            self.degraded = degraded
+
+        def record(self, *a, **k):
+            pass
+
+    def __init__(self, overturns_origin=False, reasoning="测试", degraded=False):
+        self._result = {
+            "overturns_origin": overturns_origin,
+            "reasoning": reasoning,
+        }
+        self.engine = self._Engine(self)
+        self.monitor = self._Monitor(degraded)
+
+
+class TestReestimateLLMConfirm:
+    """T3.13 增强：重估 LLM 佐证——overturns_origin 决定是否推进 origin_at 修正。"""
+
+    def _setup_low_confidence_event(self, db):
+        """构造 origin_confidence='low' 的事件 + 一篇更早的新文章（person_origin 语义）。"""
+        topic = _make_topic(db)
+        src = make_source(db, country_code="GB")
+        article_old = _persist_article(db, src, published_at=T0, country_code="GB")
+        _link(db, topic, article_old)
+        event = _make_event(db, topic, origin_country_code="GB", origin_confidence="low", status="watching")
+        # 更早的新证据（LLM 复核对象）
+        new_article = _persist_article(
+            db, src, published_at=T0 - timedelta(hours=26), country_code="GB",
+        )
+        _link(db, topic, new_article)
+        db.commit()
+        return event, new_article
+
+    def test_overturns_true_proceeds_origin_at_revision(self, db):
+        """overturns_origin=True → 推进 origin_at 修正，trigger_evidence 含 llm_overturn。"""
+        event, new_article = self._setup_low_confidence_event(db)
+        llm = _FakeReestimateLLM(overturns_origin=True, reasoning="更早同源报道")
+        db.commit()
+
+        result = reestimate_origin(
+            db, event.topic_id,
+            trigger={"type": "person_origin", "article_id": str(new_article.id)},
+            llm_annotator=llm,
+        )
+        db.commit()
+
+        assert result is not None
+        db.expire_all()
+        event_db = db.get(AgendaEvent, event.id)
+        assert event_db.origin_at == T0 - timedelta(hours=26)
+        origin_entry = next(e for e in event_db.revision_log if e["field"] == "origin_at")
+        assert origin_entry["trigger_evidence"]["llm_overturn"] is True
+        assert origin_entry["trigger_evidence"]["reasoning"] == "更早同源报道"
+        # llm_judgements 留痕
+        from app.models.llm import LLMJudgement
+
+        rows = db.query(LLMJudgement).filter(LLMJudgement.task_type == "reestimate_confirm").all()
+        assert len(rows) == 1
+        assert rows[0].success is True
+        assert rows[0].output_payload["overturns_origin"] is True
+
+    def test_overturns_false_keeps_origin(self, db):
+        """overturns_origin=False → 保持原判定，origin_at 不被机器修正。"""
+        event, new_article = self._setup_low_confidence_event(db)
+        llm = _FakeReestimateLLM(overturns_origin=False, reasoning="不同事件")
+        db.commit()
+
+        result = reestimate_origin(
+            db, event.topic_id,
+            trigger={"type": "person_origin", "article_id": str(new_article.id)},
+            llm_annotator=llm,
+        )
+        db.commit()
+
+        assert result is not None
+        db.expire_all()
+        event_db = db.get(AgendaEvent, event.id)
+        assert event_db.origin_at == T0
+        fields = [e["field"] for e in event_db.revision_log]
+        assert "origin_at" not in fields
+
+    def test_no_llm_pure_algorithm_path(self, db):
+        """llm_annotator=None → 纯算法路径：更早证据自动推进 origin_at（与现状一致）。"""
+        event, new_article = self._setup_low_confidence_event(db)
+        db.commit()
+
+        result = reestimate_origin(
+            db, event.topic_id,
+            trigger={"type": "earlier_article", "article_id": str(new_article.id)},
+        )
+        db.commit()
+
+        assert result is not None
+        db.expire_all()
+        event_db = db.get(AgendaEvent, event.id)
+        assert event_db.origin_at == T0 - timedelta(hours=26)
+        origin_entry = next(e for e in event_db.revision_log if e["field"] == "origin_at")
+        assert origin_entry["trigger_evidence"]["type"] == "earlier_article"
+        assert "llm_overturn" not in origin_entry["trigger_evidence"]
+
+    def test_degraded_llm_pure_algorithm_path(self, db):
+        """LLM 降级 → 纯算法路径（与 None 等价，不阻塞修正）。"""
+        event, new_article = self._setup_low_confidence_event(db)
+        llm = _FakeReestimateLLM(overturns_origin=False, degraded=True)
+        db.commit()
+
+        result = reestimate_origin(
+            db, event.topic_id,
+            trigger={"type": "person_origin", "article_id": str(new_article.id)},
+            llm_annotator=llm,
+        )
+        db.commit()
+
+        assert result is not None
+        db.expire_all()
+        event_db = db.get(AgendaEvent, event.id)
+        assert event_db.origin_at == T0 - timedelta(hours=26)
+        origin_entry = next(e for e in event_db.revision_log if e["field"] == "origin_at")
+        assert "llm_overturn" not in origin_entry["trigger_evidence"]
+
+
 class TestReestimateIfEarlierArticle:
     """T3.13：新文章归入既有议题且早于首发锚点时触发增量重估。"""
 

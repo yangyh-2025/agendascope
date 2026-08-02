@@ -3,15 +3,18 @@
 每篇已向量化文章到达时：
   ① T_dup=0.95 判重：与近期文章 HNSW 近邻比对，命中标记转载（is_duplicate/canonical_id），
      归入原文所在议题共享归属（跟风报道是议程跟随证据，不丢弃），不重复建簇
+     —— 补充标题指纹兜底：HNSW top_n 非精确检索可能漏判（小窗/向量噪音），
+        标题归一化指纹完全一致的文章直接判转载（转载改写通常保留标题主干）。
   ② T_event=0.85 归簇：与活跃议题质心 HNSW 比对，命中则归入并增量维护质心/生命周期；
      新文章 published_at 早于议题当前首发锚点时触发增量重估（T3.13 reestimate_origin）
   ③ 都不命中：建 size=1 nascent 孤证微簇（议题萌芽保留，等待后续证据）
 
 幂等：已归属文章直接跳过（worker 重投递/重复投递不重复建簇）。
 """
+import re
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -40,6 +43,16 @@ OUTCOME_NEW_MICRO = "new_micro"
 OUTCOME_UNCLASSIFIED = "unclassified"  # 转载原文本身未归类时，跟风报道一并留池
 OUTCOME_SKIPPED = "skipped"
 
+# 标题指纹归一化：小写 + 去标点/空白（转载改写通常保留标题主干，仅改大小写/标点）
+_FP_STRIP = re.compile(r"[\W_]+", re.UNICODE)
+
+
+def title_fingerprint(title: str | None) -> str:
+    """标题归一化指纹：小写 + 去非字母数字。用于转载判重兜底（标题近全同则判转载）。"""
+    if not title:
+        return ""
+    return _FP_STRIP.sub("", title.lower())
+
 
 @dataclass(frozen=True)
 class AssignmentOutcome:
@@ -56,6 +69,40 @@ class OnlineAssigner:
         self.settings = settings
         self.t_event = t_event if t_event is not None else settings.t_event
         self.t_dup = t_dup if t_dup is not None else settings.t_dup
+
+    def _find_by_title_fingerprint(
+        self, db: Session, fp: str, exclude_id: UUID
+    ) -> "object | None":
+        """标题指纹兜底判重：近期非转载文章里找标题指纹一致的原文。
+
+        PostgreSQL 侧按指纹列过滤不可行（无指纹索引），这里用小窗口扫描标题列、
+        应用侧计算指纹比对（转载窗口内文章量有限，扫描成本可控）。
+        """
+        from app.nlp.similarity import SimilarArticle
+
+        cutoff = datetime.now() - timedelta(days=1)
+        stmt = (
+            select(Article)
+            .where(
+                Article.title.is_not(None),
+                Article.is_duplicate.is_(False),
+                Article.id != exclude_id,
+                Article.published_at >= cutoff,
+            )
+            .order_by(Article.published_at.asc())
+            .limit(200)
+        )
+        for article in db.scalars(stmt).all():
+            if title_fingerprint(article.title) == fp:
+                return SimilarArticle(
+                    article_id=article.id,
+                    title=article.title,
+                    language=article.language,
+                    country_code=article.country_code,
+                    published_at=article.published_at,
+                    score=self.t_dup,  # 指纹命中按阈值上限记分（语义已确认转载）
+                )
+        return None
 
     def assign(self, db: Session, article: Article, now: datetime | None = None) -> AssignmentOutcome:
         """在线归簇入口。now：处理时刻基准（缺省墙钟 now）；回放注入文章发布时间，
@@ -86,11 +133,17 @@ class OnlineAssigner:
         # ① 判重：与近期文章比对（pgvector HNSW，min_score 阈值下推 SQL）；
         #    转载只指向原始报道（跳过已判转载的候选，不形成转载链）
         canonical = None
-        for candidate in find_similar(db, embedding, top_n=5, min_score=self.t_dup, exclude_id=article.id):
+        for candidate in find_similar(db, embedding, top_n=self.settings.worker_batch_size, min_score=self.t_dup, exclude_id=article.id):
             candidate_article = db.get(Article, candidate.article_id)
             if candidate_article is not None and not candidate_article.is_duplicate:
                 canonical = candidate
                 break
+        # 标题指纹兜底：HNSW top_n 非精确检索漏判时，标题近全同的直接判转载
+        #（转载改写常保留标题主干，仅大小写/标点差异；指纹命中即判转载）
+        if canonical is None:
+            fp = title_fingerprint(article.title)
+            if fp:
+                canonical = self._find_by_title_fingerprint(db, fp, exclude_id=article.id)
         if canonical is not None:
             article.is_duplicate = True
             article.canonical_id = canonical.article_id

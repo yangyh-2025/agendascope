@@ -197,6 +197,25 @@ def _revise_field(
     return True
 
 
+def _trigger_new_article(db: Session, trigger: dict) -> Any | None:
+    """从 trigger 中解析「新证据文章」（LLM 重估复核的输入）。
+
+    支持 trigger['article_id']（earlier_article/person_origin 携带新文章）或
+    trigger['new_article_id']（调用方显式给出）。无则返回 None（跳过 LLM 复核）。
+    """
+    article_id = trigger.get("article_id") or trigger.get("new_article_id")
+    if not article_id:
+        return None
+    from app.models.article import Article
+
+    try:
+        if not isinstance(article_id, UUID):
+            article_id = uuid.UUID(str(article_id))
+        return db.get(Article, article_id)
+    except Exception:  # noqa: BLE001 非 UUID / 不存在均视为无新证据
+        return None
+
+
 def reestimate_origin(
     db: Session,
     topic_id: UUID,
@@ -226,7 +245,6 @@ def reestimate_origin(
       6. 调 confidence.check_revision_storm 检查修正风暴
     """
     cfg = settings or get_agenda_settings()
-    _ = llm_annotator  # LLM 注入位（保留接口一致性，本版本由媒体时间锚点为主）
 
     # 取议题当前 AgendaEvent（一个议题同时只有一个活跃事件；取最新一条）
     from sqlalchemy import select
@@ -253,6 +271,45 @@ def reestimate_origin(
         "trigger": _json_safe(trigger),
         "reestimated_at": datetime.now(UTC).isoformat(),
     }
+
+    # LLM 重估佐证（T3.13 增强）：person_origin 触发 或 事件 origin_confidence 为
+    # low 时，用 LLM 复核"新文章是否推翻首发源判定"：
+    #   - overturns_origin=True → 允许推进 origin_at 修正（trigger_evidence 附 llm_overturn 佐证）
+    #   - overturns_origin=False → 保持原判定（跳过 origin_at 机器修正）
+    #   - llm_annotator 为 None/降级 或 无新文章 → 纯算法路径（行为与现状完全一致）
+    llm_gates_origin = False
+    llm_overturn_evidence: dict | None = None
+    should_llm_review = (
+        llm_annotator is not None
+        and not llm_annotator.monitor.degraded
+        and (trigger_type == "person_origin" or (event.origin_confidence or "").lower() == "low")
+    )
+    if should_llm_review:
+        new_article = _trigger_new_article(db, trigger)
+        if new_article is not None:
+            from app.agenda_engine.reestimate_confirm import confirm_reestimate_overturn
+
+            confirm = confirm_reestimate_overturn(
+                db,
+                event,
+                new_article=new_article,
+                llm_annotator=llm_annotator,
+            )
+            if confirm is not None:
+                llm_gates_origin = True
+                if confirm.overturns_origin:
+                    llm_overturn_evidence = {
+                        "llm_overturn": True,
+                        "reasoning": confirm.reasoning,
+                        "at": datetime.now(UTC).isoformat(),
+                    }
+                else:
+                    logger.info(
+                        "reestimate_llm_keeps_origin",
+                        event_id=str(event.id),
+                        topic_id=str(topic_id),
+                        reasoning=confirm.reasoning,
+                    )
 
     # 重跑媒体首发锚点判定（最权威的客观锚点）
     new_origin = detect_media_origin(db, topic_id)
@@ -331,15 +388,41 @@ def reestimate_origin(
     ):
         revised_fields.append("origin_source_id")
 
-    if _revise_field(
-        db, event,
-        field="origin_at",
-        new_value=new_origin.published_at,
-        trigger_evidence={**trigger_evidence_base, "origin_article_id": str(new_origin.article_id)},
-        model=ALGO_MODEL_PLACEHOLDER, prompt_version=ALGO_PROMPT_VERSION_PLACEHOLDER,
-        locked_fields=locked_fields,
-    ):
-        revised_fields.append("origin_at")
+    # origin_at：LLM 复核门控——若本轮已咨询 LLM 且判定不推翻（overturns_origin=False），
+    # 维持原首发时间（不因算法锚点更早而自动改）；未咨询 LLM 时走纯算法路径。
+    if not llm_gates_origin:
+        if _revise_field(
+            db, event,
+            field="origin_at",
+            new_value=new_origin.published_at,
+            trigger_evidence={
+                **trigger_evidence_base,
+                "origin_article_id": str(new_origin.article_id),
+            },
+            model=ALGO_MODEL_PLACEHOLDER, prompt_version=ALGO_PROMPT_VERSION_PLACEHOLDER,
+            locked_fields=locked_fields,
+        ):
+            revised_fields.append("origin_at")
+    elif llm_overturn_evidence is not None:
+        if _revise_field(
+            db, event,
+            field="origin_at",
+            new_value=new_origin.published_at,
+            trigger_evidence={
+                **trigger_evidence_base,
+                "origin_article_id": str(new_origin.article_id),
+                **llm_overturn_evidence,
+            },
+            model=ALGO_MODEL_PLACEHOLDER, prompt_version=ALGO_PROMPT_VERSION_PLACEHOLDER,
+            locked_fields=locked_fields,
+        ):
+            revised_fields.append("origin_at")
+    else:
+        logger.info(
+            "reestimate_llm_kept_origin_at",
+            event_id=str(event.id),
+            topic_id=str(topic_id),
+        )
 
     if _revise_field(
         db, event,

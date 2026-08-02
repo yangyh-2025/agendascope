@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.alerting.alert_summary import generate_alert_summary
 from app.core.logging import get_logger
 from app.models.agenda import AgendaEvent
 from app.models.alert import Alert, AlertRule
@@ -360,6 +361,46 @@ def count_user_recent_alerts(db: Session, user_id: uuid.UUID, since: datetime) -
 # ---------------------------------------------------------------------------
 
 
+def _build_alert_context(db: Session, rule: AlertRule, result: RuleEvaluation) -> dict[str, Any]:
+    """构造告警理由摘要的输入上下文。
+
+    从命中的 matched_snapshots 取议题代表性标题（跨议题最多 5 条），
+    连同规则名、匹配条件/阈值、国家码一起交给 LLM 生成摘要。
+    """
+    from app.clustering.repository import representative_titles
+
+    matched = result.matched_snapshots
+    articles: list[str] = []
+    for snap in matched:
+        if len(articles) >= 5:
+            break
+        topic_id = snap.get("topic_id")
+        if not topic_id:
+            continue
+        try:
+            titles = representative_titles(db, uuid.UUID(str(topic_id)), limit=5)
+        except (ValueError, TypeError):
+            titles = []
+        articles.extend(str(t) for t in titles)
+    articles = articles[:5]
+
+    conditions = []
+    for snap in matched[:1]:
+        for cond in snap.get("conditions") or []:
+            conditions.append({
+                "metric": cond.get("metric"),
+                "value": cond.get("value"),
+                "threshold": cond.get("threshold"),
+            })
+
+    return {
+        "rule_name": rule.name,
+        "rule_conditions": conditions or (rule.condition_extra or {}),
+        "matched_articles": articles,
+        "country_code": matched[0].get("country_code") if matched else "",
+    }
+
+
 def write_alert(
     db: Session,
     rule: AlertRule,
@@ -428,6 +469,7 @@ def run_evaluation_round(
     now: datetime | None = None,
     notify_hook=None,
     only_topic_id: uuid.UUID | None = None,
+    llm_annotator=None,
 ) -> EngineReport:
     """单轮评估：拉 enabled 规则 → 逐条评估 → 防抖 → 写 alerts → 通知 hook。
 
@@ -436,6 +478,8 @@ def run_evaluation_round(
         now: 评估时刻（测试可注入）
         notify_hook: 可选回调，签名 (alert, rule) -> dict[str, Any]（notify_result）
         only_topic_id: 事件驱动评估时仅评估该议题相关规则
+        llm_annotator: 可选 TopicAnnotator 实例；注入时告警触发会生成中文理由摘要
+            （payload["summary"]），否则维持现状（向后兼容）
     """
     now = now or datetime.now(UTC)
     stmt = select(AlertRule).where(AlertRule.enabled.is_(True))
@@ -495,6 +539,17 @@ def run_evaluation_round(
             "matched": result.matched_snapshots,
             "summary": result.summary,
         }
+        # 告警理由摘要：LLM 可用时补充中文理由摘要（payload["reason_summary"]），否则维持现状
+        if llm_annotator is not None:
+            try:
+                alert_context = _build_alert_context(db, rule, result)
+                summary_text = generate_alert_summary(db, alert_context, llm_annotator=llm_annotator)
+                if summary_text:
+                    payload["reason_summary"] = summary_text
+            except Exception as exc:  # noqa: BLE001 摘要失败不阻塞告警落库
+                logger.warning(
+                    "alert_summary_fail", rule_id=str(rule.id), error=str(exc)[:200],
+                )
         alert = write_alert(db, rule, payload)
         triggered += 1
         if notify_hook is not None:
@@ -525,10 +580,12 @@ def evaluate_event_driven(
     db: Session,
     event_id: uuid.UUID,
     notify_hook=None,
+    llm_annotator=None,
 ) -> EngineReport:
     """议程设置事件 suspected/confirmed → 立即评估该议题的规则（不等 15 min 周期）。
 
     议程事件本身作为 alert payload 的证据（event_id 注入 payload 便于前端跳转）。
+    llm_annotator 注入时告警触发生成中文理由摘要（同 run_evaluation_round）。
     """
     event = db.get(AgendaEvent, event_id)
     if event is None:
@@ -543,7 +600,9 @@ def evaluate_event_driven(
         )
 
     # 用基础评估 + 在 payload 中附加 event_id
-    report = run_evaluation_round(db, notify_hook=notify_hook, only_topic_id=event.topic_id)
+    report = run_evaluation_round(
+        db, notify_hook=notify_hook, only_topic_id=event.topic_id, llm_annotator=llm_annotator,
+    )
     # 为已触发的 alerts 补充 event_id（在 run_evaluation_round 之外，作为补充信息）
     if report.triggered_count > 0:
         recent_alerts = db.scalars(

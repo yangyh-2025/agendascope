@@ -211,3 +211,72 @@ def test_read_snapshot_marks_correcting_during_rewrite(db, cluster_redis):
     assert view["correcting"] is True
     assert view["snapshot"]["correcting"] is True  # 旧版照常可读 + "校正中"标注
     assert view["snapshot"]["generated_at"] == "t1"
+
+
+def test_recluster_locked_topic_fields_not_overwritten(db, cluster_redis, mpnet_embedder):
+    """T2.10 人工锁定防护：命中议题 human_locked_fields 含 centroid/keywords 时不被覆盖。
+
+    缺陷 a 回归：此前 _persist 盲目覆盖 topic.keywords/centroid，人工调过的
+    质心与关键词会被每小时重聚类推平。现锁定字段必须原样保留。
+    """
+    from app.clustering.recluster import ReclusterJob, ReclusterReport
+    from app.clustering.repository import create_topic, get_assignment
+    from app.clustering.types import ClusterDoc, ClusterInfo, StrategyResult
+
+    source = make_source(db, language="en")
+    texts = [
+        "The central bank cut rates to support the slowing economy.",
+        "央行宣布降息以支持放缓的经济。",
+        "A faraway planet was discovered by astronomers this week.",
+    ]
+    vectors = mpnet_embedder.embed(texts)
+    articles = []
+    for text, vec in zip(texts, vectors, strict=True):
+        art = make_article(db, source, title=text, published_at=datetime.now(UTC) - timedelta(hours=2))
+        art.embedding = vec
+        articles.append(art)
+    db.commit()
+
+    # 预置一个与第一簇"语义相近"的既有议题（centroid 对齐第一簇以命中复用），
+    # human_locked_fields 锁定 centroid/keywords。簇 keywords=["自动","关键词","新"]
+    # 与锁定的 ["人工","关键词"] 不同——锁生效则 keywords 保持原值，锁失效则被覆盖。
+    locked_topic = create_topic(
+        db,
+        name_auto="既有议题（人工调过）",
+        keywords=["人工", "关键词"],
+        cluster_method="bertopic",
+        centroid=vectors[0],
+        country_scope=["US"],
+        lifecycle_state="forming",
+    )
+    locked_topic.human_locked_fields = ["centroid", "keywords"]
+    db.commit()
+
+    # 直接构造受控 StrategyResult：一个簇（成员 0,1）+ 噪声 2，供 _persist 消费
+    docs = [
+        ClusterDoc(
+            article_id=a.id, title=a.title, text=a.title,
+            language=a.language, country_code=a.country_code,
+            published_at=a.published_at, embedding=[float(v) for v in a.embedding],
+        )
+        for a in articles
+    ]
+    cluster = ClusterInfo(
+        label=0, member_indices=[0, 1], centroid=vectors[0],
+        cohesion=0.9, keywords=["自动", "关键词", "新"],
+    )
+    result = StrategyResult(
+        method="agglomerative", clusters=[cluster], noise_indices=[2], duration_ms=1.0,
+    )
+
+    job = ReclusterJob(bertopic=AgglomerativeClusterer(), agglomerative=AgglomerativeClusterer())
+    report = ReclusterReport()
+    job._persist(db, docs, result, report)
+
+    # 命中 locked_topic 且其 centroid/keywords 被锁定 → 不得被覆盖
+    db.refresh(locked_topic)
+    assert locked_topic.keywords == ["人工", "关键词"]  # 锁定关键词不被簇关键词覆盖
+    assert locked_topic.centroid is not None
+    assert report.reused_topics >= 1
+    # 成员已迁移到 locked_topic（未锁定 merged_into，允许迁移）
+    assert get_assignment(db, articles[0].id) is not None
