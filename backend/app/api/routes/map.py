@@ -1,4 +1,4 @@
-"""地图聚合 API（T4.5）：57 国×Top 议题一次性下发，首屏 ≤3s 预算。"""
+"""地图聚合 API（T4.5）：108 国×Top 议题一次性下发，首屏 ≤3s 预算。"""
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
@@ -80,7 +80,7 @@ def map_countries(
     if latest_visible:
         data_delay_minutes = max(0, int((now - latest_visible).total_seconds() / 60))
 
-    # 覆盖率置信度：以 30 国目标清单为分母（修复：此前以"有数据国家数"为分母导致恒≈1）
+    # 覆盖率置信度：以监控目标国清单为分母（修复：此前以"有数据国家数"为分母导致恒≈1）
     target_with_data = len([
         cc for cc in _COUNTRY_NAMES
         if cc_counts.get(cc, 0) > 0 or cc in by_country

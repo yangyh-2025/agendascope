@@ -3,7 +3,7 @@
 标题/正文同步至 ES 检索副本，PG 为唯一事实源、ES 最终一致：
 - doc _id = article_id，index 操作幂等 upsert，重投递不产生脏副本
 - 多语言 analyzer：基础字段 standard analyzer + 按文章语言写入 title_<lang>/content_<lang>
-  语言专属字段（dynamic_templates 按字段名后缀挂内置语言 analyzer，覆盖 30 国主要语种）
+  语言专属字段（dynamic_templates 按字段名后缀挂内置语言 analyzer，覆盖监控国主要语种）
 - 失败重试有界：指数退避 ≤ es_max_retries 次（默认总耗时 ~31s，不死等），
   超限抛 EsSyncError 由 worker 整批重投递；PG 侧语言/向量已落库不受影响
 """
@@ -23,7 +23,7 @@ from app.nlp.config import get_nlp_settings
 
 logger = get_logger("nlp.es_sync")
 
-# 语言 → ES 内置 analyzer（覆盖 30 国主要语种；其余语种落基础字段走 standard）
+# 语言 → ES 内置 analyzer（覆盖监控国主要语种；其余语种落基础字段走 standard）
 _LANG_ANALYZERS = {
     "en": "english", "zh": "cjk", "ja": "cjk", "ko": "cjk",
     "ar": "arabic", "ru": "russian", "de": "german", "fr": "french",

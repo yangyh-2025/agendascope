@@ -41,7 +41,7 @@ Python 3.11 + FastAPI。配置项集中在 `backend/app/config.py`（`.env` 注�
 python -m venv .venv && .venv/Scripts/python.exe -m pip install -r backend/requirements.txt
 docker compose -f deploy/docker-compose.yml up -d db redis elasticsearch rsshub  # 基础设施
 cd backend && alembic upgrade head                                             # 建表（14 张核心表）
-cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      # 种子源（57 国 57 源）+ 初始管理员
+cd .. && .venv/Scripts/python.exe scripts/seed_sources.py                      # 种子源（108 国 124 源）+ 初始管理员
 cd backend && uvicorn app.main:app --port 8000                                 # API 服务
 python -m app.collector.worker                                                 # 采集调度 worker（另开终端）
 python -m app.worker.nlp_worker                                                # NLP worker：语言识别→向量化→ES 同步→延迟埋点（另开终端）

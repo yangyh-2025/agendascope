@@ -40,7 +40,7 @@ export default function SetupPage() {
   const [envError, setEnvError] = useState<string | null>(null);
   // Step 2 基础配置
   const [appName, setAppName] = useState("");
-  // Step 3 监控范围（默认 30 国全选）
+  // Step 3 监控范围（默认全选）
   const [countries, setCountries] = useState<string[]>(COUNTRIES.map((c) => c.code));
   // Step 4 管理员账号
   const [username, setUsername] = useState("admin");
@@ -134,7 +134,7 @@ export default function SetupPage() {
 
   const submitStep3 = () => {
     if (countries.length === 0) {
-      setError("请至少勾选一个国家（或全选 30 国）");
+      setError("请至少勾选一个国家");
       return;
     }
     submit({ step: 3, countries }, () => setStep(4));
@@ -261,10 +261,10 @@ export default function SetupPage() {
             {step === 3 && (
               <section className="setup-panel">
                 <h2>第 3 步：监控范围</h2>
-                <p className="setup-hint">勾选需要监控的国家（已选 {countries.length} / 30），未勾选国家的媒体源将停用。</p>
+                <p className="setup-hint">勾选需要监控的国家（已选 {countries.length} / {COUNTRIES.length}），未勾选国家的媒体源将停用。</p>
                 <div className="setup-actions scope-ops">
                   <button type="button" className="as-btn-ghost" onClick={() => setCountries(COUNTRIES.map((c) => c.code))}>
-                    全选 30 国
+                    全选 {COUNTRIES.length} 国
                   </button>
                   <button type="button" className="as-btn-ghost" onClick={() => setCountries([])}>清空</button>
                 </div>

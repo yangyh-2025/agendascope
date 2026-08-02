@@ -49,7 +49,10 @@ class Settings(BaseSettings):
     gdelt_api_base: str = "https://api.gdeltproject.org/api/v2/doc/doc"
     gdelt_countries: str = (
         "US,GB,CN,JP,RU,DE,FR,KR,TR,QA,CA,AU,ES,IN,BR,ZA,NG,EG,IR,IL,SA,AE,ID,"
-        "MY,SG,TH,VN,PH,MX,AR,PL,SE,NO,CH,NL,BE,CL,CO,PE,MA,GH,TZ,UG,KZ,NZ"
+        "MY,SG,TH,VN,PH,MX,AR,PL,SE,NO,CH,NL,BE,CL,CO,PE,MA,GH,TZ,UG,KZ,NZ,"
+        "LA,BN,AF,IQ,SY,YE,BH,OM,PS,GR,PT,FI,DK,CZ,AT,IE,UA,HU,RO,BG,SK,"
+        "UY,BO,EC,VE,PY,CU,DO,FJ,DZ,TN,LY,RW,SN,CI,CM,AO,MZ,ZM,ZW,BW,GA,CD,"
+        "UZ,TM,KG,TJ,AZ,GE,AM,BY"
     )
     gdelt_max_records: int = 50
     gdelt_buffer_dir: str = "data/gdelt_buffer"
