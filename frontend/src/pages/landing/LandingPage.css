@@ -4,27 +4,27 @@
    ============================================ */
 
 .lp-root {
-  background: #f5f7fa;
+  background: #ffffff;
 }
 
 .lp {
-  /* 亮色调:与内页公安蓝一致 */
-  --lp-bg: #f5f7fa;
-  --lp-bg-alt: #eef2f7;
+  /* 亮色调:纯白底 + 明亮蓝 */
+  --lp-bg: #ffffff;
+  --lp-bg-alt: #f8fafd;
   --lp-bg-panel: #ffffff;
   --lp-border: rgba(15, 61, 138, 0.10);
-  --lp-border-strong: rgba(15, 61, 138, 0.20);
+  --lp-border-strong: rgba(15, 61, 138, 0.18);
   --lp-text: #1f2d3d;
   --lp-text-secondary: #5e6d82;
   --lp-text-muted: #9aa8bb;
-  --lp-accent: #1a4fa0;
-  --lp-accent-hover: #2b63c4;
-  --lp-accent-soft: rgba(26, 79, 160, 0.08);
-  --lp-red: #c8102e;
-  --lp-violet: #6b7fff;
+  --lp-accent: #2563eb;
+  --lp-accent-hover: #1d4ed8;
+  --lp-accent-soft: rgba(37, 99, 235, 0.08);
+  --lp-red: #dc2626;
+  --lp-violet: #7c3aed;
   --lp-shadow-sm: 0 1px 2px rgba(15, 61, 138, 0.04), 0 4px 12px rgba(15, 61, 138, 0.06);
   --lp-shadow-md: 0 4px 16px rgba(15, 61, 138, 0.08);
-  --lp-shadow-lg: 0 8px 32px rgba(15, 61, 138, 0.12);
+  --lp-shadow-lg: 0 8px 32px rgba(15, 61, 138, 0.10);
 
   background: var(--lp-bg);
   color: var(--lp-text);
@@ -90,8 +90,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(26, 79, 160, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(26, 79, 160, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 70%);
 }
@@ -100,19 +100,19 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.4;
+  opacity: 0.5;
 }
 .lp-hero-glow-1 {
   width: 560px;
   height: 560px;
-  background: radial-gradient(circle, rgba(26, 79, 160, 0.18), transparent 60%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.18), transparent 60%);
   top: -200px;
   right: -100px;
 }
 .lp-hero-glow-2 {
   width: 480px;
   height: 480px;
-  background: radial-gradient(circle, rgba(107, 127, 255, 0.12), transparent 60%);
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12), transparent 60%);
   bottom: -200px;
   left: -100px;
 }
@@ -182,16 +182,17 @@
 
 .lp-nav-cta {
   padding: 8px 18px;
-  border: 1px solid var(--lp-border-strong);
+  border: 1px solid var(--lp-accent);
+  background: var(--lp-accent);
+  color: #ffffff !important;
   border-radius: 999px;
-  color: var(--lp-text) !important;
   font-weight: 500;
   transition: all 0.2s;
 }
 .lp-nav-cta:hover {
-  background: var(--lp-accent);
-  border-color: var(--lp-accent);
-  color: white !important;
+  background: var(--lp-accent-hover);
+  border-color: var(--lp-accent-hover);
+  color: #ffffff !important;
 }
 
 .lp-nav-ext {
@@ -239,7 +240,7 @@
   height: 100%;
 }
 
-/* 文字与地球之间的渐变罩,保证文字可读(亮色调) */
+/* 文字与地球之间的渐变罩,只罩住左侧文字区,右侧完全透明让地球原色呈现 */
 .lp-hero-mask {
   position: absolute;
   inset: 0;
@@ -248,10 +249,10 @@
   background:
     linear-gradient(
       to right,
-      rgba(245, 247, 250, 0.95) 0%,
-      rgba(245, 247, 250, 0.75) 25%,
-      rgba(245, 247, 250, 0.3) 48%,
-      transparent 65%
+      rgba(255, 255, 255, 0.97) 0%,
+      rgba(255, 255, 255, 0.85) 22%,
+      rgba(255, 255, 255, 0.3) 38%,
+      transparent 50%
     );
 }
 
@@ -293,10 +294,7 @@
 
 .lp-hero-title em {
   font-style: normal;
-  background: linear-gradient(135deg, var(--lp-accent) 0%, var(--lp-violet) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--lp-accent);
 }
 
 .lp-hero-subtitle {
@@ -326,14 +324,21 @@
   border: 1px solid transparent;
 }
 
-.lp-btn-primary {
-  background: linear-gradient(135deg, var(--lp-accent) 0%, #2b63c4 100%);
-  color: white;
-  box-shadow: 0 8px 24px rgba(26, 79, 160, 0.25);
+.lp-btn-primary,
+.lp-btn-primary:visited,
+.lp-btn-primary:link {
+  background: var(--lp-accent);
+  color: #ffffff !important;
+  border: 1.5px solid var(--lp-accent);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
 .lp-btn-primary:hover {
+  background: var(--lp-accent-hover);
+  border-color: var(--lp-accent-hover);
+  color: #ffffff !important;
   transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(26, 79, 160, 0.35);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.32);
 }
 
 .lp-btn-ghost {
@@ -425,10 +430,7 @@
   font-size: clamp(36px, 4vw, 52px);
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--lp-accent), var(--lp-violet));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--lp-accent);
   line-height: 1;
   margin-bottom: 12px;
 }
@@ -694,10 +696,7 @@
   font-size: 38px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--lp-accent), var(--lp-violet));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--lp-accent);
   line-height: 1;
   margin-bottom: 10px;
 }
@@ -742,10 +741,7 @@
   font-size: clamp(36px, 4vw, 48px);
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--lp-accent), var(--lp-violet));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--lp-accent);
   line-height: 1;
   margin-bottom: 12px;
 }
@@ -1150,10 +1146,7 @@
   right: 24px;
   font-size: 48px;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--lp-accent), var(--lp-violet));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--lp-accent);
   line-height: 1;
   opacity: 0.3;
 }
@@ -1233,7 +1226,7 @@
 
 .lp-hot-salience-fill {
   height: 100%;
-  background: linear-gradient(to right, var(--lp-accent), var(--lp-violet));
+  background: var(--lp-accent);
   border-radius: 3px;
   transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1317,10 +1310,7 @@
 .lp-persons-metric-num {
   font-size: 44px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--lp-accent), var(--lp-violet));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--lp-accent);
   line-height: 1;
   margin-bottom: 8px;
 }
@@ -1610,7 +1600,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--lp-accent), var(--lp-violet));
+  background: var(--lp-accent);
   color: white;
   font-size: 12px;
   font-weight: 700;

@@ -54,14 +54,14 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     }
   });
 
-  // 国家贴图(亮色调:海洋近白 + 陆地中蓝灰,有边界对比)
+  // 国家贴图(亮蓝色调:海洋浅蓝 + 陆地中蓝,高饱和有精神)
   const texture = useMemo(() => {
     const canvas = buildGlobeTexture({
       width: 2048,
       height: 1024,
-      oceanColor: "#f0f5fc",
-      landColor: "#a8bcd8",
-      borderColor: "rgba(26, 79, 160, 0.55)",
+      oceanColor: "#cfe2f5",
+      landColor: "#6b9bd8",
+      borderColor: "rgba(37, 99, 235, 0.6)",
       highlight: {
         CN: "#c8102e", // 中国(公安红)
         US: "#1a4fa0", // 美(公安蓝)
@@ -142,15 +142,13 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
   }, [arcHeads]);
 
   return (
-    <group ref={groupRef} rotation={[0.32, 0, 0]} position={[1.1, 0, 0]}>
+    <group ref={groupRef} rotation={[0.32, 2.6, 0]} position={[1.1, 0, 0]}>
       {/* 主球:国家贴图 */}
       <mesh geometry={sphereGeo}>
         <meshStandardMaterial
           map={texture}
           roughness={1}
           metalness={0}
-          emissive="#e8eef7"
-          emissiveIntensity={0.05}
         />
       </mesh>
 
@@ -180,17 +178,6 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
           opacity={1}
         />
       </points>
-
-      {/* 外层光晕 */}
-      <mesh>
-        <sphereGeometry args={[radius * 1.18, 48, 48]} />
-        <meshBasicMaterial
-          color="#1a4fa0"
-          transparent
-          opacity={0.05}
-          side={THREE.BackSide}
-        />
-      </mesh>
     </group>
   );
 }
@@ -208,9 +195,9 @@ export default function Globe({ className = "" }: GlobeProps) {
         dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[5, 3, 5]} intensity={0.8} color="#cfe1ff" />
-        <pointLight position={[-6, -2, -4]} intensity={0.3} color="#6b7fff" />
+        <ambientLight intensity={0.45} />
+        <directionalLight position={[5, 3, 5]} intensity={0.55} color="#ffffff" />
+        <pointLight position={[-6, -2, -4]} intensity={0.2} color="#6b7fff" />
         <GlobeInner />
       </Canvas>
     </div>
