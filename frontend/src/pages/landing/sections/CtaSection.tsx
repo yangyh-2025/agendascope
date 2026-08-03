@@ -1,11 +1,17 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import ScrollReveal from "../components/ScrollReveal";
+import ContactModal from "../components/ContactModal";
 
 interface CtaSectionProps {
   isAuthenticated: boolean;
 }
 
+const CONTACT_EMAIL = "yangyuhang2667@163.com";
+
 export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
     <section className="lp-cta">
       <div className="lp-container">
@@ -46,12 +52,16 @@ export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
               </svg>
               GitHub
             </a>
-            <a href="mailto:yangyuhang2667@163.com" className="lp-cta-contact-item">
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="lp-cta-contact-item lp-cta-contact-btn"
+            >
               <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
                 <path d="M1.5 3h13a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5Zm.7 1.24 5.8 4.6 5.8-4.6V4H2.2v.24ZM14 5.05l-5.62 4.46a.75.75 0 0 1-.76 0L2 5.05V12h12V5.05Z"/>
               </svg>
-              yangyuhang2667@163.com
-            </a>
+              联系我们
+            </button>
           </div>
         </ScrollReveal>
 
@@ -60,7 +70,18 @@ export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
             <img src="/logo.svg" alt="观澜" className="lp-footer-logo" />
             <div className="lp-footer-brand-text">
               <span className="lp-footer-brand-name">观澜 · AgendaScope</span>
-              <span className="lp-footer-brand-org">国际关系学院 · 国家安全计算模拟实验室</span>
+              <span className="lp-footer-brand-org">
+                <a
+                  href="https://www.uir.cn/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lp-footer-org-link"
+                >
+                  国际关系学院
+                </a>
+                {" · "}
+                国家安全计算模拟实验室
+              </span>
             </div>
           </div>
           <div className="lp-footer-meta">
@@ -74,10 +95,22 @@ export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
               GitHub
             </a>
             <span aria-hidden="true">·</span>
-            <a href="mailto:yangyuhang2667@163.com">联系我们</a>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="lp-footer-link-btn"
+            >
+              联系我们
+            </button>
           </div>
         </footer>
       </div>
+
+      <ContactModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        email={CONTACT_EMAIL}
+      />
     </section>
   );
 }

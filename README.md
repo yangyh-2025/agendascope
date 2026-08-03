@@ -1,10 +1,14 @@
-# AgendaScope 观澜 · 全球议程设置监控平台
-
 <div align="center">
+
+<img src="frontend/public/logo.svg" alt="AgendaScope 观澜 Logo" width="96" height="96">
+
+# AgendaScope 观澜 · 全球议程设置监控平台
 
 **面向国家安全与国际关系研究机构的全球主流媒体舆情实时监控与议程设置识别系统**
 
-[![License](https://img.shields.io/badge/License-Proprietary-1A4FA0)](#许可)
+**国际关系学院 · 国家安全计算模拟实验室**
+
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](backend/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](backend/app/main.py)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](frontend/)
@@ -164,4 +168,14 @@ npm run lint       # ESLint
 
 ## 许可
 
-私有软件，保留所有权利，详见 [LICENSE](LICENSE)。
+本作品采用 [知识共享 署名 4.0 国际 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.zh-Hans) 协议进行许可,可自由共享/演绎/商用,但**必须署名**。
+
+学术引用格式:
+
+```
+杨昱航. AgendaScope 观澜: 全球议程设置监控平台
+[Computer software]. 2026.
+https://github.com/yangyh-2025/agendascope
+```
+
+详见 [LICENSE](LICENSE)。

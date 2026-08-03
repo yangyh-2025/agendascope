@@ -52,7 +52,18 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
           <img src="/logo.svg" alt="观澜" className="lp-nav-logo" />
           <div className="lp-nav-brand-text">
             <span className="lp-nav-name">观澜 · AgendaScope</span>
-            <span className="lp-nav-org">国际关系学院 · 国家安全计算模拟实验室</span>
+            <span className="lp-nav-org">
+              <a
+                href="https://www.uir.cn/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lp-nav-org-link"
+              >
+                国际关系学院
+              </a>
+              {" · "}
+              国家安全计算模拟实验室
+            </span>
           </div>
         </div>
         <nav className="lp-nav-links">
@@ -107,7 +118,7 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
                 {isAuthenticated ? "回到看板" : "进入系统"}
                 <span aria-hidden="true">→</span>
               </Link>
-              <a href="#collection" className="lp-btn lp-btn-ghost">
+              <a href="#propagation" className="lp-btn lp-btn-ghost">
                 探索能力
               </a>
             </div>

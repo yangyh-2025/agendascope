@@ -159,6 +159,17 @@
   line-height: 1.2;
 }
 
+.lp-nav-org-link {
+  color: var(--lp-text-muted);
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: all 0.2s;
+}
+.lp-nav-org-link:hover {
+  color: var(--lp-accent);
+  border-bottom-color: var(--lp-accent);
+}
+
 .lp-nav-logo {
   width: 32px;
   height: 32px;
@@ -893,6 +904,143 @@
   flex-shrink: 0;
 }
 
+/* button 元素的 lp-cta-contact-item 重置 */
+.lp-cta-contact-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--lp-text-secondary);
+  font-size: 14px;
+}
+.lp-cta-contact-btn:hover {
+  color: var(--lp-accent);
+}
+
+/* footer 内联 button */
+.lp-footer-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--lp-text-secondary);
+  transition: color 0.2s;
+}
+.lp-footer-link-btn:hover {
+  color: var(--lp-accent);
+}
+
+/* ============ 联系我们弹窗 ============ */
+.lp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: lp-modal-fade-in 0.2s ease-out;
+}
+
+@keyframes lp-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lp-modal {
+  position: relative;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px 40px 28px;
+  max-width: 440px;
+  width: calc(100% - 32px);
+  box-shadow: 0 20px 60px rgba(15, 61, 138, 0.18);
+  animation: lp-modal-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes lp-modal-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lp-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(15, 61, 138, 0.06);
+  color: var(--lp-text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-modal-close:hover {
+  background: rgba(15, 61, 138, 0.12);
+  color: var(--lp-text);
+}
+
+.lp-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--lp-text);
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+
+.lp-modal-lede {
+  font-size: 14px;
+  color: var(--lp-text-secondary);
+  line-height: 1.7;
+  margin: 0 0 20px;
+}
+
+.lp-modal-email {
+  display: block;
+  padding: 14px 18px;
+  background: var(--lp-accent-soft);
+  border: 1px solid var(--lp-border-strong);
+  border-radius: 10px;
+  color: var(--lp-accent);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "SF Mono", Consolas, monospace;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.lp-modal-email:hover {
+  background: var(--lp-accent);
+  color: #ffffff;
+  border-color: var(--lp-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.lp-modal-hint {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--lp-text-muted);
+  text-align: center;
+}
+
 .lp-footer {
   display: flex;
   align-items: center;
@@ -935,6 +1083,17 @@
   font-weight: 400;
   color: var(--lp-text-muted);
   line-height: 1.2;
+}
+
+.lp-footer-org-link {
+  color: var(--lp-text-muted);
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: all 0.2s;
+}
+.lp-footer-org-link:hover {
+  color: var(--lp-accent);
+  border-bottom-color: var(--lp-accent);
 }
 
 .lp-footer-meta {

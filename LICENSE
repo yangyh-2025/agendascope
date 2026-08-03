@@ -1,6 +1,41 @@
-Copyright (c) 2026 yangyh-2025
+Creative Commons Attribution 4.0 International Public License
 
-All rights reserved.
+AgendaScope 观澜 · 全球议程设置监控平台
+Copyright (c) 2026 杨昱航
+https://github.com/yangyh-2025/agendascope
 
-本软件及其文档为私有财产。未经版权持有者书面许可，任何人不得以任何形式
-复制、修改、分发或使用本软件的全部或部分内容。
+本作品采用「知识共享 署名 4.0 国际」(CC BY 4.0) 协议进行许可。
+
+您有权:
+  - 共享 — 在任何媒介以任何形式复制、发行本作品
+  - 演绎 — 修改、转换或以本作品为基础进行创作
+  - 用于任何目的,包括商业目的
+
+惟须遵守下列条件:
+  - **署名** — 您必须给出适当的署名,提供指向本许可协议的链接,
+    同时标明是否(对原始作品)作了修改。您可以用任何合理的方式来署名,
+    但是不得以任何方式暗示许可人为您或您的使用背书。
+
+  - **学术引用要求** — 如果您在学术研究、论文、报告或公开演示中使用
+    本系统或其衍生成果,请按以下格式引用:
+
+      杨昱航. AgendaScope 观澜: 全球议程设置监控平台
+      [Computer software]. 2026.
+      https://github.com/yangyh-2025/agendascope
+
+  - **没有附加限制** — 您不得使用法律条款或技术措施,在法律上限制
+    他人做许可协议允许的事情。
+
+声明:
+  - 本许可协议不适用于作品中包含的第三方组件,各第三方组件按其
+    原有许可协议执行。详见各子目录的 LICENSE / NOTICE 文件。
+
+  - 本系统为学术与研究用途设计,使用者应遵守所在国家/地区相关法律
+    法规,不得用于任何违法、侵犯他人权益的目的。许可人不对使用者的
+    行为承担任何责任。
+
+完整法律文本:
+  https://creativecommons.org/licenses/by/4.0/legalcode.zh-Hans
+
+英文原文:
+  https://creativecommons.org/licenses/by/4.0/legalcode
