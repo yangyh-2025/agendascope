@@ -8,7 +8,7 @@
 
 **国际关系学院 · 国家安全计算模拟实验室**
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](backend/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](backend/app/main.py)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](frontend/)
@@ -168,7 +168,7 @@ npm run lint       # ESLint
 
 ## 许可
 
-本作品采用 [知识共享 署名 4.0 国际 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.zh-Hans) 协议进行许可,可自由共享/演绎/商用,但**必须署名**。
+本作品采用 [知识共享 署名-非商业性使用 4.0 国际 (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-Hans) 协议进行许可:**学术/研究/个人可自由使用,商用需单独授权**(联系 yangyuhang2667@163.com)。
 
 学术引用格式:
 
