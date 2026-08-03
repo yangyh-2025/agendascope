@@ -22,6 +22,7 @@ from app.core.errors import (
 from app.db.redis_client import get_cache_redis
 from app.db.session import get_db
 from app.models.agenda import AgendaEvent
+from app.models.article import Article
 from app.models.topic import AgendaSnapshot, Topic, TopicArticle
 from app.models.user import User
 from app.repositories.audit_repo import write_audit
@@ -107,10 +108,10 @@ def hot_topics(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(ROLE_REGISTERED)),
 ):
-    """全局热点议题 TOP N（总览页右侧）：按当日显著性降序取前 N。
+    """全局热点议题 TOP N（总览页右侧）：按 24h 全球媒体报道量降序取前 N。
 
-    复用 list_topics 的显著性聚合口径（取每议题当日各国快照的最高 salience_score），
-    附加 24h 文章量与媒体数供卡片展示；registered 角色仅看默认 3 国。
+    热点 = 24h 内被最多媒体/文章报道的议题（报道热度），不是显著性置信度。
+    附加显著性/媒体数供卡片展示；registered 角色仅看默认 3 国。
     """
     allowed = _allowed_countries(user)
 
@@ -124,7 +125,7 @@ def hot_topics(
     topic_ids = [t.id for t in all_topics]
 
     snaps = _fetch_today_snapshots(db, topic_ids, None)
-    article_counts = _article_counts(db, topic_ids)
+    article_counts = _hot_article_counts(db, topic_ids)  # 24h 报道量
     media_counts = _media_counts(db, topic_ids)
     events = _topic_event_map(db, topic_ids)
 
@@ -135,21 +136,23 @@ def hot_topics(
         best = max(candidates, key=lambda s: float(s.salience_score or 0))
         return float(best.salience_score or 0), best.country_code
 
-    rows: list[tuple[float, dict[str, Any]]] = []
+    rows: list[tuple[int, float, dict[str, Any]]] = []
     for t in all_topics:
         score, score_country = _agg_salience(t.id)
+        cnt = article_counts.get(str(t.id), 0)
         item = _topic_brief(t)
         item.update({
             "salience_score": round(score, 4),
             "salience_country": score_country,
-            "article_count": article_counts.get(str(t.id), 0),
+            "article_count": cnt,  # 24h 报道量（热点口径）
             "media_count": media_counts.get(str(t.id), 0),
             "has_agenda_event": str(t.id) in events,
         })
-        rows.append((score, item))
+        rows.append((cnt, score, item))
 
-    rows.sort(key=lambda r: -r[0])
-    items = [r[1] for r in rows[:limit]]
+    # 热点 = 24h 报道量降序；同量按显著性（可读性排序）
+    rows.sort(key=lambda r: (-r[0], -r[1]))
+    items = [r[2] for r in rows[:limit]]
     return ok({"items": items, "total": len(items)})
 
 
@@ -203,6 +206,23 @@ def _article_counts(db: Session, topic_ids: list[uuid.UUID]) -> dict[str, int]:
     stmt = (
         select(TopicArticle.topic_id, func.count())
         .where(TopicArticle.topic_id.in_(topic_ids))
+        .group_by(TopicArticle.topic_id)
+    )
+    return {str(tid): int(c) for tid, c in db.execute(stmt).all()}
+
+
+def _hot_article_counts(db: Session, topic_ids: list[uuid.UUID]) -> dict[str, int]:
+    """议题 24h 内报道量（热点口径）：topic_articles join articles 按 published_at 过滤近 24h。"""
+    if not topic_ids:
+        return {}
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
+    stmt = (
+        select(TopicArticle.topic_id, func.count(func.distinct(TopicArticle.article_id)))
+        .join(Article, Article.id == TopicArticle.article_id)
+        .where(
+            TopicArticle.topic_id.in_(topic_ids),
+            Article.published_at >= cutoff,
+        )
         .group_by(TopicArticle.topic_id)
     )
     return {str(tid): int(c) for tid, c in db.execute(stmt).all()}

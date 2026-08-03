@@ -39,6 +39,10 @@ services:
   nlp-worker:
     restart: unless-stopped
     mem_limit: 256m
+    environment:
+      # 低内存适配：降批处理大小防内存峰值（默认 32，这里 8）——防 Redis 超时崩溃
+      NLP_WORKER_BATCH_SIZE: ${NLP_WORKER_BATCH_SIZE:-8}
+      NLP_WORKER_BLOCK_MS: ${NLP_WORKER_BLOCK_MS:-2000}
 
   cluster-worker:
     restart: unless-stopped

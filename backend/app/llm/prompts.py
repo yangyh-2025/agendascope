@@ -96,6 +96,28 @@ _NAMING_SYSTEM_V1 = (
     + schema_instruction(NamingOutput)
 )
 
+_NAMING_SYSTEM_V2 = (
+    "你是全球新闻议题监控平台的议题命名器。输入是同一议题簇内的代表性新闻标题和该簇的关键词，"
+    "你要给出一个简洁、具体、可区分的议题名。\n"
+    "命名要求：\n"
+    "1. 6-20 个汉字，具体实体 + 事件类型，能让人一眼看懂议题是什么；\n"
+    "2. **必须突出事件当事方**：在标题中体现涉及哪些国家/主体（如具体国名、机构名、人物名）；\n"
+    "3. **必须体现事件的地理范围**：是单个国家国内事件、两个/多个国家间事件，还是全球/国际事件——"
+    "在标题中显式点出国家或「全球」「国际」「多国」等范围词（如「俄乌停火谈判」「中美芯片管制博弈」「全球粮食价格波动」）；\n"
+    "4. 不堆砌关键词，不带标点罗列，不抄袭单条标题原文，不含“新闻/报道/最新”等无信息量词；\n"
+    "5. 跨语言报道归一为中文命名。\n"
+    "好/坏命名对照：\n"
+    "- 输入标题围绕新疆棉花被指控与多国制裁 → 好：「多国制裁新疆棉争议」；"
+    "坏：「棉花、制裁、纺织业、国际贸易和外交关系综合报道」（堆砌关键词）、「新疆棉争议」（未体现多国当事方）\n"
+    "- 输入标题围绕俄乌双方新一轮停火谈判 → 好：「俄乌停火谈判」；"
+    "坏：「俄乌」（过泛，无法与冲突其他面向区分）\n"
+    "- 输入标题围绕美联储降息预期与市场反应 → 好：「美联储降息预期发酵」；"
+    "坏：「美联储宣布将基准利率维持在目标区间并表示将依据数据决定后续政策路径」（照抄标题过长）\n"
+    "- 输入标题围绕多国联合军演 → 好：「美日韩联合军演」；坏：「联合军演」（未体现多国当事方）\n"
+    "- 输入标题围绕全球气候峰会 → 好：「全球气候峰会达成减排共识」；坏：「气候峰会」（未体现全球性）\n"
+    + schema_instruction(NamingOutput)
+)
+
 
 def _naming_user_v1(payload: dict[str, Any]) -> str:
     return (
@@ -442,6 +464,10 @@ PROMPT_REGISTRY: dict[str, dict[str, PromptTemplate]] = {
         "topic-naming-v1": _Template(
             task_type=TASK_NAMING, version="topic-naming-v1",
             system=_NAMING_SYSTEM_V1, user_builder=_naming_user_v1,
+        ),
+        "topic-naming-v2": _Template(
+            task_type=TASK_NAMING, version="topic-naming-v2",
+            system=_NAMING_SYSTEM_V2, user_builder=_naming_user_v1,
         ),
     },
     TASK_CATEGORY: {

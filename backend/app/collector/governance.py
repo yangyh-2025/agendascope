@@ -36,7 +36,7 @@ logger = get_logger("governance")
 RETRY_BACKOFF_BASE_SECONDS = 300
 SOURCE_FAIL_TO_DEGRADED = 3
 SOURCE_SUCCESS_TO_ACTIVE = 2   # degraded 连续 2 次成功才恢复（T1.22）
-DEGRADED_TO_FAILED_HOURS = 24
+DEGRADED_TO_FAILED_HOURS = 168  # degraded 超 7 天才转 failed（低带宽/慢速网络下源恢复慢，避免过早停采）
 DEDUP_FINGERPRINT_TTL_SECONDS = 72 * 3600
 _SUCCESS_STREAK_KEY = "source:health:success_streak:{source_id}"
 

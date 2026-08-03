@@ -139,27 +139,61 @@ export interface WorldGeoJson {
 let registered: WorldGeoJson | null = null;
 const centroidByName = new Map<string, [number, number]>();
 
-/** 展开 Polygon/MultiPolygon 坐标,求外接框中心(示意用,非精确质心)。 */
-function bboxCenter(coords: unknown): [number, number] | null {
-  let minLng = Infinity;
-  let maxLng = -Infinity;
-  let minLat = Infinity;
-  let maxLat = -Infinity;
-  const walk = (node: unknown): void => {
-    if (!Array.isArray(node)) return;
-    if (typeof node[0] === "number" && typeof node[1] === "number") {
-      const [lng, lat] = node as [number, number];
-      if (lng < minLng) minLng = lng;
-      if (lng > maxLng) maxLng = lng;
-      if (lat < minLat) minLat = lat;
-      if (lat > maxLat) maxLat = lat;
-      return;
-    }
-    for (const child of node) walk(child);
-  };
-  walk(coords);
-  if (!Number.isFinite(minLng)) return null;
-  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+/** ring 的鞋带公式面积（平方经纬度，带符号；取绝对值）。 */
+function ringArea(ring: number[][]): number {
+  let area = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [lng1, lat1] = ring[i];
+    const [lng2, lat2] = ring[(i + 1) % ring.length];
+    area += lng1 * lat2 - lng2 * lat1;
+  }
+  return Math.abs(area / 2);
+}
+
+/** ring 的质心（面积加权）。 */
+function ringCentroid(ring: number[][]): [number, number] {
+  let cx = 0;
+  let cy = 0;
+  let area = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [lng1, lat1] = ring[i];
+    const [lng2, lat2] = ring[(i + 1) % ring.length];
+    const cross = lng1 * lat2 - lng2 * lat1;
+    cx += (lng1 + lng2) * cross;
+    cy += (lat1 + lat2) * cross;
+    area += cross;
+  }
+  if (Math.abs(area) < 1e-9) return [0, 0];
+  return [cx / (3 * area), cy / (3 * area)];
+}
+
+/**
+ * 计算 Polygon/MultiPolygon 的面积加权质心（真实地理中心）。
+ * 相比 bboxCenter（外接框中心），对俄罗斯/中国/美国等大国不偏移
+ * （外接框中心会偏向北极或海洋）。空坐标返回 null。
+ */
+function polygonCentroid(coords: unknown): [number, number] | null {
+  const polys: unknown[] = Array.isArray(coords) && coords.length > 0
+    && Array.isArray(coords[0]) && typeof coords[0][0] === "number"
+      ? [coords]  // 单个 Polygon：[[lng,lat],...]
+      : (coords as unknown[]);  // MultiPolygon：[[[lng,lat]...],...]
+
+  let totalArea = 0;
+  let cx = 0;
+  let cy = 0;
+  for (const poly of polys) {
+    if (!Array.isArray(poly) || poly.length === 0) continue;
+    const outerRing = poly[0] as number[][];  // 外环（环首即外环）
+    if (!outerRing || !Array.isArray(outerRing[0])) continue;
+    const area = ringArea(outerRing);
+    if (area <= 0) continue;
+    const [rcx, rcy] = ringCentroid(outerRing);
+    totalArea += area;
+    cx += rcx * area;
+    cy += rcy * area;
+  }
+  if (totalArea <= 0) return null;
+  return [cx / totalArea, cy / totalArea];
 }
 
 /**
@@ -259,6 +293,39 @@ function clipAntimeridianFragments(geo: WorldGeoJson): WorldGeoJson {
  * 在注册前会调用 clipAntimeridianFragments 修掉俄罗斯等跨国 180° 经线国家
  * 的"溢出碎块",避免渲染时出现孤立的远程长条。
  */
+/**
+ * 把 world-atlas 中的 Taiwan 要素并入 China（一个中国原则，合规化）。
+ * 做法：把 Taiwan 的 geometry 合并进 China（若 China 是 Polygon 则升级为
+ * MultiPolygon 追加），并删除独立 Taiwan 要素——地图上台湾与中国统一渲染。
+ */
+function mergeTaiwanIntoChina(geo: WorldGeoJson): WorldGeoJson {
+  const taiwanIdx = geo.features.findIndex((f) => f.properties?.name === "Taiwan");
+  if (taiwanIdx < 0) return geo;
+  const taiwan = geo.features[taiwanIdx];
+  const china = geo.features.find((f) => f.properties?.name === "China");
+  if (!china || !taiwan.geometry) return geo;
+
+  const taiwanGeom = taiwan.geometry;
+  // 归一化为 MultiPolygon 坐标数组（[[ring...], [ring...]])
+  const taiwanPolys: unknown[] =
+    taiwanGeom.type === "MultiPolygon"
+      ? (taiwanGeom.coordinates as unknown[])
+      : [taiwanGeom.coordinates];
+
+  if (china.geometry) {
+    if (china.geometry.type === "MultiPolygon") {
+      (china.geometry.coordinates as unknown[]).push(...taiwanPolys);
+    } else if (china.geometry.type === "Polygon") {
+      china.geometry = {
+        type: "MultiPolygon",
+        coordinates: [china.geometry.coordinates, ...taiwanPolys] as never,
+      };
+    }
+  }
+  geo.features.splice(taiwanIdx, 1);
+  return geo;
+}
+
 export function registerWorldMap(): WorldGeoJson {
   if (registered) return registered;
   const topo = countries50m as unknown as Topology;
@@ -266,11 +333,12 @@ export function registerWorldMap(): WorldGeoJson {
     topo,
     topo.objects.countries,
   ) as unknown as WorldGeoJson;
+  mergeTaiwanIntoChina(geo);  // 台湾并入中国（合规）
   clipAntimeridianFragments(geo);
   for (const f of geo.features) {
     const name = f.properties?.name;
     if (!name) continue;
-    const center = bboxCenter(f.geometry?.coordinates);
+    const center = polygonCentroid(f.geometry?.coordinates);
     if (center) centroidByName.set(name, center);
   }
   echarts.registerMap(WORLD_MAP_NAME, geo as never);

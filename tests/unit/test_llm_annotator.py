@@ -66,7 +66,7 @@ def test_naming_success_records_version_and_method():
     assert result.value == "俄乌停火谈判"
     assert result.naming_method == NAMING_LLM
     assert result.model_name == "stub-qwen"
-    assert result.prompt_version == "topic-naming-v1"
+    assert result.prompt_version == "topic-naming-v2"
 
 
 def test_naming_retry_once_after_parse_failure():

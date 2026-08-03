@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import socket
+import time
 from uuid import UUID
 
 from app.clustering import STREAM_EMBEDDED_ARTICLES
@@ -118,18 +119,25 @@ class NlpWorker:
         return len(valid)
 
     def run_once(self) -> int:
-        """单轮：先回收滞留 pending，再读新消息。返回处理消息数（测试与巡检用）。"""
+        """单轮：先回收滞留 pending，再读新消息。返回处理消息数（测试与巡检用）。
+
+        整体异常保护：Redis 瞬时超时（低内存/swap 下）不应崩进程——记日志下轮重试，
+        消息滞留 pending 由回收/重投递兜底（可靠性语义不变）。
+        """
         processed = 0
-        reclaimed = self._reclaim_pending()
-        if reclaimed:
-            processed += self.process_entries(reclaimed)
-        entries = self.queue.consume(
-            self.stream, self.group, self.consumer,
-            count=self.settings.worker_batch_size, block_ms=self.settings.worker_block_ms,
-        )
-        entries = [(str(mid), fields) for mid, fields in entries]
-        if entries:
-            processed += self.process_entries(entries)
+        try:
+            reclaimed = self._reclaim_pending()
+            if reclaimed:
+                processed += self.process_entries(reclaimed)
+            entries = self.queue.consume(
+                self.stream, self.group, self.consumer,
+                count=self.settings.worker_batch_size, block_ms=self.settings.worker_block_ms,
+            )
+            entries = [(str(mid), fields) for mid, fields in entries]
+            if entries:
+                processed += self.process_entries(entries)
+        except Exception as exc:  # noqa: BLE001 单轮整体失败不崩进程（Redis 超时/DB 抖动）
+            logger.error("nlp_round_fail", error=str(exc)[:300])
         return processed
 
     def run_forever(self) -> None:
@@ -139,7 +147,11 @@ class NlpWorker:
             batch=self.settings.worker_batch_size, es_index=self.es_indexer.index,
         )
         while True:
-            self.run_once()
+            try:
+                self.run_once()
+            except Exception as exc:  # noqa: BLE001 兜底：任何未捕获异常都不崩进程
+                logger.error("nlp_worker_loop_fail", error=str(exc)[:300])
+                time.sleep(2.0)
 
 
 def main() -> None:
