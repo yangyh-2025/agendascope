@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import argparse
-import random
 import threading
 import time
 
@@ -39,10 +38,12 @@ class CombinedWorker:
 
     # ---------- 各任务线程 ----------
     def _loop(self, name: str, interval_s: float, fn) -> None:
-        """周期任务线程：首次延迟随机 0~interval 错峰，之后每 interval 跑一次。"""
+        """周期任务线程：首次立即执行（不等初相位），之后每 interval 跑一次。
+
+        首轮立即：detection/snapshot 若延迟 0~interval 随机初相位，用户会看到
+        事件/显著性长时间不更新（议程事件地图消失的根因）。
+        """
         set_trace_id(new_trace_id())
-        # 初相位：0~interval 随机，避免多任务同时触发
-        time.sleep(random.uniform(0, interval_s))
         while not self._stop.is_set():
             try:
                 fn()
@@ -96,7 +97,7 @@ class CombinedWorker:
         logger.info("combined_worker_start")
         threads = [
             threading.Thread(target=self._loop, args=("snapshot", 1800, self._snapshot_tick), daemon=True),
-            threading.Thread(target=self._loop, args=("detection", 1800, self._detection_tick), daemon=True),
+            threading.Thread(target=self._loop, args=("detection", 900, self._detection_tick), daemon=True),
             threading.Thread(target=self._loop, args=("naming", 300, self._naming_tick), daemon=True),
             threading.Thread(target=self._loop, args=("agenda", 3600, self._agenda_tick), daemon=True),
             threading.Thread(target=self._nlp_loop, daemon=True),

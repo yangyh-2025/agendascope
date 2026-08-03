@@ -151,7 +151,8 @@ class NlpWorker:
         logger.info(
             "nlp_worker_start",
             stream=self.stream, group=self.group, consumer=self.consumer,
-            batch=self.settings.worker_batch_size, es_index=self.es_indexer.index,
+            batch=self.settings.worker_batch_size,
+            es_index=self.es_indexer.index if self.es_indexer is not None else None,
         )
         while True:
             try:

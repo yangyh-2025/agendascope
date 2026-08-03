@@ -173,24 +173,36 @@ function ringCentroid(ring: number[][]): [number, number] {
  * （外接框中心会偏向北极或海洋）。空坐标返回 null。
  */
 function polygonCentroid(coords: unknown): [number, number] | null {
-  const polys: unknown[] = Array.isArray(coords) && coords.length > 0
-    && Array.isArray(coords[0]) && typeof coords[0][0] === "number"
-      ? [coords]  // 单个 Polygon：[[lng,lat],...]
-      : (coords as unknown[]);  // MultiPolygon：[[[lng,lat]...],...]
+  // Polygon: [[[lng,lat],...]]（coords[0] 是 ring，ring[0] 是点）→ 包成 [coords]
+  // MultiPolygon: [[[[lng,lat],...],...]]（coords[0] 是 poly）→ 直接用
+  const isSinglePolygon = Array.isArray(coords)
+    && Array.isArray(coords[0])
+    && Array.isArray(coords[0][0])
+    && typeof coords[0][0][0] === "number";
+  const polys: unknown[] = isSinglePolygon ? [coords] : (coords as unknown[]);
 
   let totalArea = 0;
   let cx = 0;
   let cy = 0;
   for (const poly of polys) {
     if (!Array.isArray(poly) || poly.length === 0) continue;
-    const outerRing = poly[0] as number[][];  // 外环（环首即外环）
-    if (!outerRing || !Array.isArray(outerRing[0])) continue;
-    const area = ringArea(outerRing);
-    if (area <= 0) continue;
-    const [rcx, rcy] = ringCentroid(outerRing);
-    totalArea += area;
-    cx += rcx * area;
-    cy += rcy * area;
+    // 取最大面积 ring（外环）：部分国家（HU/BG/AT 等）首 ring 是内环（退化），
+    // 固定 poly[0] 会算出 null/错误质心——取面积最大者最稳。
+    let bestRing: number[][] | null = null;
+    let bestArea = 0;
+    for (const ring of poly) {
+      if (!Array.isArray(ring) || !Array.isArray(ring[0])) continue;
+      const a = ringArea(ring as number[][]);
+      if (a > bestArea) {
+        bestArea = a;
+        bestRing = ring as number[][];
+      }
+    }
+    if (!bestRing || bestArea <= 0) continue;
+    const [rcx, rcy] = ringCentroid(bestRing);
+    totalArea += bestArea;
+    cx += rcx * bestArea;
+    cy += rcy * bestArea;
   }
   if (totalArea <= 0) return null;
   return [cx / totalArea, cy / totalArea];
