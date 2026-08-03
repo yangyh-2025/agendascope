@@ -185,9 +185,9 @@ function GlobeInner({ radius = 1.4, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
 
   return (
     <group ref={groupRef} rotation={[0.32, 2.6, 0]} position={[1.1, 0, 0]}>
-      {/* 主球:国家贴图(Basic 材质不受光照影响,海洋部分透明) */}
+      {/* 主球:国家贴图(Basic 材质不受光照影响,海洋部分透明;DoubleSide 让背面也渲染) */}
       <mesh geometry={sphereGeo}>
-        <meshBasicMaterial map={texture} transparent />
+        <meshBasicMaterial map={texture} transparent side={THREE.DoubleSide} />
       </mesh>
 
       {/* 经纬线网格(球体结构感) */}
