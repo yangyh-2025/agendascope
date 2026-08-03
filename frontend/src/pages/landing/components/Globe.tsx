@@ -143,13 +143,9 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
 
   return (
     <group ref={groupRef} rotation={[0.32, 2.6, 0]} position={[1.1, 0, 0]}>
-      {/* 主球:国家贴图 */}
+      {/* 主球:国家贴图(Basic 材质不受光照影响,贴图原色呈现,不会有背光面"蒙版") */}
       <mesh geometry={sphereGeo}>
-        <meshStandardMaterial
-          map={texture}
-          roughness={1}
-          metalness={0}
-        />
+        <meshBasicMaterial map={texture} />
       </mesh>
 
       {/* 国家光点 */}
@@ -195,9 +191,6 @@ export default function Globe({ className = "" }: GlobeProps) {
         dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
-        <ambientLight intensity={0.45} />
-        <directionalLight position={[5, 3, 5]} intensity={0.55} color="#ffffff" />
-        <pointLight position={[-6, -2, -4]} intensity={0.2} color="#6b7fff" />
         <GlobeInner />
       </Canvas>
     </div>
