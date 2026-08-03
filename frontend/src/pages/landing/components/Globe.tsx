@@ -54,17 +54,17 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     }
   });
 
-  // 国家贴图(亮色页面里用深色球形成对比焦点:海洋深蓝 + 陆地中蓝)
+  // 国家贴图(亮色调:海洋近白 + 陆地中蓝灰,有边界对比)
   const texture = useMemo(() => {
     const canvas = buildGlobeTexture({
       width: 2048,
       height: 1024,
-      oceanColor: "#0d1e3f",
-      landColor: "#2a4a8a",
-      borderColor: "rgba(140, 180, 255, 0.55)",
+      oceanColor: "#f0f5fc",
+      landColor: "#a8bcd8",
+      borderColor: "rgba(26, 79, 160, 0.55)",
       highlight: {
         CN: "#c8102e", // 中国(公安红)
-        US: "#4f7fff", // 美(亮蓝,在深色球上对比度高)
+        US: "#1a4fa0", // 美(公安蓝)
       },
     });
     const tex = new THREE.CanvasTexture(canvas);
@@ -92,17 +92,17 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     return geo;
   }, [radius]);
 
-  // 传播弧:多国互发(Origin → Targets),颜色按源头分(深色球上的亮色弧)
+  // 传播弧:多国互发(Origin → Targets),颜色按源头分(亮底下用饱和色)
   const { arcLines, arcHeads } = useMemo(() => {
     // (origin, targets, color)
     const flows: Array<[string, string[], string]> = [
-      ["US", ["JP", "KR", "GB", "DE", "AU"], "#ff3b5c"],  // 美 → 亚/欧/澳(红)
-      ["CN", ["RU", "KZ", "PK", "TH", "ZA"], "#4f7fff"],  // 中 → 周边/金砖(蓝)
-      ["RU", ["BY", "KZ", "TR", "IN"], "#f59e0b"],        // 俄 → 独联体/土印(橙)
-      ["GB", ["AU", "IN", "ZA", "CA"], "#a78bfa"],        // 英 → 英联邦(浅紫)
-      ["DE", ["FR", "PL", "IT", "ES"], "#34d399"],        // 德 → 欧盟(浅绿)
-      ["BR", ["AR", "MX", "PE"], "#22d3ee"],              // 巴西 → 拉美(青)
-      ["IN", ["BD", "LK", "NP", "MM"], "#f472b6"],        // 印 → 南亚(粉)
+      ["US", ["JP", "KR", "GB", "DE", "AU"], "#c8102e"],  // 美 → 亚/欧/澳(公安红)
+      ["CN", ["RU", "KZ", "PK", "TH", "ZA"], "#1a4fa0"],  // 中 → 周边/金砖(公安蓝)
+      ["RU", ["BY", "KZ", "TR", "IN"], "#d9a02b"],        // 俄 → 独联体/土印(琥珀)
+      ["GB", ["AU", "IN", "ZA", "CA"], "#6b7fff"],        // 英 → 英联邦(紫)
+      ["DE", ["FR", "PL", "IT", "ES"], "#16a34a"],        // 德 → 欧盟(绿)
+      ["BR", ["AR", "MX", "PE"], "#0891b2"],              // 巴西 → 拉美(青)
+      ["IN", ["BD", "LK", "NP", "MM"], "#db2777"],        // 印 → 南亚(粉)
     ];
     const lines: THREE.Line[] = [];
     const heads: THREE.Vector3[] = [];
@@ -149,8 +149,8 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
           map={texture}
           roughness={1}
           metalness={0}
-          emissive="#1a2d5a"
-          emissiveIntensity={0.2}
+          emissive="#e8eef7"
+          emissiveIntensity={0.05}
         />
       </mesh>
 
@@ -158,10 +158,10 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
       <points geometry={dots}>
         <pointsMaterial
           size={0.022}
-          color="#6ba4ff"
+          color="#1a4fa0"
           sizeAttenuation
           transparent
-          opacity={0.9}
+          opacity={0.85}
         />
       </points>
 
@@ -174,7 +174,7 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
       <points geometry={headGeo}>
         <pointsMaterial
           size={0.05}
-          color="#ff3b5c"
+          color="#c8102e"
           sizeAttenuation
           transparent
           opacity={1}
@@ -185,9 +185,9 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
       <mesh>
         <sphereGeometry args={[radius * 1.18, 48, 48]} />
         <meshBasicMaterial
-          color="#4f7fff"
+          color="#1a4fa0"
           transparent
-          opacity={0.06}
+          opacity={0.05}
           side={THREE.BackSide}
         />
       </mesh>
