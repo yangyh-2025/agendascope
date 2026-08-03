@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/";
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/dashboard";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

@@ -5,6 +5,7 @@ import SetupGuard from "./components/SetupGuard";
 import AlertRulesPage from "./pages/AlertRulesPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import EventDetailPage from "./pages/EventDetailPage";
+import LandingPage from "./pages/landing/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
 import PersonsPage from "./pages/PersonsPage";
@@ -20,15 +21,17 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* 产品介绍首页(公开) */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/setup" element={<SetupPage />} />
         <Route element={<RequireAuth />}>
           <Route element={<SetupGuard />}>
             <Route element={<Layout />}>
-              <Route index element={<OverviewPage />} />
-              {/* 看板+地图已合并到 /,旧路由重定向 */}
-              <Route path="map" element={<Navigate to="/" replace />} />
-              <Route path="dashboard" element={<Navigate to="/" replace />} />
+              <Route path="dashboard" element={<OverviewPage />} />
+              {/* 旧路由重定向,避免书签失效 */}
+              <Route path="map" element={<Navigate to="/dashboard" replace />} />
+              <Route path="overview" element={<Navigate to="/dashboard" replace />} />
               {/* 议题分析(议题+议程事件 Tab 整合) */}
               <Route path="topics" element={<TopicsPage />} />
               <Route path="topics/:id" element={<TopicDetailPage />} />

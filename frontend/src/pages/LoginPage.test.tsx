@@ -12,6 +12,7 @@ function renderLogin() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<div>主界面</div>} />
+        <Route path="/dashboard" element={<div>主界面</div>} />
       </Routes>
     </MemoryRouter>,
   );

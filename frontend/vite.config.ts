@@ -12,6 +12,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // three.js 独立分包,Landing 首屏懒加载,看板页不加载
+          three: ["three", "@react-three/fiber", "@react-three/drei"],
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

@@ -18,7 +18,7 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     title: "总览",
-    items: [{ to: "/", label: "全球总览", icon: "🌐", end: true }],
+    items: [{ to: "/dashboard", label: "全球总览", icon: "🌐", end: true }],
   },
   {
     title: "议题分析",
