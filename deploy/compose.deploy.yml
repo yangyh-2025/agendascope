@@ -8,7 +8,9 @@
 #   + cluster 512m + frontend 64m = ~1.8GB（ES 关闭，降级走 PG）
 #
 # 关键决策：
-#   - 关 ES：全文搜索降级走 PG（articles 路由已实现 es_unavailable 降级）
+#   - 关 ES：全文搜索降级走 PG（articles 路由已实现 es_unavailable 降级）。
+#     实测 ES 8.14 在 2G/2 核下 128m 堆无法启动（GC 死循环 8 分钟未就绪），
+#     256m 堆超内存预算会 OOM——2G 硬性跑不动，维持 PG 降级
 #   - 合并 worker：nlp/snapshot/detection/naming/agenda 5 进程 → combined-worker 1 进程
 #     （线程错峰调度，省 ~500MB 常驻内存）
 services:
@@ -20,7 +22,7 @@ services:
   rsshub:
     profiles: ["disabled"]   # 无原生 RSS 补源依赖时禁用（避免拉慢镜像源）
   elasticsearch:
-    profiles: ["disabled"]   # 低内存：关 ES（128m 起不来 + backend 已不依赖），搜索降级走 PG
+    profiles: ["disabled"]   # 低内存：ES 8.14 在 2G/2 核下跑不动（128m 堆 GC 死循环，256m 堆 OOM），搜索走 PG 降级
   # 已合并进 combined-worker，禁用独立进程（否则重复消费 + 内存叠加）
   nlp-worker:
     profiles: ["disabled"]
