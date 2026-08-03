@@ -26,11 +26,11 @@ export default function LandingPage() {
     <div className="lp">
       <HeroSection isAuthenticated={isAuthenticated} />
       <StatsSection />
+      <PropagationSection />
+      <PersonsSection />
       <CollectionSection />
       <HotTopicsSection />
-      <PersonsSection />
       <AlertsSection />
-      <PropagationSection />
       <ArchitectureSection />
       <CtaSection isAuthenticated={isAuthenticated} />
     </div>

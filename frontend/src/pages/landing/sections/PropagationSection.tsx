@@ -39,7 +39,7 @@ export default function PropagationSection() {
       {
         name: origin.countryName,
         value: [...originCoord, 0] as [number, number, number],
-        itemStyle: { color: "#ff3b5c" },
+        itemStyle: { color: "#c8102e" },
       },
     ];
     const followerPoints = followers
@@ -49,7 +49,7 @@ export default function PropagationSection() {
         return {
           name: f.countryName,
           value: [...c, f.lagHours] as [number, number, number],
-          itemStyle: { color: "#4f7fff" },
+          itemStyle: { color: "#1a4fa0" },
         };
       })
       .filter((p): p is NonNullable<typeof p> => Boolean(p));
@@ -71,8 +71,8 @@ export default function PropagationSection() {
         zoom: 1.2,
         center: [30, 20] as [number, number],
         itemStyle: {
-          areaColor: "#0d1a36",
-          borderColor: "rgba(120,160,255,0.25)",
+          areaColor: "#e8f0fb",
+          borderColor: "rgba(26, 79, 160, 0.3)",
           borderWidth: 0.5,
         },
         emphasis: { disabled: true },
@@ -85,7 +85,7 @@ export default function PropagationSection() {
           coordinateSystem: "geo",
           data: coveragePoints,
           symbolSize: 3,
-          itemStyle: { color: "rgba(120,160,255,0.35)" },
+          itemStyle: { color: "rgba(26, 79, 160, 0.35)" },
           silent: true,
           zlevel: 1,
         },
@@ -100,10 +100,10 @@ export default function PropagationSection() {
             trailLength: 0.4,
             symbol: "arrow",
             symbolSize: 6,
-            color: "#ff3b5c",
+            color: "#c8102e",
           },
           lineStyle: {
-            color: "#ff3b5c",
+            color: "#c8102e",
             width: 1.4,
             opacity: 0.55,
             curveness: 0.3,
@@ -118,12 +118,12 @@ export default function PropagationSection() {
           data: followerPoints,
           symbolSize: 10,
           rippleEffect: { brushType: "stroke", scale: 3.5, period: 3 },
-          itemStyle: { color: "#4f7fff", shadowBlur: 8, shadowColor: "#4f7fff" },
+          itemStyle: { color: "#1a4fa0", shadowBlur: 8, shadowColor: "#1a4fa0" },
           label: {
             show: true,
             position: "right",
             formatter: (p: { name?: string }) => p.name ?? "",
-            color: "#e8eef7",
+            color: "#1f2d3d",
             fontSize: 11,
             fontWeight: 500,
             textBorderColor: "rgba(5,9,20,0.8)",
@@ -139,15 +139,15 @@ export default function PropagationSection() {
           symbolSize: 16,
           rippleEffect: { brushType: "stroke", scale: 5, period: 2.5 },
           itemStyle: {
-            color: "#ff3b5c",
+            color: "#c8102e",
             shadowBlur: 16,
-            shadowColor: "#ff3b5c",
+            shadowColor: "#c8102e",
           },
           label: {
             show: true,
             position: "right",
             formatter: `{b} · 首发源`,
-            color: "#ff3b5c",
+            color: "#c8102e",
             fontSize: 13,
             fontWeight: 700,
             textBorderColor: "rgba(5,9,20,0.85)",

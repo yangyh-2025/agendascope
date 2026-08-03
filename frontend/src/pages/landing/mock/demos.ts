@@ -55,7 +55,7 @@ export const HOT_TOPICS: HotTopic[] = [
   { rank: 10, name: "网络安全多边对话", category: "安全", articleCount24h: 143, countries: 17, trend: "up", salience: 54 },
 ];
 
-/** 人物/机构监测演示:中心人物 + 关联实体。 */
+/** 人物/机构监测演示:中心人物 + 多层关联实体网络。 */
 export interface PersonNode {
   id: string;
   name: string;
@@ -74,29 +74,127 @@ export interface PersonLink {
 export const PERSON_DEMO = {
   centerPerson: { name: "某国国务卿", role: "外交首长", mentions: 184 },
   nodes: [
+    // 中心
     { id: "center", name: "某国国务卿", type: "person" as const, role: "外交首长", mentions: 184 },
-    { id: "org1", name: "国务院", type: "org" as const, mentions: 156 },
-    { id: "org2", name: "白宫", type: "org" as const, mentions: 98 },
-    { id: "thinktank1", name: "CSIS", type: "thinktank" as const, mentions: 42 },
-    { id: "thinktank2", name: "布鲁金斯学会", type: "thinktank" as const, mentions: 38 },
-    { id: "c1", name: "中国", type: "country" as const, mentions: 87 },
-    { id: "c2", name: "日本", type: "country" as const, mentions: 64 },
-    { id: "c3", name: "欧盟", type: "country" as const, mentions: 51 },
-    { id: "c4", name: "俄罗斯", type: "country" as const, mentions: 43 },
-    { id: "p1", name: "某国总统", type: "person" as const, mentions: 76 },
-    { id: "p2", name: "某国外长", type: "person" as const, mentions: 58 },
+
+    // 第一层:核心机构与上级
+    { id: "org_state", name: "国务院", type: "org" as const, mentions: 156 },
+    { id: "org_wh", name: "白宫", type: "org" as const, mentions: 98 },
+    { id: "org_nsc", name: "国安委", type: "org" as const, mentions: 67 },
+    { id: "org_dod", name: "国防部", type: "org" as const, mentions: 54 },
+    { id: "p_president", name: "某国总统", type: "person" as const, mentions: 76 },
+    { id: "p_nsadvisor", name: "国安顾问", type: "person" as const, mentions: 58 },
+    { id: "p_deputy", name: "副国务卿", type: "person" as const, mentions: 42 },
+
+    // 第二层:智库/研究
+    { id: "tt_csis", name: "CSIS", type: "thinktank" as const, mentions: 42 },
+    { id: "tt_brookings", name: "布鲁金斯", type: "thinktank" as const, mentions: 38 },
+    { id: "tt_cfr", name: "CFR", type: "thinktank" as const, mentions: 31 },
+    { id: "tt_rand", name: "兰德公司", type: "thinktank" as const, mentions: 28 },
+    { id: "tt_chatham", name: "查塔姆", type: "thinktank" as const, mentions: 19 },
+
+    // 第三层:国家
+    { id: "c_cn", name: "中国", type: "country" as const, mentions: 87 },
+    { id: "c_ru", name: "俄罗斯", type: "country" as const, mentions: 43 },
+    { id: "c_jp", name: "日本", type: "country" as const, mentions: 64 },
+    { id: "c_kr", name: "韩国", type: "country" as const, mentions: 52 },
+    { id: "c_eu", name: "欧盟", type: "country" as const, mentions: 51 },
+    { id: "c_uk", name: "英国", type: "country" as const, mentions: 47 },
+    { id: "c_de", name: "德国", type: "country" as const, mentions: 41 },
+    { id: "c_in", name: "印度", type: "country" as const, mentions: 36 },
+    { id: "c_au", name: "澳大利亚", type: "country" as const, mentions: 33 },
+
+    // 第四层:外方官员
+    { id: "fp_cn", name: "某国外长", type: "person" as const, mentions: 58 },
+    { id: "fp_ru", name: "俄外长", type: "person" as const, mentions: 39 },
+    { id: "fp_jp", name: "日外相", type: "person" as const, mentions: 34 },
+    { id: "fp_uk", name: "英外相", type: "person" as const, mentions: 27 },
+
+    // 第五层:国际组织
+    { id: "org_un", name: "联合国", type: "org" as const, mentions: 46 },
+    { id: "org_nato", name: "北约", type: "org" as const, mentions: 41 },
+    { id: "org_g7", name: "G7", type: "org" as const, mentions: 35 },
+    { id: "org_quad", name: "四方对话", type: "org" as const, mentions: 29 },
   ] as PersonNode[],
   links: [
-    { source: "center", target: "org1", label: "任职" },
-    { source: "center", target: "org2", label: "汇报" },
-    { source: "center", target: "thinktank1", label: "演讲" },
-    { source: "center", target: "c1", label: "双边会谈" },
-    { source: "center", target: "c2", label: "同盟协调" },
-    { source: "center", target: "c3", label: "多边对话" },
-    { source: "center", target: "c4", label: "战略竞争" },
-    { source: "center", target: "p1", label: "直属上级" },
-    { source: "center", target: "p2", label: "对应官员" },
-    { source: "thinktank1", target: "c1", label: "研究报告" },
+    // 中心直连(任职/汇报)
+    { source: "center", target: "org_state", label: "任职" },
+    { source: "center", target: "p_president", label: "直属上级" },
+    { source: "center", target: "p_deputy", label: "直接下属" },
+    { source: "center", target: "p_nsadvisor", label: "内阁协作" },
+    { source: "center", target: "org_nsc", label: "成员" },
+
+    // 中心 → 智库(公开演讲/引用)
+    { source: "center", target: "tt_csis", label: "主题演讲" },
+    { source: "center", target: "tt_brookings", label: "对话" },
+    { source: "center", target: "tt_cfr", label: "专访" },
+    { source: "center", target: "tt_rand", label: "引用观点" },
+
+    // 中心 → 国家(外交互动)
+    { source: "center", target: "c_cn", label: "战略竞争" },
+    { source: "center", target: "c_ru", label: "对抗" },
+    { source: "center", target: "c_jp", label: "同盟协调" },
+    { source: "center", target: "c_kr", label: "同盟协调" },
+    { source: "center", target: "c_eu", label: "多边合作" },
+    { source: "center", target: "c_uk", label: "特殊关系" },
+    { source: "center", target: "c_de", label: "跨大西洋" },
+    { source: "center", target: "c_in", label: "印太伙伴" },
+    { source: "center", target: "c_au", label: "印太同盟" },
+
+    // 中心 → 外方官员(双边会谈)
+    { source: "center", target: "fp_cn", label: "双边会谈" },
+    { source: "center", target: "fp_ru", label: "对撞" },
+    { source: "center", target: "fp_jp", label: "同盟对接" },
+    { source: "center", target: "fp_uk", label: "同盟对接" },
+
+    // 中心 → 国际组织
+    { source: "center", target: "org_un", label: "多边表态" },
+    { source: "center", target: "org_nato", label: "成员协调" },
+    { source: "center", target: "org_g7", label: "峰会" },
+    { source: "center", target: "org_quad", label: "印太机制" },
+
+    // 跨层:智库 → 国家(研究报告)
+    { source: "tt_csis", target: "c_cn", label: "研究报告" },
+    { source: "tt_brookings", target: "c_cn", label: "政策分析" },
+    { source: "tt_rand", target: "c_ru", label: "兵棋推演" },
+    { source: "tt_cfr", target: "c_eu", label: "专题报告" },
+    { source: "tt_chatham", target: "c_uk", label: "政策建言" },
+
+    // 跨层:外方官员 → 所属国家
+    { source: "fp_cn", target: "c_cn", label: "代表" },
+    { source: "fp_ru", target: "c_ru", label: "代表" },
+    { source: "fp_jp", target: "c_jp", label: "代表" },
+    { source: "fp_uk", target: "c_uk", label: "代表" },
+
+    // 跨层:总统 → 白宫/国安委
+    { source: "p_president", target: "org_wh", label: "主持" },
+    { source: "p_president", target: "org_nsc", label: "主席" },
+
+    // 跨层:国安顾问 → 国安委/国防部
+    { source: "p_nsadvisor", target: "org_nsc", label: "协调" },
+    { source: "p_nsadvisor", target: "org_dod", label: "联动" },
+    { source: "org_dod", target: "org_nato", label: "军事协作" },
+
+    // 跨层:国家间关系
+    { source: "c_jp", target: "c_kr", label: "美日韩机制" },
+    { source: "c_jp", target: "c_au", label: "印太协作" },
+    { source: "c_uk", target: "c_eu", label: "欧英关系" },
+    { source: "c_de", target: "c_eu", label: "欧盟核心" },
+    { source: "c_in", target: "c_au", label: "四方成员" },
+
+    // 跨层:国际组织 → 国家
+    { source: "org_nato", target: "c_de", label: "成员" },
+    { source: "org_nato", target: "c_uk", label: "成员" },
+    { source: "org_quad", target: "c_jp", label: "成员" },
+    { source: "org_quad", target: "c_in", label: "成员" },
+    { source: "org_quad", target: "c_au", label: "成员" },
+    { source: "org_g7", target: "c_de", label: "成员" },
+    { source: "org_g7", target: "c_jp", label: "成员" },
+    { source: "org_g7", target: "c_uk", label: "成员" },
+
+    // 副国务卿 → 国际组织
+    { source: "p_deputy", target: "org_un", label: "常驻代表" },
+    { source: "p_deputy", target: "org_nato", label: "常驻代表" },
   ] as PersonLink[],
 };
 

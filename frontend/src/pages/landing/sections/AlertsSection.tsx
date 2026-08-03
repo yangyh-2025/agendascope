@@ -2,15 +2,15 @@ import ScrollReveal from "../components/ScrollReveal";
 import { ALERT_DEMO, ALERT_NOTIFICATIONS } from "../mock/demos";
 
 const LEVEL_COLOR: Record<string, string> = {
-  P1: "#ff3b5c",
-  P2: "#f59e0b",
-  P3: "#4f7fff",
+  P1: "#c8102e",
+  P2: "#d9a02b",
+  P3: "#1a4fa0",
 };
 
 const LEVEL_BG: Record<string, string> = {
-  P1: "rgba(255,59,92,0.12)",
-  P2: "rgba(245,158,11,0.12)",
-  P3: "rgba(79,127,255,0.12)",
+  P1: "rgba(200,16,46,0.08)",
+  P2: "rgba(217,160,43,0.10)",
+  P3: "rgba(26,79,160,0.08)",
 };
 
 const STATUS_LABEL: Record<string, string> = {

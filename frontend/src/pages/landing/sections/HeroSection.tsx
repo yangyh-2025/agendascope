@@ -49,16 +49,27 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
 
       <header className="lp-nav">
         <div className="lp-nav-brand">
-          <img src="/logo.png" alt="观澜" className="lp-nav-logo" />
-          <span className="lp-nav-name">观澜 · AgendaScope</span>
+          <img src="/logo.svg" alt="观澜" className="lp-nav-logo" />
+          <div className="lp-nav-brand-text">
+            <span className="lp-nav-name">观澜 · AgendaScope</span>
+            <span className="lp-nav-org">国际关系学院 · 国家安全计算模拟实验室</span>
+          </div>
         </div>
         <nav className="lp-nav-links">
+          <a href="#propagation">溯源</a>
+          <a href="#persons">人物</a>
           <a href="#collection">采集</a>
           <a href="#hot-topics">热点</a>
-          <a href="#persons">人物</a>
           <a href="#alerts">预警</a>
-          <a href="#propagation">溯源</a>
           <a href="#architecture">架构</a>
+          <a
+            href="https://github.com/yangyh-2025/agendascope"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="lp-nav-ext"
+          >
+            GitHub
+          </a>
           <Link to={isAuthenticated ? "/dashboard" : "/login"} className="lp-nav-cta">
             {isAuthenticated ? "回到看板" : "登录"}
           </Link>

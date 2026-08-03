@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- 单色版:currentColor 继承父元素 color,亮暗主题通用 -->
+  <circle cx="32" cy="32" r="5" fill="currentColor"/>
+  <path
+    d="M 14 32 A 18 18 0 0 1 41 16"
+    stroke="currentColor"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <path
+    d="M 8 32 A 24 24 0 0 1 50 45"
+    stroke="currentColor"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    fill="none"
+    opacity="0.75"
+  />
+  <path
+    d="M 56 32 A 24 24 0 0 1 16 52"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+    fill="none"
+    opacity="0.45"
+  />
+</svg>

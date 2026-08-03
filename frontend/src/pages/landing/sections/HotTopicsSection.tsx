@@ -23,7 +23,7 @@ export default function HotTopicsSection() {
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          color: "#e8eef7",
+          color: "#1f2d3d",
           fontSize: 13,
           fontWeight: 500,
           margin: 12,
@@ -41,8 +41,8 @@ export default function HotTopicsSection() {
                       type: "linear" as const,
                       x: 0, y: 0, x2: 1, y2: 0,
                       colorStops: [
-                        { offset: 0, color: "#4f7fff" },
-                        { offset: 1, color: "#8b5cf6" },
+                        { offset: 0, color: "#1a4fa0" },
+                        { offset: 1, color: "#6b7fff" },
                       ],
                     }
                   : "rgba(79,127,255,0.25)",
@@ -53,7 +53,7 @@ export default function HotTopicsSection() {
           label: {
             show: true,
             position: "right",
-            color: "#9aa8c5",
+            color: "#5e6d82",
             fontSize: 12,
             fontWeight: 600,
             formatter: (p: { dataIndex: number }) => {
@@ -67,8 +67,8 @@ export default function HotTopicsSection() {
                 type: "linear" as const,
                 x: 0, y: 0, x2: 1, y2: 0,
                 colorStops: [
-                  { offset: 0, color: "#4f7fff" },
-                  { offset: 1, color: "#8b5cf6" },
+                  { offset: 0, color: "#1a4fa0" },
+                  { offset: 1, color: "#6b7fff" },
                 ],
               },
             },

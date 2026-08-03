@@ -5,10 +5,10 @@ import ScrollReveal from "../components/ScrollReveal";
 import { PERSON_DEMO } from "../mock/demos";
 
 const TYPE_COLOR: Record<string, string> = {
-  person: "#ff3b5c",
-  org: "#4f7fff",
-  country: "#8b5cf6",
-  thinktank: "#2fa96b",
+  person: "#c8102e",
+  org: "#1a4fa0",
+  country: "#6b7fff",
+  thinktank: "#16a34a",
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -24,18 +24,18 @@ export default function PersonsSection() {
       id: n.id,
       name: n.name,
       value: n.mentions,
-      symbolSize: n.id === "center" ? 60 : Math.max(20, Math.sqrt(n.mentions) * 3.5),
+      symbolSize: n.id === "center" ? 52 : Math.max(14, Math.sqrt(n.mentions) * 2.6),
       itemStyle: {
         color: TYPE_COLOR[n.type],
-        shadowBlur: n.id === "center" ? 24 : 12,
+        shadowBlur: n.id === "center" ? 22 : 8,
         shadowColor: TYPE_COLOR[n.type],
-        borderColor: "rgba(255,255,255,0.2)",
+        borderColor: "rgba(255,255,255,0.25)",
         borderWidth: n.id === "center" ? 2 : 1,
       },
       label: {
         show: true,
-        color: "#e8eef7",
-        fontSize: n.id === "center" ? 14 : 11,
+        color: "#1f2d3d",
+        fontSize: n.id === "center" ? 14 : 10,
         fontWeight: n.id === "center" ? 700 : 500,
       },
       category: n.type,
@@ -45,15 +45,19 @@ export default function PersonsSection() {
       source: l.source,
       target: l.target,
       label: {
-        show: true,
+        show: false,  // 高密度网络下默认不显示关系文字,避免拥挤;hover 才显示
         formatter: l.label,
-        color: "#9aa8c5",
-        fontSize: 10,
+        color: "#5e6d82",
+        fontSize: 9,
       },
       lineStyle: {
-        color: "rgba(120,160,255,0.35)",
-        width: 1.2,
-        curveness: 0.2,
+        color: "rgba(26, 79, 160, 0.3)",
+        width: 1,
+        curveness: 0.18,
+      },
+      emphasis: {
+        label: { show: true },
+        lineStyle: { width: 2, color: "rgba(26, 79, 160, 0.7)" },
       },
     }));
 
@@ -63,18 +67,20 @@ export default function PersonsSection() {
         {
           type: "graph",
           layout: "force",
-          roam: false,
+          roam: true,
+          scaleLimit: { min: 0.6, max: 2.5 },
           data: nodes,
           links: links,
           force: {
-            repulsion: 400,
-            edgeLength: [80, 140],
-            gravity: 0.1,
-            friction: 0.3,
+            repulsion: 320,
+            edgeLength: [40, 90],
+            gravity: 0.12,
+            friction: 0.25,
+            layoutAnimation: true,
           },
           label: {
             position: "bottom",
-            distance: 6,
+            distance: 4,
           },
           emphasis: {
             focus: "adjacency",
@@ -130,7 +136,7 @@ export default function PersonsSection() {
               </div>
               <ReactECharts
                 option={chartOption}
-                style={{ width: "100%", height: "440px" }}
+                style={{ width: "100%", height: "520px" }}
                 notMerge
                 lazyUpdate
               />

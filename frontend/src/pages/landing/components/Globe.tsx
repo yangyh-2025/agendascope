@@ -54,17 +54,17 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     }
   });
 
-  // 国家贴图
+  // 国家贴图(亮色页面里用深色球形成对比焦点:海洋深蓝 + 陆地中蓝)
   const texture = useMemo(() => {
     const canvas = buildGlobeTexture({
       width: 2048,
       height: 1024,
-      oceanColor: "#081228",
-      landColor: "#1a2d5a",
-      borderColor: "rgba(120,160,255,0.5)",
+      oceanColor: "#0d1e3f",
+      landColor: "#2a4a8a",
+      borderColor: "rgba(140, 180, 255, 0.55)",
       highlight: {
-        CN: "#8e1a2a", // 中国(暗红,不过饱和)
-        US: "#4f7fff", // 美(首发源示例)
+        CN: "#c8102e", // 中国(公安红)
+        US: "#4f7fff", // 美(亮蓝,在深色球上对比度高)
       },
     });
     const tex = new THREE.CanvasTexture(canvas);
@@ -92,27 +92,38 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     return geo;
   }, [radius]);
 
-  // 传播弧(美 → 亚/欧/拉/澳/非)
+  // 传播弧:多国互发(Origin → Targets),颜色按源头分(深色球上的亮色弧)
   const { arcLines, arcHeads } = useMemo(() => {
-    const origin = COUNTRIES.find((c) => c.code === "US");
-    if (!origin) return { arcLines: [], arcHeads: [] };
-    const targets = ["JP", "KR", "IN", "GB", "DE", "BR", "AU", "ZA"]
-      .map((code) => COUNTRIES.find((c) => c.code === code))
-      .filter((c): c is NonNullable<typeof c> => Boolean(c));
-    const start = latLngToVec3(origin.lat, origin.lng, radius);
+    // (origin, targets, color)
+    const flows: Array<[string, string[], string]> = [
+      ["US", ["JP", "KR", "GB", "DE", "AU"], "#ff3b5c"],  // 美 → 亚/欧/澳(红)
+      ["CN", ["RU", "KZ", "PK", "TH", "ZA"], "#4f7fff"],  // 中 → 周边/金砖(蓝)
+      ["RU", ["BY", "KZ", "TR", "IN"], "#f59e0b"],        // 俄 → 独联体/土印(橙)
+      ["GB", ["AU", "IN", "ZA", "CA"], "#a78bfa"],        // 英 → 英联邦(浅紫)
+      ["DE", ["FR", "PL", "IT", "ES"], "#34d399"],        // 德 → 欧盟(浅绿)
+      ["BR", ["AR", "MX", "PE"], "#22d3ee"],              // 巴西 → 拉美(青)
+      ["IN", ["BD", "LK", "NP", "MM"], "#f472b6"],        // 印 → 南亚(粉)
+    ];
     const lines: THREE.Line[] = [];
     const heads: THREE.Vector3[] = [];
-    targets.forEach((t) => {
-      const end = latLngToVec3(t.lat, t.lng, radius);
-      const pts = arcPoints(start, end, 64, 0.22);
-      const geo = new THREE.BufferGeometry().setFromPoints(pts);
-      const mat = new THREE.LineBasicMaterial({
-        color: "#ff3b5c",
-        transparent: true,
-        opacity: 0.85,
+    flows.forEach(([originCode, targetCodes, color]) => {
+      const origin = COUNTRIES.find((c) => c.code === originCode);
+      if (!origin) return;
+      const start = latLngToVec3(origin.lat, origin.lng, radius);
+      targetCodes.forEach((tCode) => {
+        const t = COUNTRIES.find((c) => c.code === tCode);
+        if (!t) return;
+        const end = latLngToVec3(t.lat, t.lng, radius);
+        const pts = arcPoints(start, end, 48, 0.22);
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const mat = new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.55,
+        });
+        lines.push(new THREE.Line(geo, mat));
+        heads.push(end);
       });
-      lines.push(new THREE.Line(geo, mat));
-      heads.push(end);
     });
     return { arcLines: lines, arcHeads: heads };
   }, [radius]);
@@ -139,7 +150,7 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
           roughness={1}
           metalness={0}
           emissive="#1a2d5a"
-          emissiveIntensity={0.18}
+          emissiveIntensity={0.2}
         />
       </mesh>
 
@@ -197,9 +208,9 @@ export default function Globe({ className = "" }: GlobeProps) {
         dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 3, 5]} intensity={0.7} color="#cfe1ff" />
-        <pointLight position={[-6, -2, -4]} intensity={0.3} color="#8b5cf6" />
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[5, 3, 5]} intensity={0.8} color="#cfe1ff" />
+        <pointLight position={[-6, -2, -4]} intensity={0.3} color="#6b7fff" />
         <GlobeInner />
       </Canvas>
     </div>

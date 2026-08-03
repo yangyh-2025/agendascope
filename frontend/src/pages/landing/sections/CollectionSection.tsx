@@ -38,7 +38,7 @@ export default function CollectionSection() {
             name: c.nameZh,
             value: [...center, 0] as [number, number, number],
             itemStyle: {
-              color: c.code === activeCountry ? "#ff3b5c" : "rgba(120,160,255,0.4)",
+              color: c.code === activeCountry ? "#c8102e" : "rgba(26, 79, 160, 0.4)",
             },
             symbolSize: c.code === activeCountry ? 14 : 5,
           }
@@ -54,8 +54,8 @@ export default function CollectionSection() {
         zoom: 1.2,
         center: [30, 20] as [number, number],
         itemStyle: {
-          areaColor: "#0d1a36",
-          borderColor: "rgba(120,160,255,0.2)",
+          areaColor: "#e8f0fb",
+          borderColor: "rgba(26, 79, 160, 0.25)",
           borderWidth: 0.5,
         },
         emphasis: { disabled: true },
@@ -68,7 +68,7 @@ export default function CollectionSection() {
           data: coveragePoints,
           itemStyle: {
             shadowBlur: 8,
-            shadowColor: "rgba(79,127,255,0.5)",
+            shadowColor: "rgba(26, 79, 160, 0.3)",
           },
           zlevel: 2,
         },
@@ -87,9 +87,9 @@ export default function CollectionSection() {
                 symbolSize: 14,
                 rippleEffect: { brushType: "stroke" as const, scale: 4, period: 2 },
                 itemStyle: {
-                  color: "#ff3b5c",
+                  color: "#c8102e",
                   shadowBlur: 12,
-                  shadowColor: "#ff3b5c",
+                  shadowColor: "#c8102e",
                 },
                 zlevel: 3,
               },

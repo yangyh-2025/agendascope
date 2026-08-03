@@ -4,23 +4,27 @@
    ============================================ */
 
 .lp-root {
-  background: #050914;
+  background: #f5f7fa;
 }
 
 .lp {
-  --lp-bg: #050914;
-  --lp-bg-alt: #0a1120;
-  --lp-bg-panel: #0d1629;
-  --lp-border: rgba(120, 160, 255, 0.12);
-  --lp-border-strong: rgba(120, 160, 255, 0.24);
-  --lp-text: #e8eef7;
-  --lp-text-secondary: #9aa8c5;
-  --lp-text-muted: #5a6a8a;
-  --lp-accent: #4f7fff;
-  --lp-accent-hover: #6ba4ff;
-  --lp-accent-soft: rgba(79, 127, 255, 0.12);
-  --lp-red: #ff3b5c;
-  --lp-violet: #8b5cf6;
+  /* 亮色调:与内页公安蓝一致 */
+  --lp-bg: #f5f7fa;
+  --lp-bg-alt: #eef2f7;
+  --lp-bg-panel: #ffffff;
+  --lp-border: rgba(15, 61, 138, 0.10);
+  --lp-border-strong: rgba(15, 61, 138, 0.20);
+  --lp-text: #1f2d3d;
+  --lp-text-secondary: #5e6d82;
+  --lp-text-muted: #9aa8bb;
+  --lp-accent: #1a4fa0;
+  --lp-accent-hover: #2b63c4;
+  --lp-accent-soft: rgba(26, 79, 160, 0.08);
+  --lp-red: #c8102e;
+  --lp-violet: #6b7fff;
+  --lp-shadow-sm: 0 1px 2px rgba(15, 61, 138, 0.04), 0 4px 12px rgba(15, 61, 138, 0.06);
+  --lp-shadow-md: 0 4px 16px rgba(15, 61, 138, 0.08);
+  --lp-shadow-lg: 0 8px 32px rgba(15, 61, 138, 0.12);
 
   background: var(--lp-bg);
   color: var(--lp-text);
@@ -86,8 +90,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(120, 160, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120, 160, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(26, 79, 160, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 79, 160, 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 70%);
 }
@@ -96,19 +100,19 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.5;
+  opacity: 0.4;
 }
 .lp-hero-glow-1 {
   width: 560px;
   height: 560px;
-  background: radial-gradient(circle, rgba(79, 127, 255, 0.35), transparent 60%);
+  background: radial-gradient(circle, rgba(26, 79, 160, 0.18), transparent 60%);
   top: -200px;
   right: -100px;
 }
 .lp-hero-glow-2 {
   width: 480px;
   height: 480px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 60%);
+  background: radial-gradient(circle, rgba(107, 127, 255, 0.12), transparent 60%);
   bottom: -200px;
   left: -100px;
 }
@@ -135,9 +139,29 @@
   letter-spacing: 0.02em;
 }
 
+.lp-nav-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lp-nav-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lp-text);
+  line-height: 1.2;
+}
+
+.lp-nav-org {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--lp-text-muted);
+  line-height: 1.2;
+}
+
 .lp-nav-logo {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
@@ -167,6 +191,18 @@
 .lp-nav-cta:hover {
   background: var(--lp-accent);
   border-color: var(--lp-accent);
+  color: white !important;
+}
+
+.lp-nav-ext {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--lp-text-secondary);
+  font-weight: 500;
+}
+.lp-nav-ext:hover {
+  color: var(--lp-accent) !important;
 }
 
 /* Hero 主内容 */
@@ -203,7 +239,7 @@
   height: 100%;
 }
 
-/* 文字与地球之间的渐变罩,保证文字可读 */
+/* 文字与地球之间的渐变罩,保证文字可读(亮色调) */
 .lp-hero-mask {
   position: absolute;
   inset: 0;
@@ -212,9 +248,9 @@
   background:
     linear-gradient(
       to right,
-      rgba(5, 9, 20, 0.92) 0%,
-      rgba(5, 9, 20, 0.7) 25%,
-      rgba(5, 9, 20, 0.25) 48%,
+      rgba(245, 247, 250, 0.95) 0%,
+      rgba(245, 247, 250, 0.75) 25%,
+      rgba(245, 247, 250, 0.3) 48%,
       transparent 65%
     );
 }
@@ -228,7 +264,7 @@
   border-radius: 999px;
   font-size: 13px;
   color: var(--lp-text-secondary);
-  background: rgba(13, 22, 41, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
   margin-bottom: 24px;
 }
@@ -237,8 +273,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 8px #4ade80;
+  background: #16a34a;
+  box-shadow: 0 0 8px #16a34a;
   animation: lp-pulse 2s ease-in-out infinite;
 }
 
@@ -291,13 +327,13 @@
 }
 
 .lp-btn-primary {
-  background: linear-gradient(135deg, var(--lp-accent) 0%, #3d5fe0 100%);
+  background: linear-gradient(135deg, var(--lp-accent) 0%, #2b63c4 100%);
   color: white;
-  box-shadow: 0 8px 24px rgba(79, 127, 255, 0.35);
+  box-shadow: 0 8px 24px rgba(26, 79, 160, 0.25);
 }
 .lp-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(79, 127, 255, 0.45);
+  box-shadow: 0 12px 32px rgba(26, 79, 160, 0.35);
 }
 
 .lp-btn-ghost {
@@ -486,7 +522,7 @@
   height: 480px;
   margin: 8px 0 24px;
   border-radius: 12px;
-  background: radial-gradient(ellipse at center, #0a1430 0%, #050b1c 80%);
+  background: radial-gradient(ellipse at center, #e8f0fb 0%, #dde7f5 80%);
   overflow: hidden;
 }
 
@@ -500,7 +536,7 @@
 
 .lp-prop-timeline-item {
   padding: 12px 10px;
-  background: rgba(13, 22, 41, 0.6);
+  background: rgba(255, 255, 255, 0.6);
   border: 1px solid var(--lp-border);
   border-radius: 10px;
   text-align: center;
@@ -514,7 +550,7 @@
 
 .lp-prop-timeline-origin {
   border-color: rgba(255, 59, 92, 0.5);
-  background: linear-gradient(135deg, rgba(255, 59, 92, 0.08), rgba(13, 22, 41, 0.6) 50%);
+  background: linear-gradient(135deg, rgba(255, 59, 92, 0.08), rgba(255, 255, 255, 0.6) 50%);
 }
 
 .lp-prop-timeline-lag {
@@ -831,7 +867,34 @@
   display: flex;
   justify-content: center;
   gap: 14px;
-  margin-bottom: 100px;
+  margin-bottom: 32px;
+}
+
+.lp-cta-contact {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 80px;
+  flex-wrap: wrap;
+}
+
+.lp-cta-contact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--lp-text-secondary);
+  transition: color 0.2s;
+  text-decoration: none;
+}
+
+.lp-cta-contact-item:hover {
+  color: var(--lp-accent);
+}
+
+.lp-cta-contact-item svg {
+  flex-shrink: 0;
 }
 
 .lp-footer {
@@ -847,20 +910,49 @@
 .lp-footer-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-weight: 600;
   color: var(--lp-text);
 }
 
 .lp-footer-logo {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
+}
+
+.lp-footer-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lp-footer-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lp-text);
+  line-height: 1.2;
+}
+
+.lp-footer-brand-org {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--lp-text-muted);
+  line-height: 1.2;
 }
 
 .lp-footer-meta {
   display: flex;
   gap: 12px;
+}
+
+.lp-footer-meta a {
+  color: var(--lp-text-secondary);
+  transition: color 0.2s;
+}
+
+.lp-footer-meta a:hover {
+  color: var(--lp-accent);
 }
 
 /* ============ 实时采集板块 ============ */
@@ -889,7 +981,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(13, 22, 41, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--lp-border-strong);
   border-radius: 999px;
   backdrop-filter: blur(8px);
@@ -899,8 +991,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 8px #4ade80;
+  background: #16a34a;
+  box-shadow: 0 0 8px #16a34a;
   animation: lp-pulse 2s ease-in-out infinite;
 }
 
@@ -908,7 +1000,7 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #4ade80;
+  color: #16a34a;
   text-transform: uppercase;
 }
 
@@ -951,12 +1043,12 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);
 }
 
 .lp-collect-item {
   padding: 10px 12px;
-  background: rgba(13, 22, 41, 0.5);
+  background: rgba(240, 244, 250, 0.6);
   border: 1px solid var(--lp-border);
   border-radius: 8px;
   transition: all 0.4s;
@@ -994,7 +1086,7 @@
 .lp-collect-item-time {
   margin-left: auto;
   font-size: 10px;
-  color: #4ade80;
+  color: #16a34a;
   font-family: "SF Mono", Consolas, monospace;
 }
 
@@ -1092,7 +1184,7 @@
   gap: 12px;
   margin-bottom: 20px;
   padding: 16px;
-  background: rgba(13, 22, 41, 0.5);
+  background: rgba(240, 244, 250, 0.6);
   border-radius: 10px;
 }
 
@@ -1241,7 +1333,7 @@
 
 .lp-persons-metric-trend {
   font-size: 12px;
-  color: #4ade80;
+  color: #16a34a;
   font-weight: 500;
 }
 
@@ -1327,7 +1419,7 @@
 
 .lp-alert-rule {
   padding: 14px 16px;
-  background: rgba(13, 22, 41, 0.5);
+  background: rgba(240, 244, 250, 0.6);
   border: 1px solid var(--lp-border);
   border-left: 3px solid;
   border-radius: 10px;
@@ -1380,7 +1472,7 @@
 
 .lp-alert-status-ok {
   background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  color: #16a34a;
 }
 
 .lp-alert-time {
@@ -1443,7 +1535,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: rgba(13, 22, 41, 0.5);
+  background: rgba(240, 244, 250, 0.6);
   border: 1px solid var(--lp-border);
   border-radius: 10px;
   margin-bottom: 8px;
@@ -1481,7 +1573,7 @@
 }
 
 .lp-alert-channel-delivered {
-  color: #4ade80;
+  color: #16a34a;
 }
 
 .lp-alert-channel-sent {
@@ -1509,7 +1601,7 @@
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: rgba(13, 22, 41, 0.5);
+  background: rgba(240, 244, 250, 0.6);
   border-radius: 10px;
   align-items: flex-start;
 }

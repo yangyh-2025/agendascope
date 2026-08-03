@@ -91,7 +91,7 @@ export default function Layout() {
     <div className="layout">
       <aside className="layout-sidebar">
         <div className="layout-brand">
-          <img className="layout-brand-mark" src="/logo.png" alt="观澜 Logo" aria-hidden="true" />
+          <img className="layout-brand-mark" src="/logo.svg" alt="观澜 Logo" aria-hidden="true" />
           <div className="layout-brand-text">
             <span className="layout-brand-name">观澜</span>
             <span className="layout-brand-sub">AgendaScope</span>

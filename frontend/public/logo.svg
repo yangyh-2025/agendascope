@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="guanlan-grad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F7FFF"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <!-- 中心源头点 -->
+  <circle cx="32" cy="32" r="5" fill="url(#guanlan-grad)"/>
+  <!-- 第一层涟漪(小弧,缺口朝右上) -->
+  <path
+    d="M 14 32 A 18 18 0 0 1 41 16"
+    stroke="url(#guanlan-grad)"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- 第二层涟漪(中弧,缺口朝右下) -->
+  <path
+    d="M 8 32 A 24 24 0 0 1 50 45"
+    stroke="url(#guanlan-grad)"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    fill="none"
+    opacity="0.75"
+  />
+  <!-- 第三层涟漪(大弧,缺口朝左下) -->
+  <path
+    d="M 56 32 A 24 24 0 0 1 16 52"
+    stroke="url(#guanlan-grad)"
+    stroke-width="3"
+    stroke-linecap="round"
+    fill="none"
+    opacity="0.45"
+    transform="translate(0,0)"
+  />
+</svg>

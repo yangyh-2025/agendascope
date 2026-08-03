@@ -33,15 +33,48 @@ export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
           </div>
         </ScrollReveal>
 
+        <ScrollReveal delay={300}>
+          <div className="lp-cta-contact">
+            <a
+              href="https://github.com/yangyh-2025/agendascope"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lp-cta-contact-item"
+            >
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+              </svg>
+              GitHub
+            </a>
+            <a href="mailto:yangyuhang2667@163.com" className="lp-cta-contact-item">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <path d="M1.5 3h13a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5Zm.7 1.24 5.8 4.6 5.8-4.6V4H2.2v.24ZM14 5.05l-5.62 4.46a.75.75 0 0 1-.76 0L2 5.05V12h12V5.05Z"/>
+              </svg>
+              yangyuhang2667@163.com
+            </a>
+          </div>
+        </ScrollReveal>
+
         <footer className="lp-footer">
           <div className="lp-footer-brand">
-            <img src="/logo.png" alt="观澜" className="lp-footer-logo" />
-            <span>观澜 · AgendaScope</span>
+            <img src="/logo.svg" alt="观澜" className="lp-footer-logo" />
+            <div className="lp-footer-brand-text">
+              <span className="lp-footer-brand-name">观澜 · AgendaScope</span>
+              <span className="lp-footer-brand-org">国际关系学院 · 国家安全计算模拟实验室</span>
+            </div>
           </div>
           <div className="lp-footer-meta">
             <span>© 2026 AgendaScope</span>
             <span aria-hidden="true">·</span>
-            <span>面向国家安全与国际关系研究</span>
+            <a
+              href="https://github.com/yangyh-2025/agendascope"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>
+            <span aria-hidden="true">·</span>
+            <a href="mailto:yangyuhang2667@163.com">联系我们</a>
           </div>
         </footer>
       </div>
