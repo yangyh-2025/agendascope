@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     environment:
-      CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-60}   # 低带宽慢源更多机会
+      CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-30}   # 3Mbps 低带宽：30s 让慢源更快放弃（60s 拖低吞吐）
 
   # 合并 worker：单进程跑 nlp/snapshot/detection/naming/agenda（线程错峰）
   combined-worker:
