@@ -22,11 +22,22 @@ def get_cache_redis() -> redis.Redis:
     return _cache_client
 
 
-def get_stream_redis() -> redis.Redis:
+def get_stream_redis(force_new: bool = False) -> redis.Redis:
+    """返回 db1 客户端；force_new=True 时丢弃旧连接新建（连接损坏自愈用）。
+
+    低内存 3Mbps 部署下 Redis 连接可能 TCP 半开（网络层丢包），worker 捕获
+    超时后调 force_new 换全新连接，避免持续超时。
+    """
     global _stream_client
-    if _stream_client is None:
+    if force_new or _stream_client is None:
         _stream_client = redis.Redis.from_url(
-            get_settings().redis_stream_url, decode_responses=True, socket_timeout=_SOCKET_TIMEOUT
+            get_settings().redis_stream_url,
+            decode_responses=True,
+            socket_timeout=_SOCKET_TIMEOUT,
+            # 网络抖动/连接半开时自动重连：低内存 3Mbps 带宽下 Redis 响应可能瞬时超时，
+            # 默认不重连会让 worker 崩溃循环；开启后超时自动重连，可靠性显著提升
+            retry_on_timeout=True,
+            socket_keepalive=True,
         )
     return _stream_client
 

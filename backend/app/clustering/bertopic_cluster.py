@@ -8,6 +8,7 @@
 - bertopic/umap/hdbscan 延迟导入：库缺失或拟合异常时降级链可识别"不可用"
 """
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -34,11 +35,42 @@ class BertopicClusterer:
         self.min_cohesion = min_cohesion if min_cohesion is not None else settings.bertopic_min_cohesion
         self.max_cluster_share = max_cluster_share or settings.max_bertopic_cluster_share
         self.umap_n_neighbors = umap_n_neighbors or settings.umap_n_neighbors
+        # 超时熔断：一旦超时（低内存下 UMAP/HDBSCAN 卡死），本进程内标记不可用，
+        # 后续轮次直接走 Agglomerative 回落，避免反复起超时线程累积内存（无法强杀线程）
+        self._timed_out = False
 
     def cluster(self, docs: list[ClusterDoc]) -> StrategyResult:
-        """对一批文章拟合 BERTopic，返回簇结果；拟合失败/退化抛 BertopicDegenerateError。"""
+        """对一批文章拟合 BERTopic，返回簇结果；拟合失败/退化/超时抛 BertopicDegenerateError。
+
+        超时护栏（低内存部署）：BERTopic 对大量高维向量拟合（UMAP+HDBSCAN）在受限
+        CPU/内存下可能长时间卡死（内存触顶被拖成 1% CPU），拖住整个重聚类校正。
+        用独立线程跑拟合，超时即抛 BertopicDegenerateError，由调用方回落 Agglomerative
+        （护栏设计 T2.9）。后台线程结果丢弃，进程不退出。
+        """
         if len(docs) < max(self.min_cluster_size, 3):
             raise BertopicDegenerateError(f"样本量 {len(docs)} 不足最小簇规模 {self.min_cluster_size}")
+        if self._timed_out:
+            # 熔断后不再起新线程，直接回落（后台旧线程可能仍占用内存，避免再叠加）
+            raise BertopicDegenerateError("BERTopic 已熔断（此前拟合超时），回落 Agglomerative")
+        timeout_s = self.settings.bertopic_timeout_seconds
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            future = executor.submit(self._fit, docs)
+            return future.result(timeout=timeout_s)
+        except TimeoutError:
+            self._timed_out = True
+            logger.warning(
+                "bertopic_timeout_guardrail", docs=len(docs), timeout_s=timeout_s,
+                component="nlp_pipeline", fallback="agglomerative",
+            )
+            raise BertopicDegenerateError(
+                f"BERTopic 拟合超时 {timeout_s}s（UMAP/HDBSCAN 卡死），回落 Agglomerative"
+            ) from None
+        finally:
+            executor.shutdown(wait=False)  # 后台线程继续跑完被 GC，不阻塞主流程
+
+    def _fit(self, docs: list[ClusterDoc]) -> StrategyResult:
+        """在独立线程执行的实际 BERTopic 拟合（含护栏检查），供 cluster() 超时调度。"""
         try:
             from bertopic import BERTopic
             from hdbscan import HDBSCAN

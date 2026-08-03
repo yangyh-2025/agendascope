@@ -49,9 +49,9 @@ class ClusterWorker:
         self.assigner = assigner or OnlineAssigner()
         self.recluster_job = recluster_job or ReclusterJob()
         self._attempts: dict[str, int] = {}
-        # 低内存适配：初始为当前时刻，首轮不立即跑全局重聚类（recluster 对大量文章
-        # 聚类内存密集，会占住进程饿死在线归簇；延迟到首个周期再校正，在线归簇先跑）
-        self._last_recluster = time.monotonic()
+        # 首轮立即触发全局重聚类（哨兵 0.0）：同步跑已无内存叠加问题（_persist 优化 +
+        # BERTopic 超时护栏），首轮校正让精度尽快恢复（用户精度优先诉求）
+        self._last_recluster = 0.0
 
     def _reclaim_pending(self) -> list:
         try:
@@ -163,7 +163,16 @@ class ClusterWorker:
             recluster_interval_minutes=self.settings.recluster_interval_minutes,
         )
         while True:
-            self.run_once()
+            try:
+                self.run_once()
+            except Exception as exc:  # noqa: BLE001 兜底：任何未捕获异常都不崩进程（Redis 超时/DB 抖动）
+                logger.error("cluster_loop_fail", error=str(exc)[:300])
+                # 连接可能已损坏（TCP 半开）：重建 queue 换新连接，避免持续超时
+                try:
+                    self.queue = StreamQueue(get_stream_redis(force_new=True))
+                except Exception as conn_exc:  # noqa: BLE001 重建失败不致命，下轮再试
+                    logger.error("cluster_conn_rebuild_fail", error=str(conn_exc)[:200])
+                time.sleep(2.0)
 
 
 def main() -> None:

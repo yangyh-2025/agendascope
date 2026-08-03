@@ -27,6 +27,8 @@ class ClusterSettings(BaseSettings):
     umap_n_neighbors: int = 15
     umap_n_components: int = 5
     max_bertopic_cluster_share: float = 0.8  # 单簇占比护栏：超限判 HDBSCAN 超大簇黑洞，弃用本轮结果
+    bertopic_timeout_seconds: int = 600  # BERTopic 拟合超时护栏（低内存服务器 UMAP/HDBSCAN 慢但能完成，实测 ~200s fit+初始化；600s 只防真卡死，不误伤正常完成）
+    bertopic_enabled: bool = True  # 主策略开关：低内存 2G 服务器 BERTopic 峰值 ~500MB + 落库超 640m 会 cgroup OOM 杀容器（实测），关闭后直接走 Agglomerative（精度略降但内存安全）
 
     # Agglomerative 硬阈值并行策略（T2.7）：cosine 距离阈值 0.25，average linkage；孤证保留 size=1
     agglomerative_distance_threshold: float = 0.25

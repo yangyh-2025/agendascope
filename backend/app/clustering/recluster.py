@@ -34,7 +34,6 @@ from app.clustering.repository import (
     active_topics,
     archive_empty_topics,
     create_topic,
-    get_assignment,
     lifecycle_for_size,
     load_no_merge_pairs,
     load_window_docs,
@@ -50,7 +49,7 @@ from app.clustering.snapshot import mark_correcting, mark_ready, publish_snapsho
 from app.clustering.types import ClusterDoc, StrategyResult
 from app.core.logging import get_logger
 from app.models.article import Article
-from app.models.topic import Topic
+from app.models.topic import Topic, TopicArticle
 
 logger = get_logger("clustering.recluster")
 
@@ -179,12 +178,26 @@ class ReclusterJob:
     def _run_strategies(
         self, docs: list[ClusterDoc]
     ) -> tuple[StrategyResult | None, StrategyResult | None, bool]:
-        """双策略并行评估：返回 (采用结果, Agglomerative 对照结果, 是否触发护栏)。"""
+        """双策略并行评估：返回 (采用结果, Agglomerative 对照结果, 是否触发护栏)。
+
+        低内存 2G 部署（bertopic_enabled=False）：跳过 BERTopic（峰值内存 ~500MB +
+        落库超 640m 会 cgroup OOM 杀容器，实测），直接采用 Agglomerative 主策略——
+        跨语言归并校正仍恢复（硬阈值 0.25 cosine 能归并同主题跨语言文章），
+        精度略降但内存安全。
+        """
         agglom_result: StrategyResult | None = None
         try:
             agglom_result = self.agglomerative.cluster(docs)
         except Exception as exc:  # noqa: BLE001 对照策略失败不直接致命，走降级判定
             logger.error("agglomerative_cluster_fail", error=str(exc)[:300])
+        if not self.settings.bertopic_enabled:
+            if agglom_result is None:
+                return None, None, False
+            logger.warning(
+                "bertopic_disabled", component="nlp_pipeline",
+                fallback="agglomerative", reason="低内存部署关闭 BERTopic 主策略",
+            )
+            return agglom_result, agglom_result, True
         try:
             bertopic_result = self.bertopic.cluster(docs)
             return bertopic_result, agglom_result, False
@@ -208,8 +221,26 @@ class ReclusterJob:
         report.clusters_before = len(active_topics(db))
         now = datetime.now(UTC)
         no_merge_pairs = load_no_merge_pairs(db)
+        # 预加载全部成员当前归属（一次查询替代逐篇 get_assignment，消除 singleton 微簇的
+        # 1971 次重复查询——低内存服务器上逐篇读是落库卡死的元凶）
+        member_ids = [docs[i].article_id for c in result.clusters for i in c.member_indices]
+        member_ids += [docs[i].article_id for i in result.noise_indices]
+        member_ids = list(dict.fromkeys(member_ids))  # 去重保序
+        assignments: dict[UUID, UUID] = {}
+        if member_ids:
+            rows = db.execute(
+                select(TopicArticle.article_id, TopicArticle.topic_id).where(
+                    TopicArticle.article_id.in_(member_ids)
+                )
+            ).all()
+            assignments = {r[0]: r[1] for r in rows}
         for cluster in result.clusters:
             members = [docs[i] for i in cluster.member_indices]
+            # singleton 微簇：已有活跃归属则保留（在线归簇已处理），跳过 HNSW 迁移，
+            # 消除 1971 次重复查询；仅无归属的 singleton 才建微议题
+            if cluster.size == 1 and members[0].article_id in assignments:
+                report.reused_topics += 0  # 保留原归属，不计数
+                continue
             hit = nearest_active_topic(db, cluster.centroid, min_score=self.settings.t_event)
             if hit is not None:
                 topic, _ = hit
@@ -238,12 +269,13 @@ class ReclusterJob:
                 topic.centroid = cluster.centroid  # 校正以本轮窗内质心为准（已是加权池化对象）
             topic.last_seen_at = now
             for member in members:
-                if not self._can_move(db, member.article_id, topic, no_merge_pairs):
+                if not self._can_move(db, member.article_id, topic, no_merge_pairs, assignments):
                     report.pooled_articles += 1  # 人工锁定的归属不迁移，视作保留
                     continue
                 weight = sum(a * b for a, b in zip(member.embedding, cluster.centroid, strict=True))
                 if move_assignment(db, member.article_id, topic, weight, "recluster"):
                     report.moved_articles += 1
+                    assignments[member.article_id] = topic.id  # 更新映射，后续成员复用
             topic.lifecycle_state = lifecycle_for_size(topic_size(db, topic.id))
             db.flush()
         for idx in result.noise_indices:
@@ -259,21 +291,25 @@ class ReclusterJob:
         article_id: UUID,
         new_topic: Topic,
         no_merge_pairs: set[tuple[UUID, UUID]],
+        assignments: dict[UUID, UUID],
     ) -> bool:
         """成员是否允许从当前归属迁入 new_topic（人工锁定/误并回滚名单豁免）。
 
         返回 False 表示保留原归属：当前归属议题 locked merged_into，或 (旧,新)
         落在 no_merge_with 名单（人工拆开过的两个议题不再自动合并）。
+        assignments：预加载的 article_id → topic_id 映射（避免逐篇 get_assignment 查询）。
         """
-        current = get_assignment(db, article_id)
-        if current is None:
+        old_topic_id = assignments.get(article_id)
+        if old_topic_id is None:
             return True
-        old_topic = db.get(Topic, current.topic_id)
-        if old_topic is None or old_topic.id == new_topic.id:
+        if old_topic_id == new_topic.id:
+            return True
+        old_topic = db.get(Topic, old_topic_id)
+        if old_topic is None:
             return True
         if "merged_into" in (old_topic.human_locked_fields or []):
             return False
-        pair = norm_pair(old_topic.id, new_topic.id)
+        pair = norm_pair(old_topic_id, new_topic.id)
         return pair not in no_merge_pairs
 
     def _alert_quality_drift(

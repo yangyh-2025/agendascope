@@ -101,10 +101,14 @@ services:
 
   cluster-worker:
     restart: unless-stopped
-    mem_limit: 512m   # 聚类内存密集，加大上限防 Redis 超时
+    mem_limit: 512m
     environment:
-      # 低内存激进：禁用全局重聚类（0 = 只在线归簇，省重聚类内存峰值 400MB+）
-      CLUSTER_RECLUSTER_INTERVAL_MINUTES: ${CLUSTER_RECLUSTER_INTERVAL_MINUTES:-0}
+      # 精度优先：恢复全局重聚类（180min 一轮，校正跨语言议题归并；v1.2.2 验证 2G 能跑，
+      # 峰值频率降 3 倍省内存。0=禁用，省峰值但议题归并精度下降）
+      CLUSTER_RECLUSTER_INTERVAL_MINUTES: ${CLUSTER_RECLUSTER_INTERVAL_MINUTES:-180}
+      # 低内存 2G：关闭 BERTopic 主策略（峰值 ~500MB + 落库超 640m 会 cgroup OOM 杀容器，
+      # 实测多次），直接走 Agglomerative（跨语言归并校正仍恢复，精度略降但内存安全）
+      CLUSTER_BERTOPIC_ENABLED: ${CLUSTER_BERTOPIC_ENABLED:-false}
 
   frontend:
     image: agendascope-frontend:latest  # 用已 load 的镜像
