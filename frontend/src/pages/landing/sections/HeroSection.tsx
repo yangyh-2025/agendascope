@@ -58,7 +58,7 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
           <a href="#persons">人物</a>
           <a href="#alerts">预警</a>
           <a href="#propagation">溯源</a>
-          <a href="#reliability">可靠性</a>
+          <a href="#architecture">架构</a>
           <Link to={isAuthenticated ? "/dashboard" : "/login"} className="lp-nav-cta">
             {isAuthenticated ? "回到看板" : "登录"}
           </Link>

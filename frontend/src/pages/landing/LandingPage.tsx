@@ -8,7 +8,6 @@ import PersonsSection from "./sections/PersonsSection";
 import AlertsSection from "./sections/AlertsSection";
 import PropagationSection from "./sections/PropagationSection";
 import ArchitectureSection from "./sections/ArchitectureSection";
-import ReliabilitySection from "./sections/ReliabilitySection";
 import CtaSection from "./sections/CtaSection";
 import "./LandingPage.css";
 
@@ -33,7 +32,6 @@ export default function LandingPage() {
       <AlertsSection />
       <PropagationSection />
       <ArchitectureSection />
-      <ReliabilitySection />
       <CtaSection isAuthenticated={isAuthenticated} />
     </div>
   );
