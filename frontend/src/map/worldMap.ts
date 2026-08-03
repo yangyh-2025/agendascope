@@ -3,11 +3,17 @@
  * - 构建期把 world-atlas 的 TopoJSON（countries-50m；110m 缺少新加坡等小国土要素）转成 GeoJSON 并 echarts.registerMap('world')
  * - GeoJSON 随前端包离线打包，运行时绝不从公网拉取地图数据
  * - 提供 ISO-3166 alpha2 → 地图要素英文名 映射与各国外接框中心（流向动画取点用）
+ *
+ * 合规修补（chinaCompliance.ts）：
+ * - 台湾并入中国（一个中国原则）
+ * - 藏南地区、阿克赛钦 以追加 Polygon 的方式并入中国要素（world-atlas 数据源
+ *   按"麦克马洪线"/"约翰逊线"错误划给印度，此处按中国主张线归并）
  */
 import * as echarts from "echarts";
 import { feature } from "topojson-client";
 import type { Topology } from "topojson-specification";
 import countries50m from "world-atlas/countries-50m.json";
+import { CHINA_COMPLIANCE_PATCHES } from "./chinaCompliance";
 
 export const WORLD_MAP_NAME = "world";
 
@@ -338,6 +344,32 @@ function mergeTaiwanIntoChina(geo: WorldGeoJson): WorldGeoJson {
   return geo;
 }
 
+/** 把藏南、阿克赛钦等中国主张地区以追加 Polygon 的方式并入 China 要素。
+ * world-atlas / Natural Earth 数据源按"麦克马洪线"/"约翰逊线"把这些地区错误
+ * 划给印度，合规要求按中国主张线归并。叠加补丁 Polygon 是最小侵入式做法——
+ * 不修改 India 的现有要素（重叠区域 China 覆盖绘制时按 z-order 覆盖）。
+ */
+function mergeChinaCompliancePatches(geo: WorldGeoJson): WorldGeoJson {
+  const china = geo.features.find((f) => f.properties?.name === "China");
+  if (!china) return geo;
+  if (!china.geometry) {
+    china.geometry = { type: "MultiPolygon", coordinates: [] as never };
+  }
+  if (china.geometry.type === "Polygon") {
+    china.geometry = {
+      type: "MultiPolygon",
+      coordinates: [china.geometry.coordinates] as never,
+    };
+  }
+  const coords = china.geometry.coordinates as unknown[];
+  for (const patch of CHINA_COMPLIANCE_PATCHES) {
+    // Polygon 结构: [ring, ring, ...],ring = [[lng, lat], ...]
+    // 这里只添加外环(单 ring)
+    coords.push([patch.polygon]);
+  }
+  return geo;
+}
+
 export function registerWorldMap(): WorldGeoJson {
   if (registered) return registered;
   const topo = countries50m as unknown as Topology;
@@ -345,7 +377,8 @@ export function registerWorldMap(): WorldGeoJson {
     topo,
     topo.objects.countries,
   ) as unknown as WorldGeoJson;
-  mergeTaiwanIntoChina(geo);  // 台湾并入中国（合规）
+  mergeTaiwanIntoChina(geo);  // 台湾并入中国(合规)
+  mergeChinaCompliancePatches(geo);  // 藏南/阿克赛钦归并中国(合规)
   clipAntimeridianFragments(geo);
   for (const f of geo.features) {
     const name = f.properties?.name;

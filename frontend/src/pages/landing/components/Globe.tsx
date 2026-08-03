@@ -2,8 +2,9 @@ import { useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { COUNTRIES } from "../mock/countries";
+import { buildGlobeTexture } from "./globeTexture";
 
-/** 经纬度 → 单位球面三维坐标。 */
+/** 经纬度 → 单位球面三维坐标(与 equirectangular 贴图对齐)。 */
 function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lng + 180) * (Math.PI / 180);
@@ -14,18 +15,19 @@ function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
   );
 }
 
-/** 大圆插值,生成弧线点。 */
+/** 大圆弧线(从起点到终点,带弧度)。 */
 function arcPoints(
   start: THREE.Vector3,
   end: THREE.Vector3,
-  segments = 48,
-  altitude = 0.18,
+  segments = 64,
+  altitude = 0.25,
 ): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const angle = start.angleTo(end);
+  if (angle < 1e-6) return [start.clone(), end.clone()];
+  const sin = Math.sin(angle);
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
-    const sin = Math.sin(angle);
     const a = Math.sin((1 - t) * angle) / sin;
     const b = Math.sin(t * angle) / sin;
     const p = new THREE.Vector3()
@@ -43,7 +45,7 @@ interface GlobeInnerProps {
   autoRotateSpeed?: number;
 }
 
-function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.15 }: GlobeInnerProps) {
+function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
@@ -52,21 +54,35 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.15 }: GlobeInnerProps) {
     }
   });
 
-  // 基础球体(深色)+ 网格
+  // 国家贴图
+  const texture = useMemo(() => {
+    const canvas = buildGlobeTexture({
+      width: 2048,
+      height: 1024,
+      oceanColor: "#081228",
+      landColor: "#1a2d5a",
+      borderColor: "rgba(120,160,255,0.5)",
+      highlight: {
+        CN: "#8e1a2a", // 中国(暗红,不过饱和)
+        US: "#4f7fff", // 美(首发源示例)
+      },
+    });
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
   const sphereGeo = useMemo(
-    () => new THREE.SphereGeometry(radius * 0.985, 64, 64),
-    [radius],
-  );
-  const wireGeo = useMemo(
-    () => new THREE.SphereGeometry(radius, 24, 24),
+    () => new THREE.SphereGeometry(radius, 96, 96),
     [radius],
   );
 
-  // 108 国光点
-  const dotsGeo = useMemo(() => {
+  // 108 国光点(在球面上方少许)
+  const dots = useMemo(() => {
     const positions = new Float32Array(COUNTRIES.length * 3);
     COUNTRIES.forEach((c, i) => {
-      const p = latLngToVec3(c.lat, c.lng, radius * 1.005);
+      const p = latLngToVec3(c.lat, c.lng, radius * 1.012);
       positions[i * 3] = p.x;
       positions[i * 3 + 1] = p.y;
       positions[i * 3 + 2] = p.z;
@@ -76,58 +92,91 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.15 }: GlobeInnerProps) {
     return geo;
   }, [radius]);
 
-  // 演示传播弧(从美国到亚/欧/拉)
-  const arcs = useMemo(() => {
+  // 传播弧(美 → 亚/欧/拉/澳/非)
+  const { arcLines, arcHeads } = useMemo(() => {
     const origin = COUNTRIES.find((c) => c.code === "US");
-    if (!origin) return [];
+    if (!origin) return { arcLines: [], arcHeads: [] };
     const targets = ["JP", "KR", "IN", "GB", "DE", "BR", "AU", "ZA"]
       .map((code) => COUNTRIES.find((c) => c.code === code))
       .filter((c): c is NonNullable<typeof c> => Boolean(c));
     const start = latLngToVec3(origin.lat, origin.lng, radius);
-    return targets.map((t) => {
+    const lines: THREE.Line[] = [];
+    const heads: THREE.Vector3[] = [];
+    targets.forEach((t) => {
       const end = latLngToVec3(t.lat, t.lng, radius);
-      const pts = arcPoints(start, end, 48, 0.18);
+      const pts = arcPoints(start, end, 64, 0.22);
       const geo = new THREE.BufferGeometry().setFromPoints(pts);
-      return geo;
+      const mat = new THREE.LineBasicMaterial({
+        color: "#ff3b5c",
+        transparent: true,
+        opacity: 0.85,
+      });
+      lines.push(new THREE.Line(geo, mat));
+      heads.push(end);
     });
+    return { arcLines: lines, arcHeads: heads };
   }, [radius]);
 
+  // 弧末端光点几何
+  const headGeo = useMemo(() => {
+    const positions = new Float32Array(arcHeads.length * 3);
+    arcHeads.forEach((p, i) => {
+      positions[i * 3] = p.x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = p.z;
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    return geo;
+  }, [arcHeads]);
+
   return (
-    <group ref={groupRef} rotation={[0.35, 0, 0]}>
-      {/* 主球体(深色) */}
+    <group ref={groupRef} rotation={[0.32, 0, 0]} position={[1.1, 0, 0]}>
+      {/* 主球:国家贴图 */}
       <mesh geometry={sphereGeo}>
-        <meshBasicMaterial color="#0b1a3a" transparent opacity={0.85} />
-      </mesh>
-      {/* 网格线 */}
-      <mesh geometry={wireGeo}>
-        <meshBasicMaterial
-          color="#2a4a8a"
-          wireframe
-          transparent
-          opacity={0.18}
+        <meshStandardMaterial
+          map={texture}
+          roughness={1}
+          metalness={0}
+          emissive="#1a2d5a"
+          emissiveIntensity={0.18}
         />
       </mesh>
+
       {/* 国家光点 */}
-      <points geometry={dotsGeo}>
+      <points geometry={dots}>
         <pointsMaterial
-          size={0.025}
-          color="#4f7fff"
+          size={0.022}
+          color="#6ba4ff"
           sizeAttenuation
           transparent
-          opacity={0.95}
+          opacity={0.9}
         />
       </points>
+
       {/* 传播弧 */}
-      {arcs.map((geo, i) => (
-        <primitive key={i} object={new THREE.Line(geo, arcMaterial())} />
+      {arcLines.map((line, i) => (
+        <primitive key={i} object={line} />
       ))}
-      {/* 光晕 */}
+
+      {/* 弧末端脉冲点 */}
+      <points geometry={headGeo}>
+        <pointsMaterial
+          size={0.05}
+          color="#ff3b5c"
+          sizeAttenuation
+          transparent
+          opacity={1}
+        />
+      </points>
+
+      {/* 外层光晕 */}
       <mesh>
-        <sphereGeometry args={[radius * 1.12, 32, 32]} />
+        <sphereGeometry args={[radius * 1.18, 48, 48]} />
         <meshBasicMaterial
           color="#4f7fff"
           transparent
-          opacity={0.04}
+          opacity={0.06}
           side={THREE.BackSide}
         />
       </mesh>
@@ -135,30 +184,22 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.15 }: GlobeInnerProps) {
   );
 }
 
-function arcMaterial(): THREE.LineBasicMaterial {
-  return new THREE.LineBasicMaterial({
-    color: "#ff3b5c",
-    transparent: true,
-    opacity: 0.7,
-  });
-}
-
 interface GlobeProps {
   className?: string;
 }
 
-/** 3D 地球(懒加载使用,主入口动态 import)。 */
+/** 3D 地球(全屏背景,懒加载使用)。 */
 export default function Globe({ className = "" }: GlobeProps) {
   return (
     <div className={`lp-globe ${className}`} aria-hidden="true">
       <Canvas
-        camera={{ position: [0, 0, 4.2], fov: 42 }}
-        dpr={[1, 1.6]}
+        camera={{ position: [0, 0.6, 4.5], fov: 40 }}
+        dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-        frameloop="always"
       >
-        <ambientLight intensity={0.7} />
-        <pointLight position={[6, 4, 6]} intensity={0.7} color="#6ba4ff" />
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 3, 5]} intensity={0.7} color="#cfe1ff" />
+        <pointLight position={[-6, -2, -4]} intensity={0.3} color="#8b5cf6" />
         <GlobeInner />
       </Canvas>
     </div>

@@ -8,7 +8,7 @@ interface HeroSectionProps {
   isAuthenticated: boolean;
 }
 
-/** 检测 WebGL 是否可用;移动端小屏也走降级。 */
+/** 检测 WebGL 可用;移动端小屏降级。 */
 function useShouldRenderGlobe(): boolean {
   const [ok, setOk] = useState(false);
   useEffect(() => {
@@ -21,7 +21,7 @@ function useShouldRenderGlobe(): boolean {
         canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
       if (gl) setOk(true);
     } catch {
-      /* 忽略,保持 false */
+      /* 保持 false */
     }
   }, []);
   return ok;
@@ -31,11 +31,21 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
   const showGlobe = useShouldRenderGlobe();
   return (
     <section className="lp-hero">
+      {/* 全屏 3D 地球背景(无框) */}
       <div className="lp-hero-bg" aria-hidden="true">
         <div className="lp-hero-grid" />
         <div className="lp-hero-glow lp-hero-glow-1" />
         <div className="lp-hero-glow lp-hero-glow-2" />
       </div>
+      {showGlobe && (
+        <div className="lp-hero-globe-bg" aria-hidden="true">
+          <Suspense fallback={null}>
+            <Globe />
+          </Suspense>
+        </div>
+      )}
+      {/* 文字与背景之间的渐变罩,保证文字可读 */}
+      <div className="lp-hero-mask" aria-hidden="true" />
 
       <header className="lp-nav">
         <div className="lp-nav-brand">
@@ -43,9 +53,11 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
           <span className="lp-nav-name">观澜 · AgendaScope</span>
         </div>
         <nav className="lp-nav-links">
-          <a href="#capabilities">能力</a>
+          <a href="#collection">采集</a>
+          <a href="#hot-topics">热点</a>
+          <a href="#persons">人物</a>
+          <a href="#alerts">预警</a>
           <a href="#propagation">溯源</a>
-          <a href="#architecture">架构</a>
           <a href="#reliability">可靠性</a>
           <Link to={isAuthenticated ? "/dashboard" : "/login"} className="lp-nav-cta">
             {isAuthenticated ? "回到看板" : "登录"}
@@ -84,7 +96,7 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
                 {isAuthenticated ? "回到看板" : "进入系统"}
                 <span aria-hidden="true">→</span>
               </Link>
-              <a href="#capabilities" className="lp-btn lp-btn-ghost">
+              <a href="#collection" className="lp-btn lp-btn-ghost">
                 探索能力
               </a>
             </div>
@@ -98,16 +110,6 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
               <span>LLM 云端合规通道</span>
             </div>
           </ScrollReveal>
-        </div>
-
-        <div className="lp-hero-globe">
-          {showGlobe ? (
-            <Suspense fallback={<div className="lp-globe-fallback" />}>
-              <Globe />
-            </Suspense>
-          ) : (
-            <div className="lp-globe-fallback" aria-hidden="true" />
-          )}
         </div>
       </div>
 

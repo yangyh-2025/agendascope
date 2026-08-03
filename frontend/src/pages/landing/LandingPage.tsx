@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { useAuthStore } from "../../stores/auth";
 import HeroSection from "./sections/HeroSection";
 import StatsSection from "./sections/StatsSection";
-import CapabilitiesSection from "./sections/CapabilitiesSection";
+import CollectionSection from "./sections/CollectionSection";
+import HotTopicsSection from "./sections/HotTopicsSection";
+import PersonsSection from "./sections/PersonsSection";
+import AlertsSection from "./sections/AlertsSection";
 import PropagationSection from "./sections/PropagationSection";
 import ArchitectureSection from "./sections/ArchitectureSection";
 import ReliabilitySection from "./sections/ReliabilitySection";
@@ -24,7 +27,10 @@ export default function LandingPage() {
     <div className="lp">
       <HeroSection isAuthenticated={isAuthenticated} />
       <StatsSection />
-      <CapabilitiesSection />
+      <CollectionSection />
+      <HotTopicsSection />
+      <PersonsSection />
+      <AlertsSection />
       <PropagationSection />
       <ArchitectureSection />
       <ReliabilitySection />
