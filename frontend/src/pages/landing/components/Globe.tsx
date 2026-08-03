@@ -54,12 +54,12 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     }
   });
 
-  // 国家贴图(亮蓝色调:海洋浅蓝 + 陆地中蓝,高饱和有精神)
+  // 国家贴图(亮蓝色调:海洋纯白 + 陆地中蓝,边界清晰)
   const texture = useMemo(() => {
     const canvas = buildGlobeTexture({
       width: 2048,
       height: 1024,
-      oceanColor: "#cfe2f5",
+      oceanColor: "#ffffff",
       landColor: "#6b9bd8",
       borderColor: "rgba(37, 99, 235, 0.6)",
       highlight: {

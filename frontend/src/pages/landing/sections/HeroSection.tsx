@@ -86,9 +86,9 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
           </ScrollReveal>
           <ScrollReveal delay={120}>
             <h1 className="lp-hero-title">
-              看见 <em>议程</em> 如何
+              谁在操作 <em>舆情</em>
               <br />
-              在全球 <em>108 国</em> 流动
+              <em>议程</em> 如何设置
             </h1>
           </ScrollReveal>
           <ScrollReveal delay={240}>
