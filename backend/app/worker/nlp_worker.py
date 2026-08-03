@@ -50,7 +50,14 @@ class NlpWorker:
         self.session_factory = get_session_factory()
         self.detector = detector or LanguageDetector()
         self.embedder = embedder or Embedder()
-        self.es_indexer = es_indexer if es_indexer is not None else EsArticleIndexer()
+        # ES 同步可禁用（低内存部署 NLP_ES_SYNC_ENABLED=false 时跳过 ES，搜索走 PG 降级；
+        # 语言+向量先落 PG 已保证可见性，ES 故障不阻塞 pipeline）
+        if es_indexer is not None:
+            self.es_indexer = es_indexer
+        elif getattr(settings, "es_sync_enabled", True):
+            self.es_indexer = EsArticleIndexer()
+        else:
+            self.es_indexer = None
         self._attempts: dict[str, int] = {}  # 消息级尝试计数（进程内；重启后由 DLQ 兜底语义不变）
 
     def _reclaim_pending(self) -> list:

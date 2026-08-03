@@ -34,6 +34,7 @@ class NlpSettings(BaseSettings):
     es_index: str = "agendascope_articles"
     es_max_retries: int = 5  # 指数退避上限(有界, 不死等); 超限整批重投递
     es_retry_backoff_seconds: float = 1.0
+    es_sync_enabled: bool = True  # 低内存部署可关（NLP_ES_SYNC_ENABLED=false → 跳过 ES，搜索走 PG 降级）
 
     worker_group: str = "nlp"
     worker_batch_size: int = 32

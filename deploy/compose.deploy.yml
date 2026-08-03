@@ -1,12 +1,16 @@
-# AgendaScope 精简部署 override（适配低内存服务器）
+# AgendaScope 精简部署 override（适配 2G 低内存服务器）
 #
 # 用法:
 #   docker compose -f deploy/docker-compose.yml -f deploy/compose.deploy.yml up -d
 #
-# 仅启用核心链路服务（采集→理解→聚类→命名→前端），停用非核心 worker
-# （agenda/snapshot/detection/alerting），并给容器加内存上限防 OOM。
-# 内存预算（1.2GB 物理 + 3GB swap）:
-#   ES 384m + PG 384m + Redis 128m + backend 192m + worker 256m + nlp 256m + cluster 512m + naming 256m + frontend 64m
+# 内存预算（2GB 物理，无 swap 依赖）：
+#   PG 384m + Redis 128m + backend 192m + worker(采集) 256m + combined-worker 256m
+#   + cluster 512m + frontend 64m = ~1.8GB（ES 关闭，降级走 PG）
+#
+# 关键决策：
+#   - 关 ES：全文搜索降级走 PG（articles 路由已实现 es_unavailable 降级）
+#   - 合并 worker：nlp/snapshot/detection/naming/agenda 5 进程 → combined-worker 1 进程
+#     （线程错峰调度，省 ~500MB 常驻内存）
 services:
   # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
   agenda-worker:
@@ -15,14 +19,26 @@ services:
     profiles: ["disabled"]
   rsshub:
     profiles: ["disabled"]   # 无原生 RSS 补源依赖时禁用（避免拉慢镜像源）
-
   elasticsearch:
-    environment:
-      ES_JAVA_OPTS: "-Xms192m -Xmx192m"   # 缩减 ES 堆，适配低内存
-    mem_limit: 384m
+    profiles: ["disabled"]   # 低内存：关 ES（128m 起不来 + backend 已不依赖），搜索降级走 PG
+  # 已合并进 combined-worker，禁用独立进程（否则重复消费 + 内存叠加）
+  nlp-worker:
+    profiles: ["disabled"]
+  snapshot-worker:
+    profiles: ["disabled"]
+  detection-worker:
+    profiles: ["disabled"]
+  naming-worker:
+    profiles: ["disabled"]
 
   db:
     mem_limit: 384m
+    # 低内存 PG 调优：shared_buffers 128MB（默认 128 但显式）、work_mem 4MB（防排序爆内存）、
+    # max_connections 50（2G 内存下每连接 ~10MB，50 连接 = 500MB 上限内）、
+    # effective_cache_size 512MB（2G 总内存的 ~1/4）
+    command: >
+      postgres -c shared_buffers=128MB -c work_mem=4MB -c max_connections=50
+      -c effective_cache_size=512MB -c maintenance_work_mem=32MB
 
   redis:
     mem_limit: 128m
@@ -30,54 +46,65 @@ services:
   backend:
     image: agendascope-backend:latest   # 用已 load 的镜像（up 时加 --no-build 跳过 build）
     restart: unless-stopped
-    mem_limit: 192m   # backend 实际用 ~70MB，减额匀给 cluster
+    mem_limit: 192m   # 单 worker：2G 内存下 2 workers 每 worker ~100MB 触发 OOM 崩溃
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   worker:
     restart: unless-stopped
     mem_limit: 256m
+    environment:
+      CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-60}   # 低带宽慢源更多机会
 
-  nlp-worker:
+  # 合并 worker：单进程跑 nlp/snapshot/detection/naming/agenda（线程错峰）
+  combined-worker:
+    image: agendascope-backend:latest
     restart: unless-stopped
     mem_limit: 256m
     environment:
-      # 低内存适配：降批处理大小防内存峰值（默认 32，这里 8）——防 Redis 超时崩溃
+      APP_ENV: dev
+      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
+      REDIS_URL: redis://redis:6379/0
+      REDIS_STREAM_URL: redis://redis:6379/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      NLP_MODEL_DIR: /models
+      NLP_DEVICE: ${NLP_DEVICE:-cpu}
+      NLP_EMBEDDING_PROFILE: ${NLP_EMBEDDING_PROFILE:-api}
+      NLP_EMBEDDING_API_BASE_URL: ${NLP_EMBEDDING_API_BASE_URL:-}
+      NLP_EMBEDDING_API_KEY: ${NLP_EMBEDDING_API_KEY:-}
+      NLP_EMBEDDING_API_MODEL: ${NLP_EMBEDDING_API_MODEL:-text-embedding-3-small}
+      # nlp batch 降（低内存防峰值）
       NLP_WORKER_BATCH_SIZE: ${NLP_WORKER_BATCH_SIZE:-8}
       NLP_WORKER_BLOCK_MS: ${NLP_WORKER_BLOCK_MS:-2000}
+      # 低内存：跳过 ES 全文索引（搜索走 PG 降级），省 ES 同步内存与重试噪音
+      NLP_ES_SYNC_ENABLED: ${NLP_ES_SYNC_ENABLED:-false}
+      # LLM 多模型池
+      LLM_PROFILE: ${LLM_PROFILE:-api}
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
+      LLM_POOL: ${LLM_POOL:-}
+      LLM_NAMING_WORKER_BATCH_SIZE: ${LLM_NAMING_WORKER_BATCH_SIZE:-8}
+      LLM_NAMING_WORKER_POLL_SECONDS: ${LLM_NAMING_WORKER_POLL_SECONDS:-30}
+      # 快照 30min（显著性数据源）
+      AGENDA_SNAPSHOT_INTERVAL_MINUTES: ${AGENDA_SNAPSHOT_INTERVAL_MINUTES:-30}
+      AGENDA_SNAPSHOT_TIMEOUT_SECONDS: ${AGENDA_SNAPSHOT_TIMEOUT_SECONDS:-300}
+    volumes:
+      - ../models:/models:ro
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.worker.combined_worker
 
   cluster-worker:
     restart: unless-stopped
     mem_limit: 512m   # 聚类内存密集，加大上限防 Redis 超时
     environment:
-      # 低内存适配：重聚类间隔 60→180min（全局重聚类内存峰值大，拉长降频率）
-      CLUSTER_RECLUSTER_INTERVAL_MINUTES: ${CLUSTER_RECLUSTER_INTERVAL_MINUTES:-180}
-
-  detection-worker:
-    restart: unless-stopped
-    mem_limit: 256m   # 实体登记 + 事件检测（本地轻量 NER，LLM 首发判定走云 API）
-    environment:
-      # LLM API 模式（首发判定/终审走云 API，无需本地 Qwen 权重）
-      LLM_PROFILE: ${LLM_PROFILE:-api}
-      LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
-      # 多模型池（可选，配置后启用 ModelPool 调度 + 失败转移）
-      LLM_POOL: ${LLM_POOL:-}
-
-  snapshot-worker:
-    restart: unless-stopped
-    mem_limit: 256m   # 国家×议题显著性 15min 刷新（热点 TOP10/地图下钻的数据源）
-    environment:
-      # 低内存适配：延长快照间隔减少瞬时负载（默认 15min）
-      AGENDA_SNAPSHOT_INTERVAL_MINUTES: ${AGENDA_SNAPSHOT_INTERVAL_MINUTES:-30}
-      AGENDA_SNAPSHOT_TIMEOUT_SECONDS: ${AGENDA_SNAPSHOT_TIMEOUT_SECONDS:-300}
-
-  naming-worker:
-    restart: unless-stopped
-    mem_limit: 256m   # LLM 议题命名（解决"LLM 降级中"标签）
-    environment:
-      # 讯飞配额（QPS 2/并发 2）+ 引擎自适应限流：batch 8 利用闲时吞吐
-      LLM_NAMING_WORKER_BATCH_SIZE: ${LLM_NAMING_WORKER_BATCH_SIZE:-8}
-      LLM_NAMING_WORKER_POLL_SECONDS: ${LLM_NAMING_WORKER_POLL_SECONDS:-30}
+      # 低内存激进：禁用全局重聚类（0 = 只在线归簇，省重聚类内存峰值 400MB+）
+      CLUSTER_RECLUSTER_INTERVAL_MINUTES: ${CLUSTER_RECLUSTER_INTERVAL_MINUTES:-0}
 
   frontend:
     image: agendascope-frontend:latest  # 用已 load 的镜像

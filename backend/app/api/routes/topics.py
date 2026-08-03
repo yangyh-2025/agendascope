@@ -115,7 +115,16 @@ def hot_topics(
     """
     allowed = _allowed_countries(user)
 
-    stmt = select(Topic).where(Topic.merged_into.is_(None))
+    # 先取 24h 有报道的议题（热点只需这些，避免全量 2567 议题聚合）
+    active_ids = db.scalars(
+        select(TopicArticle.topic_id)
+        .join(Article, Article.id == TopicArticle.article_id)
+        .where(Article.published_at >= datetime.now(UTC) - timedelta(hours=24))
+        .distinct()
+    ).all()
+    if not active_ids:
+        return ok({"items": [], "total": 0})
+    stmt = select(Topic).where(Topic.merged_into.is_(None), Topic.id.in_(active_ids))
     all_topics = list(db.scalars(stmt).all())
     # registered 无 country_code 时仅看与默认 3 国有交集的议题
     if allowed is not None:
@@ -123,14 +132,21 @@ def hot_topics(
             t for t in all_topics if set(t.country_scope or []) & allowed
         ]
     topic_ids = [t.id for t in all_topics]
+    if not topic_ids:
+        return ok({"items": [], "total": 0})
 
     snaps = _fetch_today_snapshots(db, topic_ids, None)
     article_counts = _hot_article_counts(db, topic_ids)  # 24h 报道量
     media_counts = _media_counts(db, topic_ids)
     events = _topic_event_map(db, topic_ids)
 
+    # 快照预索引（修复 O(N×M) 性能缺陷）
+    snaps_by_topic: dict[str, list[AgendaSnapshot]] = {}
+    for (t, _c), s in snaps.items():
+        snaps_by_topic.setdefault(t, []).append(s)
+
     def _agg_salience(tid: uuid.UUID) -> tuple[float, str | None]:
-        candidates = [s for (t, _c), s in snaps.items() if t == str(tid)]
+        candidates = snaps_by_topic.get(str(tid), [])
         if not candidates:
             return 0.0, None
         best = max(candidates, key=lambda s: float(s.salience_score or 0))
@@ -290,11 +306,14 @@ def list_topics(
     events = _topic_event_map(db, topic_ids)
     article_counts = _article_counts(db, topic_ids)
 
+    # 快照预索引：按 topic_id 分组一次（修复 O(N×M) 性能缺陷——原实现每议题遍历全部快照）
+    snaps_by_topic: dict[str, list[AgendaSnapshot]] = {}
+    for (t, _c), s in snaps.items():
+        snaps_by_topic.setdefault(t, []).append(s)
+
     def _agg_salience(tid: uuid.UUID) -> tuple[float, int | None, str | None]:
         """聚合该议题当日显著性：指定国取该国 score，未指定则取各国最大值。"""
-        candidates = [
-            s for (t, _c), s in snaps.items() if t == str(tid)
-        ]
+        candidates = snaps_by_topic.get(str(tid), [])
         if not candidates:
             return 0.0, None, None
         best = max(candidates, key=lambda s: float(s.salience_score or 0))

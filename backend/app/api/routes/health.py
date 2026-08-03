@@ -35,7 +35,8 @@ def _check_es() -> bool:
     try:
         import requests
 
-        resp = requests.get(get_settings().elasticsearch_url, timeout=3)
+        # ES 为可选组件：短超时（低内存部署可关 ES，DNS 解析失败快速返回 False）
+        resp = requests.get(get_settings().elasticsearch_url, timeout=1.5)
         return resp.status_code == 200
     except Exception as exc:  # noqa: BLE001
         logger.warning("health_es_fail", error=str(exc))
@@ -50,5 +51,7 @@ def health():
         "redis_stream": _check_redis(get_stream_redis),
         "elasticsearch": _check_es(),
     }
-    healthy = all(components.values())
+    # 核心组件（PG/Redis）健康即 ok；ES 为可选（低内存部署可关，搜索降级走 PG）
+    core_healthy = components["postgres"] and components["redis_cache"] and components["redis_stream"]
+    healthy = core_healthy and components["elasticsearch"]
     return ok({"status": "ok" if healthy else "degraded", "components": components})
