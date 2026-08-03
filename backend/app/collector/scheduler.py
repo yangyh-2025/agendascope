@@ -38,7 +38,9 @@ logger = get_logger("scheduler")
 
 
 class CollectorScheduler:
-    def __init__(self, max_workers: int = 8):
+    def __init__(self, max_workers: int = 2):
+        # 低带宽/低内存部署：默认 2 并发采集（原 8 并发打满 3Mbps 带宽 + backend 内存峰值
+        # 导致 OOM kill 502）。2 路顺序抓取，采集慢但稳定，用户访问带宽不被占满。
         self.settings = get_settings()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         self._last_gdelt_at: datetime | None = None

@@ -44,6 +44,7 @@ describe("媒体源管理页", () => {
       "agendascope.tokens",
       JSON.stringify({ access_token: "a", refresh_token: "r", expires_in: 1800 }),
     );
+    sessionStorage.clear();  // 隔离 API 缓存（client.ts 的 sessionStorage 缓存）
   });
 
   it("渲染后端返回的源列表（名称/国家/类型/健康状态/最近采集时间）", async () => {

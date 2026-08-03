@@ -135,6 +135,45 @@ function refreshTokens(): Promise<TokenPair | null> {
 export interface RequestOptions {
   /** 默认 true：携带 access_token 并在 401 时刷新重试。登录/刷新自身传 false。 */
   auth?: boolean;
+  /** GET 列表响应 sessionStorage 缓存秒数（默认 30s）：切换页面秒开，不重复请求。 */
+  cacheTtl?: number;
+}
+
+/** GET 列表响应缓存（sessionStorage）：page 切换不重复请求，30s 内直接复用。
+ *  key 含路径+query+用户 token 摘要，避免跨用户串数据。 */
+const CACHE_PREFIX = "as.api.cache.v1";
+const DEFAULT_CACHE_TTL = 30;
+
+function cacheKey(path: string): string {
+  const tokens = getStoredTokens();
+  const uid = tokens ? tokens.access_token.slice(-8) : "anon";
+  return `${CACHE_PREFIX}:${uid}:${path}`;
+}
+
+function readCache<T>(path: string): T | null {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(path));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at: number; data: T };
+    if (Date.now() - parsed.at > DEFAULT_CACHE_TTL * 1000) {
+      sessionStorage.removeItem(cacheKey(path));
+      return null;
+    }
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(path: string, data: unknown): void {
+  try {
+    sessionStorage.setItem(
+      cacheKey(path),
+      JSON.stringify({ at: Date.now(), data }),
+    );
+  } catch {
+    // sessionStorage 满/不可用：静默跳过（缓存是锦上添花）
+  }
 }
 
 export async function request<T>(
@@ -144,9 +183,23 @@ export async function request<T>(
 ): Promise<T> {
   const withAuth = options.auth !== false;
   const tokens = withAuth ? getStoredTokens() : null;
+  // GET 且未显式禁缓存：先查 sessionStorage（30s 内直接返回，页面切换秒开）
+  const method = (init.method || "GET").toUpperCase();
+  if (method === "GET" && (options.cacheTtl ?? 1) > 0 && !init.signal) {
+    const cached = readCache<T>(path);
+    if (cached !== null) return cached;
+  }
   try {
-    return await rawRequest<T>(path, init, tokens?.access_token);
+    const data = await rawRequest<T>(path, init, tokens?.access_token);
+    if (method === "GET") writeCache(path, data);
+    return data;
   } catch (err) {
+    // 请求失败：若会话内已有该列表的缓存（30s 内），用缓存兜底返回旧数据（比白屏好）。
+    // 若无可回退缓存，继续走 401 刷新/报错逻辑。
+    if (method === "GET") {
+      const cached = readCache<T>(path);
+      if (cached !== null) return cached;
+    }
     // 仅在“带了 token 却被判 401”时尝试刷新；登录失败等无 token 场景直接抛出
     if (err instanceof ApiError && err.status === 401 && withAuth && tokens) {
       const refreshed = await refreshTokens();
@@ -154,7 +207,9 @@ export async function request<T>(
         onSessionExpired();
         throw err;
       }
-      return rawRequest<T>(path, init, refreshed.access_token);
+      const data = await rawRequest<T>(path, init, refreshed.access_token);
+      if (method === "GET") writeCache(path, data);
+      return data;
     }
     throw err;
   }

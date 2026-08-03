@@ -47,6 +47,9 @@ services:
   cluster-worker:
     restart: unless-stopped
     mem_limit: 512m   # 聚类内存密集，加大上限防 Redis 超时
+    environment:
+      # 低内存适配：重聚类间隔 60→180min（全局重聚类内存峰值大，拉长降频率）
+      CLUSTER_RECLUSTER_INTERVAL_MINUTES: ${CLUSTER_RECLUSTER_INTERVAL_MINUTES:-180}
 
   detection-worker:
     restart: unless-stopped
