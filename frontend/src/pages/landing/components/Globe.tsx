@@ -45,7 +45,7 @@ interface GlobeInnerProps {
   autoRotateSpeed?: number;
 }
 
-function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
+function GlobeInner({ radius = 1.4, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
@@ -54,17 +54,17 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     }
   });
 
-  // 国家贴图(亮蓝色调:海洋纯白 + 陆地中蓝,边界清晰)
+  // 国家贴图(陆地亮蓝,海洋透明;另起一张经纬线贴图叠加)
   const texture = useMemo(() => {
     const canvas = buildGlobeTexture({
       width: 2048,
       height: 1024,
-      oceanColor: "#ffffff",
+      oceanColor: "rgba(0,0,0,0)",  // 海洋透明
       landColor: "#6b9bd8",
       borderColor: "rgba(37, 99, 235, 0.6)",
       highlight: {
-        CN: "#c8102e", // 中国(公安红)
-        US: "#1a4fa0", // 美(公安蓝)
+        CN: "#c8102e",
+        US: "#1a4fa0",
       },
     });
     const tex = new THREE.CanvasTexture(canvas);
@@ -72,6 +72,48 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }, []);
+
+  // 经纬线网格(经线 24 条 / 纬线 12 条,细线淡蓝)
+  const graticule = useMemo(() => {
+    const group = new THREE.Group();
+    const material = new THREE.LineBasicMaterial({
+      color: "#2563eb",
+      transparent: true,
+      opacity: 0.18,
+    });
+    const r = radius * 1.002;  // 贴在球面上方一点点
+    // 经线:每 15° 一条(24 条)
+    for (let i = 0; i < 24; i++) {
+      const lng = (i * 15 - 180) * (Math.PI / 180);
+      const points: THREE.Vector3[] = [];
+      for (let j = 0; j <= 64; j++) {
+        const lat = (j * 180 / 64 - 90) * (Math.PI / 180);
+        points.push(new THREE.Vector3(
+          -r * Math.cos(lat) * Math.cos(lng),
+          r * Math.sin(lat),
+          r * Math.cos(lat) * Math.sin(lng),
+        ));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      group.add(new THREE.Line(geo, material));
+    }
+    // 纬线:每 15° 一条(11 条,不含两极)
+    for (let i = 1; i < 12; i++) {
+      const lat = (i * 15 - 90) * (Math.PI / 180);
+      const points: THREE.Vector3[] = [];
+      for (let j = 0; j <= 64; j++) {
+        const lng = (j * 360 / 64 - 180) * (Math.PI / 180);
+        points.push(new THREE.Vector3(
+          -r * Math.cos(lat) * Math.cos(lng),
+          r * Math.sin(lat),
+          r * Math.cos(lat) * Math.sin(lng),
+        ));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      group.add(new THREE.Line(geo, material));
+    }
+    return group;
+  }, [radius]);
 
   const sphereGeo = useMemo(
     () => new THREE.SphereGeometry(radius, 96, 96),
@@ -143,10 +185,13 @@ function GlobeInner({ radius = 1.6, autoRotateSpeed = 0.1 }: GlobeInnerProps) {
 
   return (
     <group ref={groupRef} rotation={[0.32, 2.6, 0]} position={[1.1, 0, 0]}>
-      {/* 主球:国家贴图(Basic 材质不受光照影响,贴图原色呈现,不会有背光面"蒙版") */}
+      {/* 主球:国家贴图(Basic 材质不受光照影响,海洋部分透明) */}
       <mesh geometry={sphereGeo}>
-        <meshBasicMaterial map={texture} />
+        <meshBasicMaterial map={texture} transparent />
       </mesh>
+
+      {/* 经纬线网格(球体结构感) */}
+      <primitive object={graticule} />
 
       {/* 国家光点 */}
       <points geometry={dots}>
@@ -187,7 +232,7 @@ export default function Globe({ className = "" }: GlobeProps) {
   return (
     <div className={`lp-globe ${className}`} aria-hidden="true">
       <Canvas
-        camera={{ position: [0, 0.6, 4.5], fov: 40 }}
+        camera={{ position: [0, 0.5, 4.2], fov: 40 }}
         dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
