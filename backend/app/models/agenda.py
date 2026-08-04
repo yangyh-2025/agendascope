@@ -1,4 +1,11 @@
-"""agenda_events / agenda_event_evidence 表（详细设计 2.10/2.11）。"""
+"""agenda_events / agenda_event_evidence 表（L2 事件层，v3.0 重构）。
+
+变更点：
+- 删 follower_sequence JSONB → agenda_event_followers 表
+- 删 stats_evidence JSONB（数据迁移到 topic_snapshots / 主表字段）
+- 删 revision_log JSONB → 由 topic_lifecycle_events 承接（事件级复用 topic）
+- 新增 subject_entity_id / object_entity_id（GDELT Actor1/Actor2 风格，可空）
+"""
 import uuid
 from datetime import datetime
 
@@ -31,11 +38,18 @@ class AgendaEvent(Base):
     origin_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     origin_confidence: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     origin_quote: Mapped[str | None] = mapped_column(Text)
+    subject_entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("persons_orgs.id")
+    )
+    object_entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("persons_orgs.id")
+    )
+    # 过渡期保留的旧 JSONB 字段（worker 继续写，新 API 不读）
     follower_sequence: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     stats_evidence: Mapped[dict | None] = mapped_column(JSONB)
+    revision_log: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     detection_method: Mapped[str] = mapped_column(String(20), nullable=False, default="llm")
     final_review: Mapped[dict | None] = mapped_column(JSONB)
-    revision_log: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     human_locked_fields: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     confirmed_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id")

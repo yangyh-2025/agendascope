@@ -14,6 +14,7 @@ from app.api.routes import (
     setup,
     snapshots,
     sources,
+    structured,
     subscriptions,
     system_admin,
     topics,
@@ -41,3 +42,4 @@ api_router.include_router(audit.router, prefix="/system/audit-logs", tags=["syst
 api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"])
 api_router.include_router(open_api.router, prefix="/open", tags=["open-api"])
 api_router.include_router(watchlist.router, prefix="/watchlist", tags=["watchlist"])
+api_router.include_router(structured.router, prefix="/structured", tags=["structured"])

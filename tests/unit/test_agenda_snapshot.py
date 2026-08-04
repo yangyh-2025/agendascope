@@ -11,7 +11,8 @@ from app.agenda_engine.snapshot import (
 )
 from app.models.alert import Alert
 from app.models.article import Article
-from app.models.topic import AgendaSnapshot, Topic, TopicArticle
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic, TopicArticle
 from tests.conftest import make_source
 from tests.integration.conftest import make_article
 

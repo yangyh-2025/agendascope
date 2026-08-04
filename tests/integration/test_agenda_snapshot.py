@@ -4,7 +4,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.agenda_engine.snapshot import refresh_snapshots
-from app.models.topic import AgendaSnapshot, Topic, TopicArticle
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic, TopicArticle
 from app.worker.snapshot_worker import SnapshotWorker
 from tests.conftest import make_source
 from tests.integration.conftest import make_article

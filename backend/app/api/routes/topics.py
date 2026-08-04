@@ -23,7 +23,8 @@ from app.db.redis_client import get_cache_redis
 from app.db.session import get_db
 from app.models.agenda import AgendaEvent
 from app.models.article import Article
-from app.models.topic import AgendaSnapshot, Topic, TopicArticle
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic, TopicArticle
 from app.models.user import User
 from app.repositories.audit_repo import write_audit
 from app.schemas.topic import TopicRenameRequest

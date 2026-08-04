@@ -4,6 +4,62 @@
 
 ---
 
+## 数据库结构化重构 v3.0（2026-08-05）
+
+> **本轮范围**：数据库从"应用数据库"升级为"单一事实源"。借鉴 GDELT 三层结构（Events/Mentions/GKG）但超越——新增处理状态机 + 分布式任务队列。所有看板/议题/事件/监控对象/预警功能都是对数据库的 SELECT 查询；采集/NLP/聚类/LLM 标注都是独立的 worker 进程，未来可分布式部署到不同机器。
+
+### 新表（alembic 0016-0020）
+
+**L0 原始层**：
+- articles 重建（含 url_hash 唯一索引、country_code、source_channel）
+
+**L1 加工层**（新增）：
+- `article_processing`：每篇文章的 NLP/聚类/实体抽取/关系抽取状态机（pending/processing/done/failed/skipped）
+- `article_entities`：实体-文章显式关联（mention_count/is_primary_subject/extracted_by/confidence）
+- `worker_tasks`：分布式 worker 任务队列（本次仅建表，未来启用 `FOR UPDATE SKIP LOCKED` 领任务）
+
+**L2 事实层**：
+- topics 重建（保留旧 JSONB 字段过渡，新功能读新维度表）
+- `topic_keywords`：议题关键词（每行一词，含 weight/rank/source）
+- `topic_countries`：议题涉及国家（含 article_count/salience_peak）
+- `topic_lifecycle_events`：议题生命周期历史（created/lifecycle_change/merged/renamed/origin_revised 等）
+- `topic_no_merge_pairs`：不可归并议题对
+- agenda_events 重建（保留旧 JSONB 字段过渡，新增 subject_entity_id/object_entity_id）
+- `agenda_event_entities`：事件-实体 N-N 关联（role: subject/object/participant/mentioned）
+- `agenda_event_followers`：事件传播链（首发源→跟随源，含时序和 lag_seconds）
+
+**L3 快照层**：
+- `topic_snapshots`：议题×国家×时间窗显著性（替代旧 agenda_snapshots）
+- `entity_snapshots`：实体×时间窗提及数/情感/首发数/新关系数
+- `source_snapshots`：媒体源×时间窗采集数/首发数/跟随数/平均延迟
+
+### 新 API（`/api/v1/structured/*`）
+
+- `GET /topics/{id}/lifecycle` — 议题生命周期历史
+- `GET /topics/{id}/keywords` — 议题关键词（独立表）
+- `GET /topics/{id}/countries` — 议题涉及国家
+- `GET /events/{id}/follow-chain` — 事件传播链（时序）
+- `GET /entities/{id}/timeline` — 实体提及曲线
+- `GET /entities/{id}/articles` — 实体相关文章
+- `GET /processing/stats` — 加工流水线状态统计（看板/系统管理用）
+
+### 兼容性
+
+- **数据**：完全重建（用户已确认"接受重建，采集重新开始"）；users/api_keys/alert_rules/subscriptions/sources/llm_judgements 保留
+- **API**：旧 endpoint 全部保留向后兼容；新 endpoint 走 `/api/v1/structured/*`
+- **worker**：本次不重写（继续使用旧 JSONB 字段）；新表结构已就绪，下次升级 worker
+
+### 设计借鉴（GDELT + 改进）
+
+- 借鉴 GDELT：Events/Mentions/GKG 三层分离、显式 mention 表、时间序列快照、置信度
+- 超越 GDELT：
+  - 加 `article_processing` 处理状态机（GDELT 没有）——支持失败重跑/进度查询/分布式领任务
+  - 加 `worker_tasks` 任务队列（GDELT 没有）——云服务器只做数据库，worker 可任意分布式部署
+  - 多元实体关系（GDELT 是 Actor1/Actor2 二元）——`agenda_event_entities` 支持 N 实体
+  - 议题生命周期显式留痕（GDELT 没有）——每次状态变化/合并/重命名/首发源修正都入 `topic_lifecycle_events`
+
+---
+
 ## 监控对象重构 + 数据 API 开放平台 + 报告板块下线（2026-08-05）
 
 > **本轮范围**：四大调整——下线报告板块、侧边栏整合到"系统"、人物监测重构为"监控对象"精品 50 实体社交网络、新增数据开放平台对外开放数据库 API。

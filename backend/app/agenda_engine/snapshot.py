@@ -36,7 +36,8 @@ from app.clustering.tokenize import top_keywords
 from app.core.logging import get_logger
 from app.models.alert import Alert, AlertRule
 from app.models.article import Article
-from app.models.topic import AgendaSnapshot, Topic, TopicArticle
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic, TopicArticle
 from app.services.seed_service import ensure_admin
 
 logger = get_logger("agenda.snapshot")

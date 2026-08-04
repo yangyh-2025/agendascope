@@ -23,7 +23,8 @@ from app.alerting.alert_summary import generate_alert_summary
 from app.core.logging import get_logger
 from app.models.agenda import AgendaEvent
 from app.models.alert import Alert, AlertRule
-from app.models.topic import AgendaSnapshot, Topic
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic
 
 logger = get_logger("alerting.engine")
 

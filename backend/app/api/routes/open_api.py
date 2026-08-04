@@ -19,8 +19,9 @@ from app.db.session import get_db
 from app.models.agenda import AgendaEvent
 from app.models.article import Article
 from app.models.person import PersonOrg
+from app.models.snapshots import TopicSnapshot
 from app.models.source import Source
-from app.models.topic import AgendaSnapshot, Topic, TopicArticle
+from app.models.topic import Topic, TopicArticle
 from app.models.user import User
 
 router = APIRouter()
@@ -318,16 +319,16 @@ def list_snapshots(
     user: User = Depends(get_api_key_user),
 ):
     cutoff = datetime.now(UTC) - timedelta(days=days)
-    stmt = select(AgendaSnapshot).where(
-        AgendaSnapshot.window_start >= cutoff,
-        AgendaSnapshot.granularity == granularity,
+    stmt = select(TopicSnapshot).where(
+        TopicSnapshot.window_start >= cutoff,
+        TopicSnapshot.granularity == granularity,
     )
     if topic_id:
-        stmt = stmt.where(AgendaSnapshot.topic_id == topic_id)
+        stmt = stmt.where(TopicSnapshot.topic_id == topic_id)
     if country_code:
-        stmt = stmt.where(AgendaSnapshot.country_code == country_code.upper())
+        stmt = stmt.where(TopicSnapshot.country_code == country_code.upper())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    stmt = stmt.order_by(desc(AgendaSnapshot.window_start)).offset((page - 1) * page_size).limit(page_size)
+    stmt = stmt.order_by(desc(TopicSnapshot.window_start)).offset((page - 1) * page_size).limit(page_size)
     snaps = db.scalars(stmt).all()
     items = [{
         "id": str(s.id),

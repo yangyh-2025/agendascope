@@ -9,7 +9,8 @@ from app.api.deps import ROLE_REGISTERED, get_db, require_role
 from app.core.countries import all_name_zh_map
 from app.core.errors import ok
 from app.models.article import Article
-from app.models.topic import AgendaSnapshot, Topic
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic
 from app.models.user import User
 
 router = APIRouter()

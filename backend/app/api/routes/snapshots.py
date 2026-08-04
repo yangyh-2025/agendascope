@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import ROLE_AUTHORIZED, ROLE_REGISTERED, get_db, require_role
 from app.core.errors import CODE_NOT_FOUND, BizError, ok
-from app.models.topic import AgendaSnapshot, Topic
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic
 from app.models.user import User
 
 router = APIRouter()

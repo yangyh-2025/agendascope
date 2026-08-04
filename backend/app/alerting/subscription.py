@@ -21,7 +21,8 @@ from app.alerting.llm_translate import llm_translate
 from app.alerting.translate import translate_summary, translate_topic_name
 from app.core.logging import get_logger
 from app.models.subscription import Subscription, SubscriptionDelivery
-from app.models.topic import AgendaSnapshot, Topic
+from app.models.snapshots import TopicSnapshot as AgendaSnapshot
+from app.models.topic import Topic
 from app.models.user import User
 
 logger = get_logger("alerting.subscription")
