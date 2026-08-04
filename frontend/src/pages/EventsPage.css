@@ -1,0 +1,166 @@
+/* 议程事件列表页样式,复用 TopicsPage 视觉语言。 */
+.events-page {
+  padding: 0 0 24px;
+}
+
+.events-page .page-header {
+  margin-bottom: 16px;
+}
+
+.events-page .page-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #1f2d3d;
+}
+
+.events-page .page-desc {
+  margin: 0;
+  color: #6b7a90;
+  font-size: 13px;
+}
+
+.events-page .filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.events-page .filter-bar select {
+  padding: 6px 10px;
+  border: 1px solid #d6dde8;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2d3d;
+  font-size: 13px;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.event-card {
+  background: #fff;
+  border: 1px solid #e3eaf3;
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.event-card.clickable {
+  cursor: pointer;
+}
+
+.event-card.clickable:hover,
+.event-card.clickable:focus-visible {
+  border-color: #c8102e;
+  box-shadow: 0 4px 14px rgba(200, 16, 46, 0.12);
+  outline: none;
+}
+
+.event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.event-card-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2d3d;
+  flex: 1;
+}
+
+.event-status-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.event-status-tag.status-watching   { background: #e8f0fb; color: #1a4fa0; }
+.event-status-tag.status-suspected  { background: #fff4e0; color: #b27b00; }
+.event-status-tag.status-confirmed  { background: #fde7ea; color: #c8102e; }
+.event-status-tag.status-dismissed  { background: #eef1f5; color: #6b7a90; }
+.event-status-tag.status-revised    { background: #e7f6ef; color: #18794e; }
+.event-status-tag.status-archived   { background: #f2f2f2; color: #909399; }
+
+.event-summary {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #4a5a70;
+  line-height: 1.5;
+}
+
+.event-summary .origin-country {
+  color: #c8102e;
+  font-weight: 600;
+}
+
+.event-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #6b7a90;
+}
+
+.event-card-footer .origin-label {
+  background: #f4f6fa;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.event-card-footer .review-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f0f6ff;
+  color: #1a4fa0;
+}
+
+.event-card-footer .confirm-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.event-card-footer .confirm-tag.manual { background: #fde7ea; color: #c8102e; }
+.event-card-footer .confirm-tag.auto   { background: #e7f6ef; color: #18794e; }
+
+.events-page .pagination {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.events-page .pagination-info {
+  font-size: 13px;
+  color: #6b7a90;
+}
+
+.events-page .page-loading,
+.events-page .page-error {
+  text-align: center;
+  color: #6b7a90;
+  padding: 32px 0;
+  font-size: 13px;
+}
+
+.events-page .page-error { color: #c8102e; }
+
+.events-page .empty-state {
+  text-align: center;
+  padding: 48px 0;
+  color: #6b7a90;
+  font-size: 13px;
+}

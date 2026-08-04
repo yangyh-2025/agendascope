@@ -23,7 +23,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "议题分析",
     items: [
-      { to: "/topics", label: "议题与事件", icon: "💬" },
+      { to: "/topics", label: "议题", icon: "💬" },
+      { to: "/events", label: "议程事件", icon: "🔥" },
       { to: "/revisions", label: "修正历史", icon: "📝" },
     ],
   },

@@ -5,6 +5,7 @@ import SetupGuard from "./components/SetupGuard";
 import AlertRulesPage from "./pages/AlertRulesPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import EventDetailPage from "./pages/EventDetailPage";
+import EventsPage from "./pages/EventsPage";
 import LandingPage from "./pages/landing/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
@@ -32,14 +33,13 @@ export default function App() {
               {/* 旧路由重定向,避免书签失效 */}
               <Route path="map" element={<Navigate to="/dashboard" replace />} />
               <Route path="overview" element={<Navigate to="/dashboard" replace />} />
-              {/* 议题分析(议题+议程事件 Tab 整合) */}
+              {/* 议题分析(议题+议程事件拆分为两个独立入口) */}
               <Route path="topics" element={<TopicsPage />} />
               <Route path="topics/:id" element={<TopicDetailPage />} />
               {/* 时间线已合并到议题页"对比模式",旧路由重定向 */}
               <Route path="timeline" element={<Navigate to="/topics" replace />} />
-              {/* 议程事件已合并到议题页 Tab,旧路由重定向到 /topics?tab=events */}
-              <Route path="events" element={<Navigate to="/topics?tab=events" replace />} />
-              {/* 事件详情独立路由保留,供外链/书签跳转 */}
+              {/* 议程事件独立列表入口 */}
+              <Route path="events" element={<EventsPage />} />
               <Route path="events/:id" element={<EventDetailPage />} />
               <Route path="revisions" element={<RevisionsPage />} />
               <Route path="persons" element={<PersonsPage />} />
