@@ -15,22 +15,23 @@ export type AgendaEventStatus =
 export interface AgendaEventListItem {
   id: string;
   topic_id: string;
-  topic_name: string;
+  topic_name: string | null;
   status: AgendaEventStatus;
   confidence: string;
   origin_type: string;
   origin_country_code: string;
-  origin_label: string;
   origin_at: string;
+  origin_confidence: string;
   follower_count: number;
-  max_lag_hours: number;
-  final_review: { score: number; verdict: string } | null;
-  latest_revision_at: string | null;
+  max_lag_hours: number | null;
+  stats_significant: boolean;
+  detection_method?: string;
+  final_review_score: number | null;
+  latest_revision_at?: string | null;
   confirmed_by: string | null;
   confirmed_at: string | null;
   created_at: string;
   updated_at: string;
-  detection_method?: string;
 }
 
 export interface AgendaEventListPage {

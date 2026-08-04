@@ -126,6 +126,13 @@
   color: #1a4fa0;
 }
 
+.event-card-footer .stats-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e7f6ef;
+  color: #18794e;
+}
+
 .event-card-footer .confirm-tag {
   padding: 2px 8px;
   border-radius: 10px;

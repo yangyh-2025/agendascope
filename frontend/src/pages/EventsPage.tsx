@@ -21,10 +21,9 @@ const STATUS_OPTIONS: { value: AgendaEventStatus | ""; label: string }[] = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "origin_at_desc", label: "首发时间 ↓" },
-  { value: "origin_at_asc", label: "首发时间 ↑" },
-  { value: "follower_count_desc", label: "跟随国数" },
-  { value: "updated_at_desc", label: "最近更新" },
+  { value: "updated_at", label: "最近更新" },
+  { value: "origin_at", label: "首发时间" },
+  { value: "confidence", label: "置信度" },
 ];
 
 export default function EventsPage() {
@@ -34,7 +33,7 @@ export default function EventsPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<AgendaEventStatus | "">("");
   const [country, setCountry] = useState("");
-  const [sort, setSort] = useState("origin_at_desc");
+  const [sort, setSort] = useState("updated_at");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -102,10 +101,10 @@ export default function EventsPage() {
                 nav(`/events/${ev.id}`);
               }
             }}
-            title={`查看事件详情(关联议题:${ev.topic_name})`}
+            title={`查看事件详情(关联议题:${ev.topic_name ?? ev.topic_id})`}
           >
             <div className="event-card-header">
-              <h3>{ev.topic_name}</h3>
+              <h3>{ev.topic_name ?? "未命名议题"}</h3>
               <span className={`event-status-tag status-${ev.status}`}>
                 {AGENDA_EVENT_STATUS_LABEL[ev.status] ?? ev.status}
               </span>
@@ -116,11 +115,15 @@ export default function EventsPage() {
               {ev.max_lag_hours != null && ` · 最长时滞 ${ev.max_lag_hours.toFixed(1)}h`}
             </p>
             <div className="event-card-footer">
-              <span className="origin-label">{ev.origin_label}</span>
-              {ev.final_review && (
-                <span className={`review-tag verdict-${ev.final_review.verdict}`}>
-                  终审 {ev.final_review.score.toFixed(2)}
-                </span>
+              <span className="origin-label">
+                {ev.origin_type === "media" ? "媒体首发" : ev.origin_type === "person" ? "人物首发" : "机构首发"}
+                {" · "}{ev.origin_confidence}
+              </span>
+              {ev.final_review_score != null && (
+                <span className="review-tag">终审 {ev.final_review_score.toFixed(1)}</span>
+              )}
+              {ev.stats_significant && (
+                <span className="stats-tag">统计显著</span>
               )}
               {ev.confirmed_by ? (
                 <span className="confirm-tag manual">人工确认</span>
