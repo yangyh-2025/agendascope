@@ -32,7 +32,6 @@ const NAV_GROUPS: NavGroup[] = [
     title: "监测预警",
     items: [
       { to: "/persons", label: "人物监测", icon: "👤" },
-      { to: "/analytics", label: "跨国对比", icon: "📊" },
       { to: "/alerts", label: "预警配置", icon: "🔔" },
     ],
   },
@@ -91,13 +90,13 @@ export default function Layout() {
   return (
     <div className="layout">
       <aside className="layout-sidebar">
-        <div className="layout-brand">
+        <NavLink to="/" className="layout-brand layout-brand-link" title="回到首页">
           <img className="layout-brand-mark" src="/logo.svg" alt="观澜 Logo" aria-hidden="true" />
           <div className="layout-brand-text">
             <span className="layout-brand-name">观澜</span>
             <span className="layout-brand-sub">AgendaScope</span>
           </div>
-        </div>
+        </NavLink>
         <nav className="layout-nav">
           {NAV_GROUPS.map((g) => (
             <div key={g.title} className="layout-nav-group">

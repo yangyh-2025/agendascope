@@ -25,6 +25,22 @@
   border-bottom: 1px solid var(--as-colors-border);
 }
 
+.layout-brand-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.layout-brand-link:hover {
+  background: var(--as-colors-bgSubtle);
+}
+
+.layout-brand-link:focus-visible {
+  outline: 2px solid var(--as-colors-primary, #1a4fa0);
+  outline-offset: -2px;
+}
+
 .layout-brand-mark {
   width: 36px;
   height: 36px;
