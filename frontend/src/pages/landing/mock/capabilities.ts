@@ -13,10 +13,10 @@ export const CAPABILITIES: Capability[] = [
   {
     icon: "🗺️",
     title: "全球议程地图",
-    tagline: "108 国 × 今日报道热力",
+    tagline: "172 国 × 今日报道热力",
     description:
-      "实时渲染 108 个主要经济体的报道热度分布,点击任意国家下钻当日 Top 议题,一眼看清全球舆论焦点。",
-    metric: "108",
+      "实时渲染 172 个国家的报道热度分布,点击任意国家下钻当日 Top 议题,一眼看清全球舆论焦点。",
+    metric: "172",
     metricLabel: "监控国家/地区",
   },
   {
@@ -33,7 +33,7 @@ export const CAPABILITIES: Capability[] = [
     title: "实时采集引擎",
     tagline: "P95 ≤ 30 分钟发布到可见",
     description:
-      "124 个重点源 RSS 高频轮询 + GDELT 全球兜底,5 分钟 33 篇新文章入库;慢源超时降级,吞吐稳定。",
+      "408 个主流源 RSS 高频轮询 + GDELT 全球兜底,新文章秒级入库;慢源超时降级,吞吐稳定。",
     metric: "≤30min",
     metricLabel: "采集到可见延迟",
   },

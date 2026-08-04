@@ -105,7 +105,7 @@ export default function CollectionSection() {
         <ScrollReveal>
           <div className="lp-section-eyebrow">实时采集引擎</div>
           <h2 className="lp-section-title">
-            124 个重点源,
+            408 个主流源,
             <br />
             P95 ≤ 30 分钟发布到可见
           </h2>
@@ -122,7 +122,7 @@ export default function CollectionSection() {
             <div className="lp-collect-map-wrap">
               <div className="lp-collect-map-header">
                 <span className="lp-collect-pulse" aria-hidden="true" />
-                <span className="lp-collect-live-tag">LIVE · 108 国监控中</span>
+                <span className="lp-collect-live-tag">LIVE · 172 国监控中</span>
               </div>
               <ReactECharts
                 option={mapOption}

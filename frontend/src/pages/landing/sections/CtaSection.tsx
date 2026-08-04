@@ -24,7 +24,7 @@ export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
         </ScrollReveal>
         <ScrollReveal delay={120}>
           <p className="lp-cta-lede">
-            进入系统,看看今天 108 国的媒体都在说什么。
+            进入系统,看看今天 172 国的媒体都在说什么。
           </p>
         </ScrollReveal>
         <ScrollReveal delay={240}>

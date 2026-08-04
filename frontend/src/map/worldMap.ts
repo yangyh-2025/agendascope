@@ -125,6 +125,24 @@ export const ISO2_TO_MAP_NAME: Record<string, string> = {
   GE: "Georgia",
   AM: "Armenia",
   BY: "Belarus",
+  // 2026-08-04 全球覆盖扩充(64 国)
+  SD: "Sudan", SS: "South Sudan", ML: "Mali", NE: "Niger", TD: "Chad",
+  BF: "Burkina Faso", GN: "Guinea", BJ: "Benin", TG: "Togo", SL: "Sierra Leone",
+  LR: "Liberia", MR: "Mauritania", ER: "Eritrea", DJ: "Djibouti", SO: "Somalia",
+  CF: "Central African Rep.", CG: "Congo", GQ: "Eq. Guinea", ST: "São Tomé and Principe",
+  KM: "Comoros", MU: "Mauritius", SC: "Seychelles", MG: "Madagascar", MW: "Malawi",
+  LS: "Lesotho", SZ: "Swaziland", NA: "Namibia", CV: "Cabo Verde", GW: "Guinea-Bissau",
+  GM: "Gambia",
+  GT: "Guatemala", HN: "Honduras", SV: "El Salvador", NI: "Nicaragua",
+  CR: "Costa Rica", PA: "Panama", JM: "Jamaica", TT: "Trinidad and Tobago",
+  HT: "Haiti", BS: "Bahamas", GY: "Guyana", SR: "Suriname",
+  LU: "Luxembourg", IS: "Iceland", EE: "Estonia", LV: "Latvia", LT: "Lithuania",
+  SI: "Slovenia", HR: "Croatia", RS: "Serbia", BA: "Bosnia and Herz.",
+  MK: "Macedonia", AL: "Albania", ME: "Montenegro", MD: "Moldova",
+  MT: "Malta", CY: "Cyprus",
+  PG: "Papua New Guinea", WS: "Samoa", TO: "Tonga", VU: "Vanuatu", SB: "Solomon Is.",
+  MV: "Maldives", BT: "Bhutan",
+  BD: "Bangladesh", ET: "Ethiopia",
 };
 
 interface GeoFeature {
@@ -519,6 +537,73 @@ const VISUAL_ANCHOR: Record<string, [number, number]> = {
   PY: [-57.58, -25.26],   // 亚松森
   CU: [-82.36, 23.14],    // 哈瓦那
   DO: [-69.93, 18.48],    // 圣多明各
+  // 2026-08-04 全球覆盖扩充首都
+  SD: [32.53, 15.50],     // 喀土穆
+  SS: [31.57, 4.85],      // 朱巴
+  ML: [-8.00, 12.64],     // 巴马科
+  NE: [2.11, 13.51],      // 尼亚美
+  TD: [15.04, 12.10],     // 恩贾梅纳
+  BF: [-1.52, 12.36],     // 瓦加杜古
+  GN: [-13.68, 9.51],     // 科纳克里
+  BJ: [2.63, 6.37],       // 波多诺伏
+  TG: [1.22, 6.13],       // 洛美
+  SL: [-13.23, 8.48],     // 弗里敦
+  LR: [-10.80, 6.30],     // 蒙罗维亚
+  MR: [-15.97, 18.09],    // 努瓦克肖特
+  ER: [38.93, 15.33],     // 阿斯马拉
+  DJ: [43.15, 11.59],     // 吉布提市
+  SO: [45.34, 2.04],      // 摩加迪沙
+  CF: [18.56, 4.39],      // 班吉
+  CG: [15.28, -4.27],     // 布拉柴维尔
+  GQ: [8.78, 3.75],       // 马拉博
+  ST: [6.72, 0.33],       // 圣多美
+  KM: [43.25, -11.70],    // 莫罗尼
+  MU: [57.50, -20.16],    // 路易港
+  SC: [55.45, -4.62],     // 维多利亚
+  MG: [47.51, -18.91],    // 塔那那利佛
+  MW: [33.78, -13.96],    // 利隆圭
+  LS: [27.48, -29.31],    // 马塞卢
+  SZ: [31.13, -26.30],    // 姆巴巴内
+  NA: [17.08, -22.56],    // 温得和克
+  CV: [-23.51, 14.92],    // 普拉亚
+  GW: [-15.60, 11.86],    // 比绍
+  GM: [-16.65, 13.45],    // 班珠尔
+  GT: [-90.53, 14.63],    // 危地马拉城
+  HN: [-87.20, 14.08],    // 特古西加尔巴
+  SV: [-89.19, 13.69],    // 圣萨尔瓦多
+  NI: [-86.27, 12.13],    // 马那瓜
+  CR: [-84.08, 9.93],     // 圣何塞
+  PA: [-79.52, 8.99],     // 巴拿马城
+  JM: [-76.79, 18.00],    // 金斯敦
+  TT: [-61.51, 10.65],    // 西班牙港
+  HT: [-72.34, 18.54],    // 太子港
+  BS: [-77.34, 25.08],    // 拿骚
+  GY: [-58.16, 6.80],     // 乔治敦
+  SR: [-55.17, 5.85],     // 帕拉马里博
+  LU: [6.13, 49.61],      // 卢森堡市
+  IS: [-21.83, 64.15],    // 雷克雅未克
+  EE: [24.75, 59.44],     // 塔林
+  LV: [24.10, 56.95],     // 里加
+  LT: [25.28, 54.69],     // 维尔纽斯
+  SI: [14.51, 46.05],     // 卢布尔雅那
+  HR: [15.98, 45.82],     // 萨格勒布
+  RS: [20.50, 44.79],     // 贝尔格莱德
+  BA: [18.42, 43.86],     // 萨拉热窝
+  MK: [21.43, 41.99],     // 斯科普里
+  AL: [19.82, 41.33],     // 地拉那
+  ME: [19.26, 42.44],     // 波德戈里察
+  MD: [28.86, 47.01],     // 基希讷乌
+  MT: [14.51, 35.90],     // 瓦莱塔
+  CY: [33.38, 35.19],     // 尼科西亚
+  PG: [147.19, -9.44],    // 莫尔兹比港
+  WS: [-171.76, -13.83],  // 阿皮亚
+  TO: [-175.20, -21.13],  // 努库阿洛法
+  VU: [168.32, -17.73],   // 维拉港
+  SB: [159.97, -9.43],    // 霍尼亚拉
+  MV: [73.51, 4.17],      // 马累
+  BT: [89.64, 27.47],     // 廷布
+  BD: [90.41, 23.81],     // 达卡
+  ET: [38.74, 9.02],      // 亚的斯亚贝巴
 };
 
 /** 取国家示意中心点(流向动画/散点定位用);未收录返回 undefined。 */

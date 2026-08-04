@@ -8,8 +8,8 @@ export interface Stat {
 }
 
 export const HERO_STATS: Stat[] = [
-  { value: 108, suffix: "", label: "监控国家/地区", hint: "G20 + 全球南方典型国" },
-  { value: 124, suffix: "", label: "主流媒体源", hint: "每国受众覆盖 ≥70%" },
+  { value: 172, suffix: "", label: "监控国家/地区", hint: "全球覆盖:G20 + 全球南方 + 主要经济体" },
+  { value: 408, suffix: "", label: "主流媒体源", hint: "重点国每国 3-17 源,受众覆盖 ≥70%" },
   { value: 30, suffix: "min", label: "P95 采集延迟", hint: "发布到可见" },
   { value: 24, suffix: "/7", label: "全天候监控", hint: "实时采集 + 聚类 + 告警" },
 ];
