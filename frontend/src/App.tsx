@@ -3,7 +3,6 @@ import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import SetupGuard from "./components/SetupGuard";
 import AlertRulesPage from "./pages/AlertRulesPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import LandingPage from "./pages/landing/LandingPage";
@@ -43,7 +42,6 @@ export default function App() {
               <Route path="events/:id" element={<EventDetailPage />} />
               <Route path="revisions" element={<RevisionsPage />} />
               <Route path="persons" element={<PersonsPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="alerts" element={<AlertRulesPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="sources" element={<SourcesPage />} />
