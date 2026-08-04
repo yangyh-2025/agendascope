@@ -3,6 +3,7 @@ import { useAuthStore } from "../../stores/auth";
 import HeroSection from "./sections/HeroSection";
 import StatsSection from "./sections/StatsSection";
 import CollectionSection from "./sections/CollectionSection";
+import DatabaseSection from "./sections/DatabaseSection";
 import HotTopicsSection from "./sections/HotTopicsSection";
 import PersonsSection from "./sections/PersonsSection";
 import AlertsSection from "./sections/AlertsSection";
@@ -29,6 +30,7 @@ export default function LandingPage() {
       <PropagationSection />
       <PersonsSection />
       <CollectionSection />
+      <DatabaseSection />
       <HotTopicsSection />
       <AlertsSection />
       <ArchitectureSection />

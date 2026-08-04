@@ -4,6 +4,51 @@
 
 ---
 
+## v4.0 分布式架构落地（2026-08-05）
+
+> **本轮范围**：计算从云端搬到本地。云端只保留 PostgreSQL + FastAPI + nginx 三个服务；本地算力机做采集/NLP/聚类/关系抽取/LLM 调用。**本次仅推 GitHub，不部署服务器**——生产继续跑 v2.0（监控对象+API 开放平台）版本用于 demo 展示。
+
+### 云端瘦身
+
+- **compose.deploy.yml 重写**：删除所有 worker（worker/nlp/cluster/naming/agenda/snapshot/detection/alerting/relation/combined/rsshub/elasticsearch 全部 disabled）
+- **内存重新分配**：db 768MB（释放 worker 占用）+ backend 384MB + frontend 64MB + redis 96MB = 1.3GB（释放 ~500MB 余量）
+- **PG 公网可达**：`deploy/postgresql/postgresql.conf`（SSL 强制 + 调优）+ `pg_hba.conf`（仅 hostssl + scram-sha-256）+ `generate_ssl_cert.sh`（自签证书脚本）+ `init_public_users.sql`（agendascope_write / agendascope_read 双账号）
+- **安全**：宝塔防火墙 5432 端口只放行导师实验室 IP 段
+
+### 本地算力机包（local_workers/）
+
+- **docker-compose.yml**：9 个 worker 服务（collector/nlp/cluster/entity/relation/snapshot/detection/naming/alerting），总内存预算 ~15GB
+- **.env.example**：DATABASE_URL 指向云端 39.106.2.28:5432（SSL）+ LLM_API_KEY + 代理配置
+- **README.md**：初次部署/日常运维/故障排查/多机分布式扩展指南
+
+### Landing 新增"数据库"板块
+
+- **位置**：放在"实时采集"和"热点议题"之间
+- **风格**：与现有板块一致（浅色背景 + 公安蓝主色）
+- **可视化形式**：案例场景（一条 Reuters 新闻从采集到看板的完整旅程）+ 6 步流水线卡片（每步含 SQL 代码块）+ L0-L3 四层架构图 + GDELT 对比表
+- **不用大数字、饼图**：用代码片段+流向箭头呈现"数据库是一个活的流水线"
+
+### GitHub README 重写
+
+- **中英双语**：上中文下英文，符合开源项目惯例
+- **架构图**：mermaid 图（本地算力机 → 云端 → 客户端）
+- **数据库四层架构表**：L0 原始层 / L1 加工层 / L2 事实层 / L3 快照层
+- **快速开始**：仅使用云端 / 本地算力机接入 / 完整私有化部署 三种模式
+- **数据规模**：172 国 / 408 源 / 50 精品 / 16 种关系类型
+
+### 文档新增
+
+- `docs/apply/本地算力机申请单.md`：给导师的方案 A 申请（8 核+32GB+无 GPU，~5000 元）
+- `docs/dev/分布式部署指南.md`：本地算力机接入的完整步骤（云端配置 → 本地接入 → 多机扩展 → 回滚）
+
+### 用户决策
+
+- **方案 A**：8 核 + 32GB + 无 GPU（~5000 元），LLM 走云 API（GLM-4-Flash 免费额度足够）
+- **不考虑任何本地 LLM 部署**：vLLM / llama.cpp / Qwen / RTX GPU 全部排除
+- **本次不部署服务器**：生产继续跑 v2.0（监控对象+API 开放平台）版本用于 demo 展示
+
+---
+
 ## 数据库结构化重构 v3.0（2026-08-05）
 
 > **本轮范围**：数据库从"应用数据库"升级为"单一事实源"。借鉴 GDELT 三层结构（Events/Mentions/GKG）但超越——新增处理状态机 + 分布式任务队列。所有看板/议题/事件/监控对象/预警功能都是对数据库的 SELECT 查询；采集/NLP/聚类/LLM 标注都是独立的 worker 进程，未来可分布式部署到不同机器。

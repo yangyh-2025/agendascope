@@ -1,126 +1,96 @@
-# AgendaScope 精简部署 override（适配 2G 低内存服务器）
+# AgendaScope 云端瘦身部署 override（v4.0 分布式架构）
 #
 # 用法:
 #   docker compose -f deploy/docker-compose.yml -f deploy/compose.deploy.yml up -d
 #
-# 内存预算（1.8GB 物理，预留 ~150M 宿主余量）：
-#   backend 256 + worker(采集) 192 + combined-worker 384 + cluster 384
-#   + db 320 + redis 96 + frontend 48 = 1680MB（ES 关闭，降级走 PG）
+# v4.0 重大调整：所有 worker 迁移到本地算力机，云端只保留 3 个服务：
+#   - db (PostgreSQL + pgvector)：数据库存储，对公网暴露 5432（SSL + 白名单）
+#   - backend (FastAPI)：只读 API + JWT/API Key 鉴权
+#   - frontend (nginx)：静态文件 + /api 反代 + HTTPS
 #
-# 关键决策：
-#   - 关 ES：全文搜索降级走 PG（articles 路由已实现 es_unavailable 降级）。
-#     实测 ES 8.14 在 2G/2 核下 128m 堆无法启动（GC 死循环 8 分钟未就绪），
-#     256m 堆超内存预算会 OOM——2G 硬性跑不动，维持 PG 降级
-#   - 合并 worker：nlp/snapshot/detection/naming/agenda 5 进程 → combined-worker 1 进程
-#     （线程错峰 + 周期任务互斥锁串行，省 ~500MB 常驻 + 防内存叠加 OOM）
+# 内存预算（2GB 物理，预留 ~300MB 宿主余量）：
+#   db 768 + backend 384 + frontend 64 = 1216MB（释放 worker 占用的 ~1000MB）
+#
+# 删除的服务（全部迁移到本地算力机）：
+#   worker / nlp-worker / cluster-worker / naming-worker / agenda-worker
+#   snapshot-worker / detection-worker / alerting-worker / relation-worker
+#   combined-worker / rsshub / elasticsearch
+#
+# Redis 保留：后端 response_cache / api_cache_middleware 仍需 Redis（30s TTL GET 缓存）
 services:
-  # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
-  agenda-worker:
+
+  # ============================================
+  # 删除所有 worker（显式禁用，避免主 compose 启动）
+  # ============================================
+  worker:
     profiles: ["disabled"]
-  alerting-worker:
-    profiles: ["disabled"]
-  rsshub:
-    profiles: ["disabled"]   # 无原生 RSS 补源依赖时禁用（避免拉慢镜像源）
-  elasticsearch:
-    profiles: ["disabled"]   # 低内存：ES 8.14 在 2G/2 核下跑不动（128m 堆 GC 死循环，256m 堆 OOM），搜索走 PG 降级
-  # 已合并进 combined-worker，禁用独立进程（否则重复消费 + 内存叠加）
   nlp-worker:
+    profiles: ["disabled"]
+  cluster-worker:
+    profiles: ["disabled"]
+  naming-worker:
+    profiles: ["disabled"]
+  agenda-worker:
     profiles: ["disabled"]
   snapshot-worker:
     profiles: ["disabled"]
   detection-worker:
     profiles: ["disabled"]
-  naming-worker:
+  alerting-worker:
+    profiles: ["disabled"]
+  relation-worker:
+    profiles: ["disabled"]
+  combined-worker:
+    profiles: ["disabled"]
+  rsshub:
+    profiles: ["disabled"]
+  elasticsearch:
     profiles: ["disabled"]
 
+  # ============================================
+  # PostgreSQL：公网可达（SSL + 独立账号）
+  # ============================================
   db:
-    mem_limit: 320m   # 实测基线 220M（连接多 + work_mem 峰值）
-    # 低内存 PG 调优：shared_buffers 128MB（默认 128 但显式）、work_mem 4MB（防排序爆内存）、
-    # max_connections 50（2G 内存下每连接 ~10MB，50 连接 = 500MB 上限内）、
-    # effective_cache_size 512MB（2G 总内存的 ~1/4）
+    mem_limit: 768m   # 释放 worker 内存后给 PG 更多 shared_buffers
+    ports:
+      - "5432:5432"   # 公网暴露（宝塔防火墙需配 IP 白名单只放行导师实验室）
+    volumes:
+      - ../deploy/postgresql/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../deploy/postgresql/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../deploy/postgresql/ssl/server.crt:/etc/ssl/pg/server.crt:ro
+      - ../deploy/postgresql/ssl/server.key:/etc/ssl/pg/server.key:ro
+      - db_data:/var/lib/postgresql/data
     command: >
-      postgres -c shared_buffers=128MB -c work_mem=4MB -c max_connections=50
-      -c effective_cache_size=512MB -c maintenance_work_mem=32MB
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agenda -d agendascope"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  redis:
-    mem_limit: 96m   # 实测基线 9M
-
+  # ============================================
+  # Backend：只读 API + 鉴权（uvicorn 单 worker 省内存）
+  # ============================================
   backend:
-    image: agendascope-backend:latest   # 用已 load 的镜像（up 时加 --no-build 跳过 build）
-    restart: unless-stopped
-    mem_limit: 256m   # FastAPI+SQLAlchemy+pgvector 基线 ~92M（实测），请求期临时缓存峰值 <200M
-    # uvicorn 单 worker：多 worker 每 worker ~100M 重复加载模型，2G 跑不动
-    # 不开 --limit-concurrency：ingest POST 与 GET 共用，ingest 高频会占满限制饿死 GET（实测）
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 5"
-
-  worker:
-    restart: unless-stopped
-    mem_limit: 192m   # 采集基线 110M（实测），3Mbps 带宽下不会突增
-    environment:
-      CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-30}   # 3Mbps 低带宽：30s 让慢源更快放弃（60s 拖低吞吐）
-      # 境外源走 mihomo(Clash Meta) 代理：阿里云大陆出口对境外 HTTP 阻断,
-      # 之前 56/125 源 failed 全因此。代理后 google/bbc/nytimes 等境外源恢复可达。
-      # docker 网桥网关 172.19.0.1 即宿主机;mihomo 在宿主 7890 监听(由 mihomo.service 提供)
-      GLOBAL_SITE_PROXY: http://172.19.0.1:7890
-      # CN 源保持直连(国内访问阿里云正常,无需代理)
-      CN_SITE_PROXY: ""
-
-  # 合并 worker：单进程跑 nlp/snapshot/detection/naming/agenda（线程错峰 + 互斥锁串行）
-  combined-worker:
     image: agendascope-backend:latest
     restart: unless-stopped
-    mem_limit: 384m   # detection 单任务峰值 ~250M（加载模型 + NER + 批处理），串行化后单任务峰值仍超 256m 触发 OOM；384m 给 50% 富余
+    mem_limit: 384m   # 释放 worker 内存后 backend 可以放宽（响应缓存 + 连接池）
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 5"
     environment:
-      APP_ENV: dev
-      DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
-      REDIS_URL: redis://redis:6379/0
-      REDIS_STREAM_URL: redis://redis:6379/1
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      NLP_MODEL_DIR: /models
-      NLP_DEVICE: ${NLP_DEVICE:-cpu}
-      NLP_EMBEDDING_PROFILE: ${NLP_EMBEDDING_PROFILE:-api}
-      NLP_EMBEDDING_API_BASE_URL: ${NLP_EMBEDDING_API_BASE_URL:-}
-      NLP_EMBEDDING_API_KEY: ${NLP_EMBEDDING_API_KEY:-}
-      NLP_EMBEDDING_API_MODEL: ${NLP_EMBEDDING_API_MODEL:-text-embedding-3-small}
-      # nlp batch 降（低内存防峰值）
-      NLP_WORKER_BATCH_SIZE: ${NLP_WORKER_BATCH_SIZE:-8}
-      NLP_WORKER_BLOCK_MS: ${NLP_WORKER_BLOCK_MS:-2000}
-      # 低内存：跳过 ES 全文索引（搜索走 PG 降级），省 ES 同步内存与重试噪音
-      NLP_ES_SYNC_ENABLED: ${NLP_ES_SYNC_ENABLED:-false}
-      # LLM 多模型池
-      LLM_PROFILE: ${LLM_PROFILE:-api}
-      LLM_API_BASE_URL: ${LLM_API_BASE_URL:-}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_API_MODEL: ${LLM_API_MODEL:-qwen-plus}
-      LLM_POOL: ${LLM_POOL:-}
-      LLM_NAMING_WORKER_BATCH_SIZE: ${LLM_NAMING_WORKER_BATCH_SIZE:-8}
-      LLM_NAMING_WORKER_POLL_SECONDS: ${LLM_NAMING_WORKER_POLL_SECONDS:-30}
-      # 快照 30min（显著性数据源）
-      AGENDA_SNAPSHOT_INTERVAL_MINUTES: ${AGENDA_SNAPSHOT_INTERVAL_MINUTES:-30}
-      AGENDA_SNAPSHOT_TIMEOUT_SECONDS: ${AGENDA_SNAPSHOT_TIMEOUT_SECONDS:-300}
-    volumes:
-      - ../models:/models:ro
-    depends_on:
-      backend:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: python -m app.worker.combined_worker
+      # 关闭所有 worker 启动（即便 backend 镜像里有 worker 代码也不启动）
+      DISABLE_EMBEDDED_WORKERS: "true"
 
-  cluster-worker:
-    restart: unless-stopped
-    mem_limit: 384m   # Agglomerative 重聚类峰值 372M（实测）；512m 富余过大，384m 精确匹配
-    environment:
-      # 精度优先：恢复全局重聚类（180min 一轮，校正跨语言议题归并；v1.2.2 验证 2G 能跑，
-      # 峰值频率降 3 倍省内存。0=禁用，省峰值但议题归并精度下降）
-      CLUSTER_RECLUSTER_INTERVAL_MINUTES: ${CLUSTER_RECLUSTER_INTERVAL_MINUTES:-180}
-      # 低内存 2G：关闭 BERTopic 主策略（峰值 ~500MB + 落库超 640m 会 cgroup OOM 杀容器，
-      # 实测多次），直接走 Agglomerative（跨语言归并校正仍恢复，精度略降但内存安全）
-      CLUSTER_BERTOPIC_ENABLED: ${CLUSTER_BERTOPIC_ENABLED:-false}
+  # ============================================
+  # Redis：保留（response_cache / rate_limit 用）
+  # ============================================
+  redis:
+    mem_limit: 96m
 
+  # ============================================
+  # Frontend：nginx 静态 + 反代 + HTTPS
+  # ============================================
   frontend:
-    image: agendascope-frontend:latest  # 用已 load 的镜像
+    image: agendascope-frontend:latest
     restart: unless-stopped
-    mem_limit: 48m    # 静态 nginx，实测 4MB 基线，gzip 压缩时 CPU 峰值小
+    mem_limit: 64m

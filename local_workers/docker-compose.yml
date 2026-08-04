@@ -1,0 +1,171 @@
+# AgendaScope 本地算力机 worker 编排（v4.0 分布式架构）
+#
+# 用法（在本地算力机上）：
+#   cd local_workers
+#   cp .env.example .env    # 填入云端 PG 连接串和 LLM API key
+#   docker compose --env-file .env up -d
+#
+# 架构：所有 worker 通过公网 PG 连接云端数据库（39.106.2.28:5432）
+# 任务领取：用 article_processing 状态机 + FOR UPDATE SKIP LOCKED
+# 镜像：复用云端的 agendascope-backend:latest（通过 docker save/load 同步）
+#
+# 资源预算（方案 A：8核 + 32GB）：
+#   collector 512m + nlp 4G + cluster 4G + relation 2G + snapshot 512m + detection 2G + entity 2G
+#   总 ~15GB，留 17GB 给系统/临时峰值
+
+services:
+
+  # ============================================
+  # 采集 worker：408 媒体源 RSS + 网页抓取
+  # ============================================
+  collector:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-30}
+      COLLECT_MAX_WORKERS: ${COLLECT_MAX_WORKERS:-8}    # 本地带宽 100M，可拉满
+      GLOBAL_SITE_PROXY: ${GLOBAL_SITE_PROXY:-}         # 本地 mihomo 代理
+      CN_SITE_PROXY: ""
+    command: python -m app.collector.worker
+
+  # ============================================
+  # NLP worker：embedding / 语言检测 / 情感
+  # ============================================
+  nlp-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 4g    # bge-m3 加载需要 ~2GB
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      NLP_MODEL_DIR: /models
+      NLP_DEVICE: cpu    # 无 GPU
+      NLP_EMBEDDING_PROFILE: local    # 本地跑 bge-m3
+      NLP_WORKER_BATCH_SIZE: 32       # 本地 CPU 8 核，可以拉到 32
+      NLP_WORKER_BLOCK_MS: 2000
+    volumes:
+      - ./models:/models:ro    # 本地模型目录（bge-m3 需先下载）
+    command: python -m app.worker.nlp_worker
+
+  # ============================================
+  # 聚类 worker：在线归簇 + 全局重聚类（BERTopic）
+  # ============================================
+  cluster-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 4g    # BERTopic 全量需要 ~3GB
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      NLP_MODEL_DIR: /models
+      NLP_DEVICE: cpu
+      CLUSTER_BERTOPIC_ENABLED: "true"     # 本地算力充足，重新启用 BERTopic
+      CLUSTER_RECLUSTER_INTERVAL_MINUTES: 60    # 本地 32GB，每小时跑一次
+    volumes:
+      - ./models:/models:ro
+    command: python -m app.worker.cluster_worker
+
+  # ============================================
+  # 实体抽取 worker：NER + 种子实体匹配
+  # ============================================
+  entity-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      NLP_MODEL_DIR: /models
+    volumes:
+      - ./models:/models:ro
+    command: python -m app.worker.entity_worker
+
+  # ============================================
+  # 关系抽取 worker：LLM 抽 entity_relations（走云 API）
+  # ============================================
+  relation-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      LLM_PROFILE: api
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_API_MODEL: ${LLM_API_MODEL}
+      LLM_POOL: ${LLM_POOL}
+      RELATION_EXTRACT_ENABLED: "true"
+      RELATION_RUN_HOUR: "3"           # 每日 03:00 跑批
+      RELATION_LOOKBACK_HOURS: "24"
+      RELATION_BATCH_LIMIT: "500"      # 本地算力足，每次跑 500 篇
+    command: python -m app.worker.relation_worker --run-on-start
+
+  # ============================================
+  # 快照聚合 worker：topic/entity/source_snapshots
+  # ============================================
+  snapshot-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      AGENDA_SNAPSHOT_INTERVAL_MINUTES: "5"    # 本地算力足，5 分钟聚合一次
+      AGENDA_SNAPSHOT_TIMEOUT_SECONDS: "300"
+    command: python -m app.worker.snapshot_worker
+
+  # ============================================
+  # 议程事件检测 worker
+  # ============================================
+  detection-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      LLM_PROFILE: api
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_API_MODEL: ${LLM_API_MODEL}
+      LLM_POOL: ${LLM_POOL}
+    command: python -m app.worker.detection_worker
+
+  # ============================================
+  # 命名 + 议程 + 预警 worker（合并到一个进程）
+  # ============================================
+  naming-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      LLM_PROFILE: api
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_API_MODEL: ${LLM_API_MODEL}
+      LLM_POOL: ${LLM_POOL}
+      LLM_NAMING_WORKER_BATCH_SIZE: "8"
+      LLM_NAMING_WORKER_POLL_SECONDS: "30"
+    command: python -m app.worker.naming_worker
+
+  alerting-worker:
+    image: agendascope-backend:latest
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+      COLLECT_API_BASE: https://www.wordread.cn
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_FROM: ${SMTP_FROM:-alert@agendascope.local}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_TLS: ${SMTP_TLS:-}
+    command: python -m app.worker.alerting_worker

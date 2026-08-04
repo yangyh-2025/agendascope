@@ -70,6 +70,7 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
           <a href="#propagation">溯源</a>
           <a href="#persons">人物</a>
           <a href="#collection">采集</a>
+          <a href="#database">数据库</a>
           <a href="#hot-topics">热点</a>
           <a href="#alerts">预警</a>
           <a href="#architecture">架构</a>
