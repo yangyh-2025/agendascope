@@ -36,6 +36,7 @@ from app.core.errors import (
 )
 from app.db.session import get_db
 from app.models.agenda import AgendaEvent
+from app.models.article import Article
 from app.models.person import PersonOrg
 from app.models.source import Source
 from app.models.topic import Topic
@@ -264,6 +265,66 @@ def event_detail(
     else:
         data["origin_entity"] = None
 
+    # 首发文章:按 origin_source_id+origin_at 反查该媒体在该议题下的最早文章
+    from datetime import timedelta as _td
+    from app.models.topic import TopicArticle as _TA
+    origin_article = None
+    if event.origin_source_id and event.origin_at:
+        window = _td(hours=6)
+        stmt_origin = (
+            select(Article)
+            .where(
+                Article.source_id == event.origin_source_id,
+                Article.published_at >= event.origin_at - window,
+                Article.published_at <= event.origin_at + window,
+                Article.id.in_(
+                    select(_TA.article_id).where(_TA.topic_id == event.topic_id)
+                ),
+            )
+            .order_by(Article.published_at.asc())
+            .limit(1)
+        )
+        a = db.scalars(stmt_origin).first()
+        if a is not None:
+            origin_article = {
+                "id": str(a.id),
+                "title": a.title,
+                "url": a.url,
+                "published_at": a.published_at.isoformat() if a.published_at else None,
+            }
+    data["origin_article"] = origin_article
+
+    # follower 文章批量解析:first_article_id → title/url
+    follower_article_ids: list[uuid.UUID] = []
+    for f in event.follower_sequence or []:
+        if isinstance(f, dict) and f.get("first_article_id"):
+            try:
+                follower_article_ids.append(uuid.UUID(str(f["first_article_id"])))
+            except (ValueError, TypeError):
+                continue
+    article_map: dict[str, Article] = {}
+    if follower_article_ids:
+        for a in db.scalars(select(Article).where(Article.id.in_(follower_article_ids))).all():
+            article_map[str(a.id)] = a
+    follower_with_articles: list[dict[str, Any]] = []
+    for f in event.follower_sequence or []:
+        if not isinstance(f, dict):
+            continue
+        entry = dict(f)
+        aid = f.get("first_article_id")
+        art = article_map.get(str(aid)) if aid else None
+        if art is not None:
+            entry["first_article"] = {
+                "id": str(art.id),
+                "title": art.title,
+                "url": art.url,
+                "published_at": art.published_at.isoformat() if art.published_at else None,
+            }
+        else:
+            entry["first_article"] = None
+        follower_with_articles.append(entry)
+    data["follower_sequence"] = follower_with_articles
+
     # 审计：机密事件查看计入 audit_logs（详细设计 1.8 详情查看条目）
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent", "")
@@ -468,15 +529,32 @@ def event_chain(
         if src is not None:
             origin_media = {"id": str(src.id), "name": src.name}
 
+    # follower first_article_id 批量解析 title/url
+    f_ids: list[uuid.UUID] = []
+    for f in event.follower_sequence or []:
+        if isinstance(f, dict) and f.get("first_article_id"):
+            try:
+                f_ids.append(uuid.UUID(str(f["first_article_id"])))
+            except (ValueError, TypeError):
+                continue
+    art_map: dict[str, Article] = {}
+    if f_ids:
+        for a in db.scalars(select(Article).where(Article.id.in_(f_ids))).all():
+            art_map[str(a.id)] = a
+
     followers: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
     for f in event.follower_sequence or []:
         if not isinstance(f, dict):
             continue
+        aid = f.get("first_article_id")
+        art = art_map.get(str(aid)) if aid else None
         followers.append({
             "country": f.get("country_code"),
             "first_media": f.get("first_media_name"),
             "first_article_id": f.get("first_article_id"),
+            "first_article_title": art.title if art else None,
+            "first_article_url": art.url if art else None,
             "first_published_at": f.get("first_published_at"),
             "lag_hours": float(f.get("lag_hours", 0)),
         })

@@ -11,6 +11,7 @@ from app.api.deps import ROLE_REGISTERED, get_db, get_es, require_role
 from app.core.errors import ok
 from app.core.logging import get_logger
 from app.models.article import Article
+from app.models.source import Source
 from app.models.user import User
 
 router = APIRouter()
@@ -129,6 +130,14 @@ def list_articles(
     offset = (page - 1) * page_size
     articles = db.scalars(stmt.offset(offset).limit(page_size)).all()
 
+    source_ids = {a.source_id for a in articles if a.source_id}
+    source_names: dict[uuid.UUID, str] = {}
+    if source_ids:
+        for sid, sname, sname_zh in db.execute(
+            select(Source.id, Source.name, Source.name_zh).where(Source.id.in_(source_ids))
+        ).all():
+            source_names[sid] = sname_zh or sname
+
     items = []
     for a in articles:
         excerpt = ""
@@ -138,7 +147,7 @@ def list_articles(
             "id": str(a.id),
             "title": a.title,
             "source_id": str(a.source_id) if a.source_id else None,
-            "source_name": getattr(a, "source_name", None),
+            "source_name": source_names.get(a.source_id),
             "country_code": a.country_code,
             "language": a.language,
             "published_at": a.published_at.isoformat() if a.published_at else None,

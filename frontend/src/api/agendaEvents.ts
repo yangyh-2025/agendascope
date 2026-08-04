@@ -67,12 +67,20 @@ export function listAgendaEvents(
   return request<AgendaEventListPage>(`/api/v1/agenda-events?${qs.toString()}`);
 }
 
+export interface FollowerArticleRef {
+  id: string;
+  title: string;
+  url: string;
+  published_at: string | null;
+}
+
 export interface FollowerStep {
   country_code: string;
   first_media?: string;
   /** 后端 follower_sequence 元素实际键名为 first_media_name。 */
   first_media_name?: string;
   first_article_id?: string;
+  first_article?: FollowerArticleRef | null;
   first_published_at?: string;
   lag_hours: number;
 }
@@ -108,6 +116,7 @@ export interface AgendaEventDetail {
   origin_country_code: string;
   origin_source: { id: string; name: string; country_code: string } | null;
   origin_entity: { id: string; name: string } | null;
+  origin_article: FollowerArticleRef | null;
   origin_at: string;
   origin_confidence: string;
   origin_quote: string | null;
@@ -140,6 +149,8 @@ export interface AgendaEventChainFollower {
   /** 首发媒体名（后端取自 follower_sequence.first_media_name，非 source_id）。 */
   first_media: string | null;
   first_article_id: string | null;
+  first_article_title: string | null;
+  first_article_url: string | null;
   first_published_at: string | null;
   lag_hours: number;
 }

@@ -238,6 +238,24 @@ export default function EventDetailPage() {
           <div><span>判定轮次</span><b>第 {event.round_no} 轮</b></div>
         </div>
         {event.origin_quote && <blockquote className="origin-quote">"{event.origin_quote}"</blockquote>}
+        {event.origin_article && (
+          <p className="origin-article-row">
+            首发报道:
+            <a
+              href={event.origin_article.url}
+              target="_blank"
+              rel="noreferrer"
+              className="article-link"
+            >
+              {event.origin_article.title}
+            </a>
+            {event.origin_article.published_at && (
+              <span className="article-time">
+                {event.origin_article.published_at.slice(0, 16).replace("T", " ")}
+              </span>
+            )}
+          </p>
+        )}
         {event.topic_id && (
           <p className="topic-link-row">关联议题:<Link to={`/topics/${event.topic_id}`}>{event.topic_name ?? event.topic_id}</Link></p>
         )}
@@ -299,13 +317,28 @@ export default function EventDetailPage() {
           <h2>跟随序列</h2>
           <table className="follower-table">
             <thead>
-              <tr><th>国家</th><th>首发媒体</th><th>时滞（小时）</th></tr>
+              <tr><th>国家</th><th>首发媒体</th><th>首发报道</th><th>时滞（小时）</th></tr>
             </thead>
             <tbody>
               {event.follower_sequence.map((f) => (
                 <tr key={f.country_code}>
                   <td>{countryLabel(f.country_code)}</td>
                   <td>{f.first_media_name ?? f.first_media ?? "—"}</td>
+                  <td className="follower-article-cell">
+                    {f.first_article ? (
+                      <a
+                        href={f.first_article.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="article-link"
+                        title={f.first_article.title}
+                      >
+                        {f.first_article.title}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>{f.lag_hours.toFixed(1)}</td>
                 </tr>
               ))}
