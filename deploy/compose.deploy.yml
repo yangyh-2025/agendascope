@@ -3,16 +3,16 @@
 # 用法:
 #   docker compose -f deploy/docker-compose.yml -f deploy/compose.deploy.yml up -d
 #
-# 内存预算（2GB 物理，无 swap 依赖）：
-#   PG 384m + Redis 128m + backend 192m + worker(采集) 256m + combined-worker 256m
-#   + cluster 512m + frontend 64m = ~1.8GB（ES 关闭，降级走 PG）
+# 内存预算（1.8GB 物理，预留 ~150M 宿主余量）：
+#   backend 256 + worker(采集) 192 + combined-worker 384 + cluster 384
+#   + db 320 + redis 96 + frontend 48 = 1680MB（ES 关闭，降级走 PG）
 #
 # 关键决策：
 #   - 关 ES：全文搜索降级走 PG（articles 路由已实现 es_unavailable 降级）。
 #     实测 ES 8.14 在 2G/2 核下 128m 堆无法启动（GC 死循环 8 分钟未就绪），
 #     256m 堆超内存预算会 OOM——2G 硬性跑不动，维持 PG 降级
 #   - 合并 worker：nlp/snapshot/detection/naming/agenda 5 进程 → combined-worker 1 进程
-#     （线程错峰调度，省 ~500MB 常驻内存）
+#     （线程错峰 + 周期任务互斥锁串行，省 ~500MB 常驻 + 防内存叠加 OOM）
 services:
   # 禁用非核心 worker（不定义则主 compose 的服务仍会启动，这里显式禁用）
   agenda-worker:
@@ -34,7 +34,7 @@ services:
     profiles: ["disabled"]
 
   db:
-    mem_limit: 384m
+    mem_limit: 320m   # 实测基线 220M（连接多 + work_mem 峰值）
     # 低内存 PG 调优：shared_buffers 128MB（默认 128 但显式）、work_mem 4MB（防排序爆内存）、
     # max_connections 50（2G 内存下每连接 ~10MB，50 连接 = 500MB 上限内）、
     # effective_cache_size 512MB（2G 总内存的 ~1/4）
@@ -43,27 +43,27 @@ services:
       -c effective_cache_size=512MB -c maintenance_work_mem=32MB
 
   redis:
-    mem_limit: 128m
+    mem_limit: 96m   # 实测基线 9M
 
   backend:
     image: agendascope-backend:latest   # 用已 load 的镜像（up 时加 --no-build 跳过 build）
     restart: unless-stopped
-    mem_limit: 384m   # 192m→384m：FastAPI+SQLAlchemy+pgvector 驱动基线 ~180M，请求期临时缓存会顶 192m 触发 OOM（实测）
+    mem_limit: 256m   # FastAPI+SQLAlchemy+pgvector 基线 ~92M（实测），请求期临时缓存峰值 <200M
     # uvicorn 单 worker：多 worker 每 worker ~100M 重复加载模型，2G 跑不动
     # 不开 --limit-concurrency：ingest POST 与 GET 共用，ingest 高频会占满限制饿死 GET（实测）
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 5"
 
   worker:
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 192m   # 采集基线 110M（实测），3Mbps 带宽下不会突增
     environment:
       CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-30}   # 3Mbps 低带宽：30s 让慢源更快放弃（60s 拖低吞吐）
 
-  # 合并 worker：单进程跑 nlp/snapshot/detection/naming/agenda（线程错峰）
+  # 合并 worker：单进程跑 nlp/snapshot/detection/naming/agenda（线程错峰 + 互斥锁串行）
   combined-worker:
     image: agendascope-backend:latest
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 384m   # detection 单任务峰值 ~250M（加载模型 + NER + 批处理），串行化后单任务峰值仍超 256m 触发 OOM；384m 给 50% 富余
     environment:
       APP_ENV: dev
       DATABASE_URL: postgresql+psycopg2://agenda:agenda_dev_pwd@db:5432/agendascope
@@ -105,7 +105,7 @@ services:
 
   cluster-worker:
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 384m   # Agglomerative 重聚类峰值 372M（实测）；512m 富余过大，384m 精确匹配
     environment:
       # 精度优先：恢复全局重聚类（180min 一轮，校正跨语言议题归并；v1.2.2 验证 2G 能跑，
       # 峰值频率降 3 倍省内存。0=禁用，省峰值但议题归并精度下降）
@@ -117,4 +117,4 @@ services:
   frontend:
     image: agendascope-frontend:latest  # 用已 load 的镜像
     restart: unless-stopped
-    mem_limit: 64m    # 静态 nginx，4MB 足够
+    mem_limit: 48m    # 静态 nginx，实测 4MB 基线，gzip 压缩时 CPU 峰值小
