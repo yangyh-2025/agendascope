@@ -45,7 +45,8 @@ class AgendaSettings(BaseSettings):
 
     # 置信度升级条件（详细设计 4.2 算法 4 注释 + T3.14）
     # watching → suspected：满足 rules 中全部子条件即升级
-    # suspected → confirmed：仅人工 POST /agenda-events/{id}/confirm（不在此自动化）
+    # suspected → confirmed：默认由 LLM 终审 score≥7 自动确认（final_review.py）；
+    #   人工 POST /agenda-events/{id}/confirm 仍可作为高置信兜底通道（配置 manual_only=True 则禁用 LLM 自动确认）
     confidence_escalation_rules: dict = {
         "watching_to_suspected": {
             "require_origin_type": True,         # 至少一个 origin_type 已确定（media/person/org）
@@ -54,7 +55,8 @@ class AgendaSettings(BaseSettings):
             "fallback_requires_stats_significant": True,  # detection_method='media_time_fallback' 需 stats_evidence 显著
         },
         "suspected_to_confirmed": {
-            "manual_only": True,                 # 只能人工确认触发，机器不自动跨档
+            "manual_only": False,                # False:LLM 终审 score≥7 自动 confirmed(默认);True:仅人工确认
+            "auto_confirm_min_score": 7,         # LLM 终审自动确认分数阈值
         },
     }
 

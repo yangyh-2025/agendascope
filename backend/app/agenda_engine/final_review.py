@@ -1,18 +1,18 @@
 """LLM 终审审查官（T3.12，详细设计 4.2 算法 4 llm_final_review + PRD 8.5 降级链）。
 
-对 suspected 议程设置事件评逻辑连贯性 1-10 分：
-  - score ≥5 → 维持 suspected（事件证据链进入人工复核队列等待确认）
-  - score <5 → 自动降为 watching 或驳回 REJECTED；驳回样本作负例积累
-    （写入 final_review.verdict='rejected' 并保留事件供复盘，不删除）
-  - 终审不可用 → 跳过终审直进人工复核队列（status 维持 suspected），
-    不自动告警（PRD 8.5 降级链：LLM 终审不可用时事件直进人工复核队列）
+对 suspected 议程设置事件评逻辑连贯性 1-10 分，三档处置：
+  - score ≥ 7 且 verdict='completed' → **自动 confirmed**(LLM 高置信，替代人工确认,
+    revision_log 记 'auto_confirmed_by_llm' 留痕;confirmed_by 置空标记机器判定)
+  - 5 ≤ score < 7 → 维持 suspected(LLM 中等置信,进人工复核队列)
+  - score < 5 → 自动降为 watching(verdict='rejected',驳回样本作负例积累)
+  - 终审不可用 → 跳过终审直进人工复核队列(status 维持 suspected),不自动告警
 
-prompt 版本化：final-review-v1 注册进 PROMPT_REGISTRY（只增不改），与 T2.17
-prompt 版本管理一致；每次终审写 llm_judgements（task_type='final_review'：
-模型名+prompt_version+输入/输出快照+耗时+成败）与 event.final_review
-（score/verdict/model/prompt_version/reviewed_at）。
+prompt 版本化：final-review-v1 注册进 PROMPT_REGISTRY(只增不改),与 T2.17
+prompt 版本管理一致;每次终审写 llm_judgements(task_type='final_review':
+模型名+prompt_version+输入/输出快照+耗时+成败)与 event.final_review
+(score/verdict/model/prompt_version/reviewed_at)。
 
-FinalReviewOutput 单一定义在 app.llm.schemas（prompt 注册表与本模块统一 import），
+FinalReviewOutput 单一定义在 app.llm.schemas(prompt 注册表与本模块统一 import),
 本模块仅 re-export 兼容既有引用。
 """
 import time
@@ -168,11 +168,24 @@ def review_event(
 
     latency_ms = int(latency_s * 1000)
 
-    # 判定分支
+    # 判定分支:score≥7 自动 confirmed(替代人工),5-6 维持 suspected 等人工,<5 降 watching
     passed = output.score >= 5 and output.verdict == "completed"
+    auto_confirm = output.score >= 7 and output.verdict == "completed"
     verdict: VerdictType = "completed" if passed else "rejected"
-    if not passed:
-        # 自动降疑似为 watching，不自动告警
+    if auto_confirm:
+        event.status = "confirmed"
+        event.confidence = "confirmed"
+        event.confirmed_at = now
+        # confirmed_by 置空 = 机器自动确认(前端区分"LLM 确认" vs "人工确认")
+        event.revision_log = (event.revision_log or []) + [{
+            "at": now.isoformat(),
+            "action": "auto_confirmed_by_llm",
+            "score": output.score,
+            "model": model_name,
+            "reasoning": (output.reasoning or "")[:300],
+        }]
+    elif not passed:
+        # 自动降疑似为 watching,不自动告警
         event.status = "watching"
         event.confidence = "watching"
 
