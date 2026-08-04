@@ -48,8 +48,10 @@ services:
   backend:
     image: agendascope-backend:latest   # 用已 load 的镜像（up 时加 --no-build 跳过 build）
     restart: unless-stopped
-    mem_limit: 192m   # 单 worker：2G 内存下 2 workers 每 worker ~100MB 触发 OOM 崩溃
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    mem_limit: 384m   # 192m→384m：FastAPI+SQLAlchemy+pgvector 驱动基线 ~180M，请求期临时缓存会顶 192m 触发 OOM（实测）
+    # uvicorn 单 worker：多 worker 每 worker ~100M 重复加载模型，2G 跑不动
+    # 不开 --limit-concurrency：ingest POST 与 GET 共用，ingest 高频会占满限制饿死 GET（实测）
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 5"
 
   worker:
     restart: unless-stopped

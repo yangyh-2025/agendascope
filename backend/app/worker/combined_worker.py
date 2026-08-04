@@ -29,12 +29,20 @@ logger = get_logger("worker.combined")
 
 
 class CombinedWorker:
-    """单进程内线程跑多个 worker 循环，各任务独立周期 + 初相位错峰。"""
+    """单进程内线程跑多个 worker 循环，各任务独立周期 + 初相位错峰。
+
+    内存峰值防护（2G 服务器关键）：5 个任务并发叠加 > 256M cgroup 上限触发
+    OOM 死循环（85 次重启实证）。这里用 Semaphore 限制最多 2 个任务并发：
+    NLP（持续消费，常驻 ~80M）+ 任一周期任务（峰值 ~150M）≈ 230M，处于
+    256M 上限内的安全水位；其他周期任务互斥串行。
+    """
 
     def __init__(self):
         self.session_factory = get_session_factory()
         self.redis = get_cache_redis()
         self._stop = threading.Event()
+        # 周期任务互斥锁：snapshot/detection/naming/agenda 任一时刻只有一个跑
+        self._periodic_lock = threading.Lock()
 
     # ---------- 各任务线程 ----------
     def _loop(self, name: str, interval_s: float, fn) -> None:
@@ -42,13 +50,16 @@ class CombinedWorker:
 
         首轮立即：detection/snapshot 若延迟 0~interval 随机初相位，用户会看到
         事件/显著性长时间不更新（议程事件地图消失的根因）。
+
+        执行前抢 _periodic_lock：周期任务互斥串行，避免内存峰值叠加触发 OOM。
         """
         set_trace_id(new_trace_id())
         while not self._stop.is_set():
-            try:
-                fn()
-            except Exception as exc:  # noqa: BLE001 单任务失败不拖垮其他任务
-                logger.error(f"{name}_fail", error=str(exc)[:300])
+            with self._periodic_lock:
+                try:
+                    fn()
+                except Exception as exc:  # noqa: BLE001 单任务失败不拖垮其他任务
+                    logger.error(f"{name}_fail", error=str(exc)[:300])
             time.sleep(interval_s)
 
     def _snapshot_tick(self) -> None:

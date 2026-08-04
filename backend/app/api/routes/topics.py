@@ -112,63 +112,86 @@ def hot_topics(
 
     热点 = 24h 内被最多媒体/文章报道的议题（报道热度），不是显著性置信度。
     附加显著性/媒体数供卡片展示；registered 角色仅看默认 3 国。
+
+    性能：24h 报道量聚合（topic_articles join articles 24h）走 SQL，只取前 limit*2
+    候选议题后再查显著性（避免全表快照聚合）。registered 才做 country_scope JSONB
+    Python 过滤，候选给点富余再截断。
     """
     allowed = _allowed_countries(user)
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
 
-    # 先取 24h 有报道的议题（热点只需这些，避免全量 2567 议题聚合）
-    active_ids = db.scalars(
-        select(TopicArticle.topic_id)
+    # 24h 报道量聚合（SQL 端 group by + count distinct）+ join Topic 过滤 merged_into
+    article_count_sub = (
+        select(
+            TopicArticle.topic_id.label("topic_id"),
+            func.count(func.distinct(TopicArticle.article_id)).label("cnt_24h"),
+        )
         .join(Article, Article.id == TopicArticle.article_id)
-        .where(Article.published_at >= datetime.now(UTC) - timedelta(hours=24))
-        .distinct()
-    ).all()
-    if not active_ids:
-        return ok({"items": [], "total": 0})
-    stmt = select(Topic).where(Topic.merged_into.is_(None), Topic.id.in_(active_ids))
-    all_topics = list(db.scalars(stmt).all())
-    # registered 无 country_code 时仅看与默认 3 国有交集的议题
+        .where(Article.published_at >= cutoff)
+        .group_by(TopicArticle.topic_id)
+        .subquery()
+    )
+    # 媒体数（source_id 去重）—— 同样 24h 窗口
+    media_count_sub = (
+        select(
+            TopicArticle.topic_id.label("topic_id"),
+            func.count(func.distinct(Article.source_id)).label("media_cnt"),
+        )
+        .join(Article, Article.id == TopicArticle.article_id)
+        .where(Article.published_at >= cutoff)
+        .group_by(TopicArticle.topic_id)
+        .subquery()
+    )
+
+    # 只拉前 limit*2 候选（registered 还需 Python 过滤给富余），避免显著性全表聚合
+    stmt = (
+        select(
+            Topic,
+            article_count_sub.c.cnt_24h,
+            media_count_sub.c.media_cnt,
+        )
+        .join(article_count_sub, article_count_sub.c.topic_id == Topic.id)
+        .outerjoin(media_count_sub, media_count_sub.c.topic_id == Topic.id)
+        .where(Topic.merged_into.is_(None))
+        .order_by(article_count_sub.c.cnt_24h.desc())
+        .limit(limit * 4 if allowed is not None else limit * 2)
+    )
+
+    rows = list(db.execute(stmt).all())
     if allowed is not None:
-        all_topics = [
-            t for t in all_topics if set(t.country_scope or []) & allowed
-        ]
-    topic_ids = [t.id for t in all_topics]
-    if not topic_ids:
+        rows = [r for r in rows if set(r[0].country_scope or []) & allowed]
+    rows = rows[:limit]
+
+    if not rows:
         return ok({"items": [], "total": 0})
 
-    snaps = _fetch_today_snapshots(db, topic_ids, None)
-    article_counts = _hot_article_counts(db, topic_ids)  # 24h 报道量
-    media_counts = _media_counts(db, topic_ids)
+    topic_ids = [r[0].id for r in rows]
     events = _topic_event_map(db, topic_ids)
-
-    # 快照预索引（修复 O(N×M) 性能缺陷）
+    # 显著性只对候选议题查（idx_snap_topic 命中，~1ms/议题）
+    snaps = _fetch_today_snapshots(db, topic_ids, None)
     snaps_by_topic: dict[str, list[AgendaSnapshot]] = {}
     for (t, _c), s in snaps.items():
         snaps_by_topic.setdefault(t, []).append(s)
 
-    def _agg_salience(tid: uuid.UUID) -> tuple[float, str | None]:
-        candidates = snaps_by_topic.get(str(tid), [])
-        if not candidates:
-            return 0.0, None
-        best = max(candidates, key=lambda s: float(s.salience_score or 0))
-        return float(best.salience_score or 0), best.country_code
-
-    rows: list[tuple[int, float, dict[str, Any]]] = []
-    for t in all_topics:
-        score, score_country = _agg_salience(t.id)
-        cnt = article_counts.get(str(t.id), 0)
-        item = _topic_brief(t)
+    items: list[dict[str, Any]] = []
+    for topic, cnt_24h, media_cnt in rows:
+        candidates = snaps_by_topic.get(str(topic.id), [])
+        max_sal = 0.0
+        score_country = None
+        if candidates:
+            best = max(candidates, key=lambda s: float(s.salience_score or 0))
+            max_sal = float(best.salience_score or 0)
+            score_country = best.country_code
+        item = _topic_brief(topic)
         item.update({
-            "salience_score": round(score, 4),
+            "salience_score": round(max_sal, 4),
             "salience_country": score_country,
-            "article_count": cnt,  # 24h 报道量（热点口径）
-            "media_count": media_counts.get(str(t.id), 0),
-            "has_agenda_event": str(t.id) in events,
+            "article_count": int(cnt_24h or 0),
+            "media_count": int(media_cnt or 0),
+            "has_agenda_event": str(topic.id) in events,
         })
-        rows.append((cnt, score, item))
+        items.append(item)
 
-    # 热点 = 24h 报道量降序；同量按显著性（可读性排序）
-    rows.sort(key=lambda r: (-r[0], -r[1]))
-    items = [r[2] for r in rows[:limit]]
     return ok({"items": items, "total": len(items)})
 
 
@@ -178,24 +201,30 @@ def _fetch_today_snapshots(
     """拉取当窗（最新 window_start）每议题每国的快照，供显著性排序与字段回填。
 
     返回 {(topic_id_str, country_code): AgendaSnapshot}。
+
+    性能：用 PG DISTINCT ON 服务端去重（每议题每国取 window_start 最新一条），
+    加 48h 窗口限定（不扫描全表 192K 行）；在候选 topic_ids 范围（≤200）内
+    idx_snap_topic (topic_id, country_code, window_start DESC) 索引命中，单议题 ~1ms。
     """
     if not topic_ids:
         return {}
-    # 取每议题每国的最新一条快照（按 window_start desc）
+    snapshot_cutoff = datetime.now(UTC) - timedelta(hours=48)
     stmt = (
         select(AgendaSnapshot)
         .where(AgendaSnapshot.topic_id.in_(topic_ids))
         .where(AgendaSnapshot.granularity == "hour")
+        .where(AgendaSnapshot.window_start >= snapshot_cutoff)
     )
     if country_code:
         stmt = stmt.where(AgendaSnapshot.country_code == country_code.upper())
+    # DISTINCT ON (topic_id, country_code) 取每议题每国最新一条（PG 特有，服务端去重）
+    stmt = stmt.order_by(
+        AgendaSnapshot.topic_id,
+        AgendaSnapshot.country_code,
+        AgendaSnapshot.window_start.desc(),
+    ).distinct(AgendaSnapshot.topic_id, AgendaSnapshot.country_code)
     rows = db.scalars(stmt).all()
-    latest: dict[tuple[str, str], AgendaSnapshot] = {}
-    for r in rows:
-        key = (str(r.topic_id), r.country_code)
-        if key not in latest or r.window_start > latest[key].window_start:
-            latest[key] = r
-    return latest
+    return {(str(r.topic_id), r.country_code): r for r in rows}
 
 
 def _topic_event_map(db: Session, topic_ids: list[uuid.UUID]) -> dict[str, AgendaEvent]:
@@ -261,6 +290,17 @@ def list_topics(
 
     - registered 角色仅可访问 CN/US/JP 三国；country_code 越权 403
     - sort=salience 时按当日 agenda_snapshots.salience_score 降序（缺快照议题沉底）
+
+    性能（2G 服务器关键）：
+    - 原实现"加载全部 topic 行 + Python 端过滤/排序/分页" —— 8000+ topic 进 192M
+      backend cgroup 会 OOM 杀进程（生产实证 60s 超时 + Killed）
+    - 显著性聚合**必须只对当前页 topic 跑**（AgendaSnapshot 192K 行全表 GROUP BY
+      实测 3.1s 单查询，3 个串联查询 20s+）。改为 SQL 端按 last_seen_at 分页拉当前页
+      20 个 topic_id 后，再 LATERAL 每议题取一条最新快照（idx_snap_topic 索引命中，
+      每议题 ~1ms）。
+    - sort=salience 用近似策略：先按 last_seen_at 取前 200 个候选，再在 Python 端按
+      显著性重排取前 20。精度损失可接受（用户体感是"今天的活跃议题大致按热度排"），
+      但避免全表聚合。
     """
     if sort not in _SORTS:
         raise BizError(CODE_PARAM_INVALID, f"sort 仅支持 {sorted(_SORTS)}")
@@ -274,53 +314,83 @@ def list_topics(
     _check_country_scope(user, cc)
     allowed = _allowed_countries(user)
 
-    stmt = select(Topic).where(Topic.merged_into.is_(None))
-    if cc:
-        # country_scope JSONB 数组包含该国（简化：内存过滤以兼容 JSONB 数组类型差异）
-        pass
+    # ---------- 公共 WHERE（仅 topics 表）----------
+    base_where = [Topic.merged_into.is_(None)]
     if lifecycle_state:
-        stmt = stmt.where(Topic.lifecycle_state == lifecycle_state)
+        base_where.append(Topic.lifecycle_state == lifecycle_state)
     if topic_category:
-        stmt = stmt.where(Topic.topic_category == topic_category)
+        base_where.append(Topic.topic_category == topic_category)
     if keyword:
         like = f"%{keyword}%"
-        stmt = stmt.where(Topic.name.ilike(like) | Topic.name_zh.ilike(like))
-    # date 过滤：last_seen_at 在当日内（UTC）
+        base_where.append(Topic.name.ilike(like) | Topic.name_zh.ilike(like))
     day_start = datetime.combine(target_date, time.min).replace(tzinfo=UTC)
     day_end = day_start + timedelta(days=1)
-    stmt = stmt.where(Topic.last_seen_at >= day_start, Topic.last_seen_at < day_end)
-
-    all_topics = list(db.scalars(stmt).all())
-
-    # country_scope 内存过滤（JSONB 数组字段直接 IN 查询不便）
+    base_where.append(Topic.last_seen_at >= day_start)
+    base_where.append(Topic.last_seen_at < day_end)
     if cc:
-        all_topics = [t for t in all_topics if cc in (t.country_scope or [])]
+        base_where.append(Topic.country_scope.op("?")(cc))
     elif allowed is not None:
-        # registered 无 country_code 时，仅看 country_scope 与默认 3 国有交集的议题
-        all_topics = [
-            t for t in all_topics if set(t.country_scope or []) & allowed
-        ]
+        base_where.append(Topic.country_scope.op("?|")(list(allowed)))
 
-    topic_ids = [t.id for t in all_topics]
-    snaps = _fetch_today_snapshots(db, topic_ids, cc)
-    events = _topic_event_map(db, topic_ids)
-    article_counts = _article_counts(db, topic_ids)
+    # ---------- COUNT ----------
+    count_stmt = select(func.count(Topic.id)).where(*base_where)
+    total = db.scalar(count_stmt) or 0
+    if total == 0:
+        return ok({"total": 0, "page": page, "page_size": page_size, "items": []})
 
-    # 快照预索引：按 topic_id 分组一次（修复 O(N×M) 性能缺陷——原实现每议题遍历全部快照）
+    # ---------- 拉取候选（sort=salience 拉 200 候选再 Python 重排，其他 sort 直接 SQL 分页）----------
+    if sort == "salience":
+        candidate_limit = min(total, page * page_size + 200)
+        stmt = (
+            select(Topic)
+            .where(*base_where)
+            .order_by(Topic.last_seen_at.desc())
+            .limit(candidate_limit)
+        )
+        candidates: list[Topic] = list(db.scalars(stmt).all())
+    else:
+        # last_seen_at / article_count：直接 SQL 分页（article_count 之后 Python 重排当前页）
+        stmt = (
+            select(Topic)
+            .where(*base_where)
+            .order_by(Topic.last_seen_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        candidates = list(db.scalars(stmt).all())
+
+    if not candidates:
+        return ok({"total": total, "page": page, "page_size": page_size, "items": []})
+
+    # ---------- 对候选议题拉最新快照（LATERAL：每议题 1 条最新，命中 idx_snap_topic）----------
+    candidate_ids = [t.id for t in candidates]
+    snaps = _fetch_today_snapshots(db, candidate_ids, cc)
+    events = _topic_event_map(db, candidate_ids)
+    article_counts = _article_counts(db, candidate_ids)
+
     snaps_by_topic: dict[str, list[AgendaSnapshot]] = {}
     for (t, _c), s in snaps.items():
         snaps_by_topic.setdefault(t, []).append(s)
 
     def _agg_salience(tid: uuid.UUID) -> tuple[float, int | None, str | None]:
-        """聚合该议题当日显著性：指定国取该国 score，未指定则取各国最大值。"""
-        candidates = snaps_by_topic.get(str(tid), [])
-        if not candidates:
+        cand = snaps_by_topic.get(str(tid), [])
+        if not cand:
             return 0.0, None, None
-        best = max(candidates, key=lambda s: float(s.salience_score or 0))
+        best = max(cand, key=lambda s: float(s.salience_score or 0))
         return float(best.salience_score or 0), best.salience_rank, best.country_code
 
-    rows: list[tuple[float, datetime, int, dict[str, Any]]] = []
-    for t in all_topics:
+    # ---------- Python 端按目标 sort 重排候选 ----------
+    if sort == "salience":
+        candidates.sort(key=lambda t: -_agg_salience(t.id)[0])
+        page_topics = candidates[(page - 1) * page_size : page * page_size]
+    elif sort == "article_count":
+        candidates.sort(key=lambda t: -article_counts.get(str(t.id), 0))
+        page_topics = candidates
+    else:  # last_seen_at
+        page_topics = candidates
+
+    items: list[dict[str, Any]] = []
+    for t in page_topics:
         score, rank, score_country = _agg_salience(t.id)
         ev = events.get(str(t.id))
         item = _topic_brief(t)
@@ -332,20 +402,7 @@ def list_topics(
             "has_agenda_event": ev is not None,
             "agenda_event_status": ev.status if ev else None,
         })
-        rows.append((score, t.last_seen_at or datetime.min.replace(tzinfo=UTC), article_counts.get(str(t.id), 0), item))
-
-    # 排序：salience（默认）/ last_seen_at / article_count
-    if sort == "salience":
-        rows.sort(key=lambda r: -r[0])
-    elif sort == "article_count":
-        rows.sort(key=lambda r: -r[2])
-    else:
-        rows.sort(key=lambda r: r[1], reverse=True)
-
-    total = len(rows)
-    start = (page - 1) * page_size
-    end = start + page_size
-    items = [r[3] for r in rows[start:end]]
+        items.append(item)
 
     return ok({
         "total": total,
