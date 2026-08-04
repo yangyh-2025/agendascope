@@ -58,6 +58,12 @@ services:
     mem_limit: 192m   # 采集基线 110M（实测），3Mbps 带宽下不会突增
     environment:
       CRAWL_TIMEOUT_SECONDS: ${CRAWL_TIMEOUT_SECONDS:-30}   # 3Mbps 低带宽：30s 让慢源更快放弃（60s 拖低吞吐）
+      # 境外源走 mihomo(Clash Meta) 代理：阿里云大陆出口对境外 HTTP 阻断,
+      # 之前 56/125 源 failed 全因此。代理后 google/bbc/nytimes 等境外源恢复可达。
+      # docker 网桥网关 172.19.0.1 即宿主机;mihomo 在宿主 7890 监听(由 mihomo.service 提供)
+      GLOBAL_SITE_PROXY: http://172.19.0.1:7890
+      # CN 源保持直连(国内访问阿里云正常,无需代理)
+      CN_SITE_PROXY: ""
 
   # 合并 worker：单进程跑 nlp/snapshot/detection/naming/agenda（线程错峰 + 互斥锁串行）
   combined-worker:
