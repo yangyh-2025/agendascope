@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import ScrollReveal from "../components/ScrollReveal";
@@ -6,13 +6,12 @@ import { PROPAGATION_DEMO } from "../mock/stats";
 import { COUNTRIES } from "../mock/countries";
 import { registerWorldMap, countryCenter } from "../../../map/worldMap";
 
+// 模块加载即注册世界地图(避免 useEffect 顺序问题导致 ECharts setOption 时地图未注册)
+registerWorldMap();
+
 /** 演示议题的传播地图:ECharts 世界地图 + 飞线 + 涟漪散点。 */
 export default function PropagationSection() {
   const chartRef = useRef<ReactECharts>(null);
-
-  useEffect(() => {
-    registerWorldMap();
-  }, []);
 
   const option = useMemo<EChartsOption>(() => {
     const origin = PROPAGATION_DEMO.find((n) => n.role === "origin");

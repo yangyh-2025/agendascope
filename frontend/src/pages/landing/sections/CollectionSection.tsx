@@ -6,11 +6,10 @@ import { COLLECTION_FEED } from "../mock/demos";
 import { COUNTRIES } from "../mock/countries";
 import { registerWorldMap, countryCenter } from "../../../map/worldMap";
 
-export default function CollectionSection() {
-  useEffect(() => {
-    registerWorldMap();
-  }, []);
+// 模块加载即注册世界地图(避免 useEffect 顺序问题导致 ECharts setOption 时地图未注册)
+registerWorldMap();
 
+export default function CollectionSection() {
   // 轮播 feed:每 2s 把第一条移到最后,形成无限滚动
   const [offset, setOffset] = useState(0);
   useEffect(() => {
