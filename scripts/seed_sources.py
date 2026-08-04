@@ -710,9 +710,6 @@ SEED_SOURCES = [
     ("New Vision", "新视野(乌干达)", "UG", "https://www.newvision.co.ug",
      "https://www.newvision.co.ug/rss/", "rss", "rss", None,
      "newspaper", "en", 15, 9.0, "high"),
-    ("Daily News Egypt (backup)", "埃及每日新闻(备用)", "EG", "https://www.dailynewsegypt.com",
-     "https://www.dailynewsegypt.com/feed/", "rss", "rss", None,
-     "newspaper", "en", 15, 8.0, "high"),
     # 中亚/高加索
     ("Kazinform", "哈萨克国际通讯社", "KZ", "https://qazinform.com",
      "https://qazinform.com/rss", "rss", "rss", None,
