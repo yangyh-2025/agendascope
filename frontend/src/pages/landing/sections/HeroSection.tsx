@@ -73,6 +73,7 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
           <a href="#hot-topics">热点</a>
           <a href="#alerts">预警</a>
           <a href="#architecture">架构</a>
+          <Link to="/developer">数据 API</Link>
           <a
             href="https://github.com/yangyh-2025/agendascope"
             target="_blank"
@@ -117,6 +118,10 @@ export default function HeroSection({ isAuthenticated }: HeroSectionProps) {
               >
                 {isAuthenticated ? "回到看板" : "进入系统"}
                 <span aria-hidden="true">→</span>
+              </Link>
+              <Link to="/developer" className="lp-btn lp-btn-secondary">
+                数据 API
+                <span aria-hidden="true">↗</span>
               </Link>
               <a href="#propagation" className="lp-btn lp-btn-ghost">
                 探索能力

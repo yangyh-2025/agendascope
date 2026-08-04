@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CHAR, Boolean, CheckConstraint, DateTime, String
+from sqlalchemy import CHAR, Boolean, CheckConstraint, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -21,6 +21,9 @@ class PersonOrg(Base):
     country_code: Mapped[str] = mapped_column(CHAR(2), nullable=False)
     role_title: Mapped[str | None] = mapped_column(String(200))
     monitored: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_seed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    category: Mapped[str | None] = mapped_column(String(50))
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     first_utterances: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

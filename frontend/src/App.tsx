@@ -3,13 +3,15 @@ import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import SetupGuard from "./components/SetupGuard";
 import AlertRulesPage from "./pages/AlertRulesPage";
+import DeveloperLayout from "./pages/developer/DeveloperLayout";
+import DocsPage from "./pages/developer/DocsPage";
+import KeysPage from "./pages/developer/KeysPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import LandingPage from "./pages/landing/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
 import PersonsPage from "./pages/PersonsPage";
-import ReportsPage from "./pages/ReportsPage";
 import RevisionsPage from "./pages/RevisionsPage";
 import SetupPage from "./pages/SetupPage";
 import SourcesPage from "./pages/SourcesPage";
@@ -26,6 +28,12 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/setup" element={<SetupPage />} />
         <Route element={<RequireAuth />}>
+          {/* 数据开放平台（独立布局，非主系统子页面） */}
+          <Route path="/developer" element={<DeveloperLayout />}>
+            <Route index element={<Navigate to="/developer/docs" replace />} />
+            <Route path="docs" element={<DocsPage />} />
+            <Route path="keys" element={<KeysPage />} />
+          </Route>
           <Route element={<SetupGuard />}>
             <Route element={<Layout />}>
               <Route path="dashboard" element={<OverviewPage />} />
@@ -43,7 +51,6 @@ export default function App() {
               <Route path="revisions" element={<RevisionsPage />} />
               <Route path="persons" element={<PersonsPage />} />
               <Route path="alerts" element={<AlertRulesPage />} />
-              <Route path="reports" element={<ReportsPage />} />
               <Route path="sources" element={<SourcesPage />} />
               <Route path="system" element={<SystemPage />} />
             </Route>

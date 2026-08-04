@@ -36,6 +36,13 @@ export default function CtaSection({ isAuthenticated }: CtaSectionProps) {
               {isAuthenticated ? "回到看板" : "进入系统"}
               <span aria-hidden="true">→</span>
             </Link>
+            <Link
+              to="/developer"
+              className="lp-btn lp-btn-secondary lp-btn-lg"
+            >
+              数据 API
+              <span aria-hidden="true">↗</span>
+            </Link>
           </div>
         </ScrollReveal>
 

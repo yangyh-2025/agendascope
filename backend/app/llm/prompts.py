@@ -16,7 +16,7 @@ from app.llm.schemas import (
     MergeConfirmOutput,
     NamingOutput,
     ReestimateConfirmOutput,
-    ReportNarrativeOutput,
+    RelationExtractOutput,
     SummaryOutput,
     TranslateOutput,
     schema_instruction,
@@ -28,10 +28,10 @@ TASK_SUMMARY = "topic_summary"
 TASK_FIRST_UTTERANCE = "first_utterance"
 TASK_FINAL_REVIEW = "final_review"
 TASK_MERGE_CONFIRM = "merge_confirm"
-TASK_REPORT_NARRATIVE = "report_narrative"
 TASK_REESTIMATE_CONFIRM = "reestimate_confirm"
 TASK_ALERT_SUMMARY = "alert_summary"
 TASK_TRANSLATE = "translate"
+TASK_RELATION_EXTRACT = "relation_extract"
 
 # ---------------------------------------------------------------------------
 # 主题分类体系（T2.14）：预置 7 类，部署方可经 LLM_CATEGORIES 环境变量（JSON 数组）覆盖扩展
@@ -344,32 +344,6 @@ def _merge_confirm_user_v1(payload: dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 报告叙述段（T4.17 增强）：议题深度报告概览 / 跨国对比简报小结的分析性叙述。
-# 只依据给定数据，不编造事实；客观中立。
-# ---------------------------------------------------------------------------
-_REPORT_NARRATIVE_SYSTEM_V1 = (
-    "你是全球新闻议题监控平台的报告分析师。根据给定议题/对比的数据（议题名、关键词、"
-    "摘要、分国显著性、情感占比），撰写 3-5 句中文分析叙述，供报告「概览/小结」引用。\n"
-    "要求：\n"
-    "1. 第一句点明议题/对比核心看点，后续句补充关键数据支撑（如报道量、显著性排名、情感倾向）；\n"
-    "2. 只依据给定数据撰写，不编造数据之外的事实、不发表超出数据的判断；\n"
-    "3. 语言客观中立、面向决策者，不使用情绪化或营销化措辞。\n"
-    + schema_instruction(ReportNarrativeOutput)
-)
-
-
-def _report_narrative_user_v1(payload: dict[str, Any]) -> str:
-    return (
-        f"议题名：{payload.get('topic_name') or '（未命名）'}\n"
-        f"关键词：{_render_keywords(payload.get('keywords') or [])}\n"
-        f"摘要：{payload.get('summary') or '（无）'}\n"
-        f"生命周期：{payload.get('lifecycle_state') or ''} / 置信度：{payload.get('confidence') or ''}\n"
-        f"分国数据：\n{payload.get('by_country') or '（无）'}\n"
-        "请撰写分析叙述。"
-    )
-
-
-# ---------------------------------------------------------------------------
 # 重估 LLM 佐证（T3.13 增强）：增量重估发现更早新证据时，LLM 复核是否推翻原首发源判定。
 # 仅当新证据与既有议题为同一事件、时间更早、来源可靠时才允许推进 origin_at 修正。
 # ---------------------------------------------------------------------------
@@ -450,6 +424,71 @@ def _translate_user_v1(payload: dict[str, Any]) -> str:
     return f"待翻译文本：\n{payload.get('text') or ''}\n请翻译为简体中文。"
 
 
+# ---------------------------------------------------------------------------
+# 监控对象关系抽取（T5.1）：从新闻正文识别实体间关系（社交图谱边）。
+# 强约束：
+#   - 关系类型封闭集合（防类型爆炸）
+#   - evidence_quote 必须逐字摘自正文（服务端校验子串，防幻觉）
+#   - 允许 LLM 发现外围新实体，但只有 confidence=high 才落库
+# ---------------------------------------------------------------------------
+_RELATION_EXTRACT_SYSTEM_V1 = (
+    "你是国际关系分析师，负责从新闻正文中识别**指定监控实体**与新闻中其他实体之间的关系。\n"
+    "\n"
+    "关系类型封闭集合（必须从中选择，不得自创）：\n"
+    "  meets（会面/会谈/通话）\n"
+    "  sanctions（制裁）\n"
+    "  appoints（任命/提名）\n"
+    "  criticizes（公开批评/谴责）\n"
+    "  supports（公开支持/背书）\n"
+    "  opposes（公开反对）\n"
+    "  allies_with（结盟/战略合作）\n"
+    "  member_of（任职/成员）\n"
+    "  advises（顾问/咨询）\n"
+    "  funds（资助/拨款）\n"
+    "  invests_in（投资）\n"
+    "  signals_support（释放支持信号/间接表态）\n"
+    "  travelled_to（访问/出访）\n"
+    "  statement_about（发表声明谈及）\n"
+    "  family_of（亲属关系）\n"
+    "  other（其他，兜底）\n"
+    "\n"
+    "判定规则：\n"
+    "1. **evidence_quote 必须是新闻正文的原文子串**（逐字摘抄，不超过 300 字符，不得改写、翻译、概括）；"
+    "服务端会校验是否为原文子串，改写将被丢弃。\n"
+    "2. 仅当两实体间有**明确交互**（动作、表态、关系声明）才返回关系；"
+    "仅同时出现（巧合同现）而无实际交互时返回空列表。\n"
+    "3. subject 通常是监控实体，object 是与之交互的另一方；若新闻里客体是被动方且语义倒置，可调换。\n"
+    "4. 若新闻中提及**未列入监控实体名单的重要实体**（人名/机构名），且与监控实体存在 high 置信度关系，"
+    "可通过 subject_is_new=True 或 object_is_new=True 上报，并补充 new_entity_type 与 new_entity_role。"
+    "但**仅 confidence=high 的新实体才会被登记入库**，medium/low 会被丢弃。\n"
+    "5. 单篇新闻最多返回 5 条最强关系；不要为凑数返回弱关系。\n"
+    "6. 若整篇新闻与给定监控实体无关，直接返回空 relations。\n"
+    + schema_instruction(RelationExtractOutput)
+)
+
+
+def _relation_extract_user_v1(payload: dict[str, Any]) -> str:
+    seeds = payload.get("seed_entities") or []
+    seed_lines = []
+    for s in seeds:
+        aliases = "/".join(s.get("name_aliases") or [])
+        seed_lines.append(
+            f"- {s.get('name')}（{s.get('name_zh') or ''}，{s.get('role_title') or ''}，别名：{aliases}）"
+        )
+    seeds_block = "\n".join(seed_lines) if seed_lines else "（无）"
+    title = payload.get("article_title") or ""
+    content = payload.get("article_content") or ""
+    # 截到 3000 字防爆 token
+    if len(content) > 3000:
+        content = content[:3000] + "…"
+    return (
+        f"【监控实体名单】\n{seeds_block}\n\n"
+        f"【新闻标题】\n{title}\n\n"
+        f"【新闻正文】\n{content}\n\n"
+        "请识别正文中监控实体与其他实体之间的关系，输出符合 Schema 的 JSON。"
+    )
+
+
 @dataclass(frozen=True)
 class _Template(PromptTemplate):
     user_builder: Any = None
@@ -504,12 +543,6 @@ PROMPT_REGISTRY: dict[str, dict[str, PromptTemplate]] = {
             system=_MERGE_CONFIRM_SYSTEM_V2, user_builder=_merge_confirm_user_v1,
         ),
     },
-    TASK_REPORT_NARRATIVE: {
-        "report-narrative-v1": _Template(
-            task_type=TASK_REPORT_NARRATIVE, version="report-narrative-v1",
-            system=_REPORT_NARRATIVE_SYSTEM_V1, user_builder=_report_narrative_user_v1,
-        ),
-    },
     TASK_REESTIMATE_CONFIRM: {
         "reestimate-confirm-v1": _Template(
             task_type=TASK_REESTIMATE_CONFIRM, version="reestimate-confirm-v1",
@@ -526,6 +559,12 @@ PROMPT_REGISTRY: dict[str, dict[str, PromptTemplate]] = {
         "translate-v1": _Template(
             task_type=TASK_TRANSLATE, version="translate-v1",
             system=_TRANSLATE_SYSTEM_V1, user_builder=_translate_user_v1,
+        ),
+    },
+    TASK_RELATION_EXTRACT: {
+        "relation-extract-v1": _Template(
+            task_type=TASK_RELATION_EXTRACT, version="relation-extract-v1",
+            system=_RELATION_EXTRACT_SYSTEM_V1, user_builder=_relation_extract_user_v1,
         ),
     },
 }

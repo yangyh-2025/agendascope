@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAlertRule, listAlertRules, updateAlertRule } from "./alertRules";
 import { clearTokens } from "./client";
 import { listPersonsOrgs } from "./persons";
-import { createReportExport, reportDownloadUrl } from "./reportExports";
 import { listTopicArticles } from "./topics";
 
 function stubOkFetch(data: unknown = {}) {
@@ -57,24 +56,6 @@ describe("API 路由契约", () => {
     expect(url.pathname).toBe("/api/v1/articles");
     expect(url.searchParams.get("topic_id")).toBe("topic-1");
     expect(url.searchParams.get("page")).toBe("2");
-  });
-
-  it("report-exports 创建体为 {report_type, format, time_range, params}", async () => {
-    const calls = stubOkFetch({ id: "e1", status: "pending" });
-    await createReportExport({
-      report_type: "topic_deep",
-      format: "pdf",
-      time_range: { from: "2026-07-01", to: "2026-07-28" },
-      params: { topic_id: "t1" },
-    });
-    expect(calls[0].url).toBe("/api/v1/report-exports");
-    expect(calls[0].init?.method).toBe("POST");
-    const body = JSON.parse(String(calls[0].init?.body));
-    expect(body.report_type).toBe("topic_deep");
-    expect(body.format).toBe("pdf");
-    expect(body.time_range).toEqual({ from: "2026-07-01", to: "2026-07-28" });
-    expect(body.params.topic_id).toBe("t1");
-    expect(reportDownloadUrl("e1")).toBe("/api/v1/report-exports/e1/download");
   });
 
   it("persons-orgs 列表路径与筛选参数", async () => {

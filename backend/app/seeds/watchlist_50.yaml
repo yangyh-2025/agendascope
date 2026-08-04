@@ -1,0 +1,75 @@
+# 监控对象 50 精品名单
+# 规则：
+# - 全部非元首（用户明确要求避开总统/总理/国王等"太普通"角色）
+# - 全部非中国相关（合规要求）
+# - 选择政府/组织中的关键人员：副手、阁员、智囊、情报首长、央行行长、智库总裁等
+# - name 为英文原名（新闻里出现频次最高的写法）
+# - name_aliases 至少含 2 个变体（含全名/缩写/当地语言）
+# - country_code ISO 3166-1 alpha-2
+# - entity_type: person / thinktank / intl_org / gov_body
+# - category 业务分类，前端按此着色
+# - priority 种子内部排序（100 最高）
+
+us:
+  - { name: "JD Vance", name_zh: "JD·万斯", name_aliases: ["James David Vance", "Vice President Vance", "J.D. Vance"], country_code: "US", entity_type: "person", role_title: "美国副总统", category: "美国白宫", priority: 100 }
+  - { name: "Marco Rubio", name_zh: "马可·卢比奥", name_aliases: ["Secretary Rubio", "Secretary of State Rubio", "M. Rubio"], country_code: "US", entity_type: "person", role_title: "美国国务卿", category: "美国外交", priority: 100 }
+  - { name: "Scott Bessent", name_zh: "斯科特·贝森特", name_aliases: ["Treasury Secretary Bessent", "S. Bessent"], country_code: "US", entity_type: "person", role_title: "美国财政部长", category: "美国经济", priority: 95 }
+  - { name: "Pete Hegseth", name_zh: "皮特·黑格塞斯", name_aliases: ["Defense Secretary Hegseth", "Secretary Hegseth"], country_code: "US", entity_type: "person", role_title: "美国国防部长", category: "美国国防", priority: 95 }
+  - { name: "Mike Waltz", name_zh: "迈克·沃尔茨", name_aliases: ["National Security Advisor Waltz", "NSA Waltz", "M. Waltz"], country_code: "US", entity_type: "person", role_title: "美国总统国家安全事务助理", category: "美国国安", priority: 95 }
+  - { name: "John Ratcliffe", name_zh: "约翰·拉特克利夫", name_aliases: ["CIA Director Ratcliffe", "J. Ratcliffe"], country_code: "US", entity_type: "person", role_title: "美国中央情报局局长", category: "美国情报", priority: 90 }
+  - { name: "Kash Patel", name_zh: "卡什·帕特尔", name_aliases: ["FBI Director Patel", "K. Patel"], country_code: "US", entity_type: "person", role_title: "美国联邦调查局局长", category: "美国情报", priority: 85 }
+  - { name: "Tulsi Gabbard", name_zh: "图尔西·加巴德", name_aliases: ["DNI Gabbard", "T. Gabbard"], country_code: "US", entity_type: "person", role_title: "美国国家情报总监", category: "美国情报", priority: 85 }
+  - { name: "Jerome Powell", name_zh: "杰罗姆·鲍威尔", name_aliases: ["Fed Chair Powell", "Chairman Powell", "J. Powell"], country_code: "US", entity_type: "person", role_title: "美联储主席", category: "美国经济", priority: 90 }
+  - { name: "Jamieson Greer", name_zh: "贾米森·格里尔", name_aliases: ["USTR Greer", "Trade Representative Greer"], country_code: "US", entity_type: "person", role_title: "美国贸易代表", category: "美国经济", priority: 80 }
+  - { name: "Susie Wiles", name_zh: "苏西·威尔斯", name_aliases: ["White House Chief of Staff Wiles", "S. Wiles"], country_code: "US", entity_type: "person", role_title: "白宫幕僚长", category: "美国白宫", priority: 80 }
+  - { name: "Stephen Miller", name_zh: "斯蒂芬·米勒", name_aliases: ["Deputy Chief of Staff Miller", "S. Miller"], country_code: "US", entity_type: "person", role_title: "白宫副幕僚长", category: "美国白宫", priority: 80 }
+
+eu:
+  - { name: "Ursula von der Leyen", name_zh: "乌尔苏拉·冯德莱恩", name_aliases: ["President von der Leyen", "Von der Leyen", "VDL"], country_code: "BE", entity_type: "person", role_title: "欧盟委员会主席", category: "欧盟决策", priority: 100 }
+  - { name: "Kaja Kallas", name_zh: "卡娅·卡拉斯", name_aliases: ["High Representative Kallas", "K. Kallas"], country_code: "BE", entity_type: "person", role_title: "欧盟外交与安全政策高级代表", category: "欧盟外交", priority: 95 }
+  - { name: "António Costa", name_zh: "安东尼奥·科斯塔", name_aliases: ["President Costa", "A. Costa"], country_code: "BE", entity_type: "person", role_title: "欧洲理事会主席", category: "欧盟决策", priority: 90 }
+  - { name: "Christine Lagarde", name_zh: "克里斯蒂娜·拉加德", name_aliases: ["ECB President Lagarde", "C. Lagarde"], country_code: "DE", entity_type: "person", role_title: "欧洲央行行长", category: "欧盟经济", priority: 90 }
+  - { name: "Friedrich Merz", name_zh: "弗里德里希·默茨", name_aliases: ["Chancellor Merz", "F. Merz"], country_code: "DE", entity_type: "person", role_title: "德国总理", category: "欧盟决策", priority: 95 }
+  - { name: "Emmanuel Macron", name_zh: "埃马纽埃尔·马克龙", name_aliases: ["President Macron", "E. Macron"], country_code: "FR", entity_type: "person", role_title: "法国总统", category: "欧盟决策", priority: 95 }
+  - { name: "Mark Rutte", name_zh: "马克·吕特", name_aliases: ["NATO Secretary General Rutte", "M. Rutte"], country_code: "BE", entity_type: "person", role_title: "北约秘书长", category: "北约", priority: 95 }
+
+ru:
+  - { name: "Sergey Lavrov", name_zh: "谢尔盖·拉夫罗夫", name_aliases: ["Foreign Minister Lavrov", "S. Lavrov", "Сергей Лавров"], country_code: "RU", entity_type: "person", role_title: "俄罗斯外交部长", category: "俄罗斯外交", priority: 95 }
+  - { name: "Sergei Shoigu", name_zh: "谢尔盖·绍伊古", name_aliases: ["Security Council Secretary Shoigu", "S. Shoigu", "Сергей Шойгу"], country_code: "RU", entity_type: "person", role_title: "俄罗斯联邦安全会议秘书", category: "俄罗斯国安", priority: 90 }
+  - { name: "Sergey Naryshkin", name_zh: "谢尔盖·纳雷什金", name_aliases: ["SVR Director Naryshkin", "S. Naryshkin", "Сергей Нарышкин"], country_code: "RU", entity_type: "person", role_title: "俄罗斯对外情报局局长", category: "俄罗斯情报", priority: 85 }
+  - { name: "Alexander Bortnikov", name_zh: "亚历山大·博尔特尼科夫", name_aliases: ["FSB Director Bortnikov", "A. Bortnikov", "Александр Бортников"], country_code: "RU", entity_type: "person", role_title: "俄罗斯联邦安全局局长", category: "俄罗斯情报", priority: 85 }
+  - { name: "Elvira Nabiullina", name_zh: "埃尔维拉·纳比乌琳娜", name_aliases: ["Central Bank Governor Nabiullina", "E. Nabiullina", "Эльвира Набиуллина"], country_code: "RU", entity_type: "person", role_title: "俄罗斯央行行长", category: "俄罗斯经济", priority: 80 }
+
+mideast:
+  - { name: "Mohammed bin Salman", name_zh: "穆罕默德·本·萨勒曼", name_aliases: ["MBS", "Crown Prince Mohammed bin Salman", "MbS"], country_code: "SA", entity_type: "person", role_title: "沙特王储兼首相", category: "中东决策", priority: 95 }
+  - { name: "Faisal bin Farhan", name_zh: "费萨尔·本·法尔汉", name_aliases: ["Saudi Foreign Minister", "F. bin Farhan"], country_code: "SA", entity_type: "person", role_title: "沙特外交大臣", category: "中东外交", priority: 85 }
+  - { name: "Ali Larijani", name_zh: "阿里·拉里贾尼", name_aliases: ["SNSC Secretary Larijani", "A. Larijani", "علی لاریجانی"], country_code: "IR", entity_type: "person", role_title: "伊朗最高国家安全委员会秘书", category: "中东国安", priority: 85 }
+  - { name: "Abbas Araghchi", name_zh: "阿巴斯·阿拉格齐", name_aliases: ["Iranian Foreign Minister", "A. Araghchi", "عباس عراقچی"], country_code: "IR", entity_type: "person", role_title: "伊朗外交部长", category: "中东外交", priority: 85 }
+  - { name: "David Barnea", name_zh: "大卫·巴尔内亚", name_aliases: ["Mossad Director Barnea", "D. Barnea", "דוד ברנע"], country_code: "IL", entity_type: "person", role_title: "以色列摩萨德局长", category: "中东情报", priority: 85 }
+  - { name: "Mohammed bin Abdulrahman Al Thani", name_zh: "穆罕默德·本·阿卜杜勒拉赫曼·阿勒萨尼", name_aliases: ["Qatari PM Al Thani", "Qatar Foreign Minister", "MBA Al Thani"], country_code: "QA", entity_type: "person", role_title: "卡塔尔首相兼外交大臣", category: "中东外交", priority: 85 }
+
+indo_pacific:
+  - { name: "Takeshi Iwaya", name_zh: "岩屋毅", name_aliases: ["Japanese Foreign Minister Iwaya", "T. Iwaya", "岩屋毅"], country_code: "JP", entity_type: "person", role_title: "日本外务大臣", category: "印太外交", priority: 85 }
+  - { name: "Gen Nakatani", name_zh: "中谷元", name_aliases: ["Japanese Defense Minister Nakatani", "G. Nakatani", "中谷元"], country_code: "JP", entity_type: "person", role_title: "日本防卫大臣", category: "印太国防", priority: 80 }
+  - { name: "Wi Sung-lac", name_zh: "魏圣洛", name_aliases: ["ROK NSA Wi", "W. Sung-lac", "위성락"], country_code: "KR", entity_type: "person", role_title: "韩国国家安保室长", category: "印太国安", priority: 80 }
+  - { name: "S. Jaishankar", name_zh: "S·贾伊尚卡尔", name_aliases: ["Indian Foreign Minister Jaishankar", "Subrahmanyam Jaishankar"], country_code: "IN", entity_type: "person", role_title: "印度外交部长", category: "印太外交", priority: 90 }
+  - { name: "Ajit Doval", name_zh: "阿吉特·多瓦尔", name_aliases: ["Indian NSA Doval", "A. Doval"], country_code: "IN", entity_type: "person", role_title: "印度国家安全顾问", category: "印太国安", priority: 85 }
+  - { name: "Penny Wong", name_zh: "黄英贤", name_aliases: ["Australian Foreign Minister Wong", "P. Wong"], country_code: "AU", entity_type: "person", role_title: "澳大利亚外交部长", category: "印太外交", priority: 85 }
+  - { name: "Richard Marles", name_zh: "理查德·马尔斯", name_aliases: ["Australian Deputy PM Marles", "Defence Minister Marles", "R. Marles"], country_code: "AU", entity_type: "person", role_title: "澳大利亚副总理兼国防部长", category: "印太国防", priority: 80 }
+  - { name: "Eduardo Año", name_zh: "爱德华多·阿尼奥", name_aliases: ["Philippine NSA Año", "E. Año"], country_code: "PH", entity_type: "person", role_title: "菲律宾国家安全顾问", category: "印太国安", priority: 75 }
+
+multilateral:
+  - { name: "António Guterres", name_zh: "安东尼奥·古特雷斯", name_aliases: ["UN Secretary-General Guterres", "A. Guterres"], country_code: "US", entity_type: "person", role_title: "联合国秘书长", category: "联合国", priority: 90 }
+  - { name: "Rosemary DiCarlo", name_zh: "罗斯玛丽·迪卡洛", name_aliases: ["UN Under-Secretary-General DiCarlo", "R. DiCarlo"], country_code: "US", entity_type: "person", role_title: "联合国副秘书长（政治与建设和平事务）", category: "联合国", priority: 75 }
+  - { name: "Ngozi Okonjo-Iweala", name_zh: "恩戈齐·奥孔乔-伊韦阿拉", name_aliases: ["WTO Director-General", "N. Okonjo-Iweala"], country_code: "CH", entity_type: "person", role_title: "世界贸易组织总干事", category: "多边经济", priority: 80 }
+  - { name: "Kristalina Georgieva", name_zh: "克里斯塔利娜·格奥尔基耶娃", name_aliases: ["IMF Managing Director", "K. Georgieva"], country_code: "US", entity_type: "person", role_title: "国际货币基金组织总裁", category: "多边经济", priority: 85 }
+  - { name: "Ajay Banga", name_zh: "阿贾伊·班加", name_aliases: ["World Bank President Banga", "A. Banga"], country_code: "US", entity_type: "person", role_title: "世界银行行长", category: "多边经济", priority: 80 }
+  - { name: "Mauro Vieira", name_zh: "毛罗·维埃拉", name_aliases: ["Brazilian Foreign Minister Vieira", "M. Vieira"], country_code: "BR", entity_type: "person", role_title: "巴西外交部长", category: "全球南方", priority: 75 }
+  - { name: "Ronald Lamola", name_zh: "罗纳德·拉莫拉", name_aliases: ["South African Foreign Minister Lamola", "R. Lamola"], country_code: "ZA", entity_type: "person", role_title: "南非国际关系与合作部长", category: "全球南方", priority: 75 }
+  - { name: "İbrahim Kalın", name_zh: "易卜拉欣·卡林", name_aliases: ["MIT Director Kalın", "I. Kalın", "İ. Kalın"], country_code: "TR", entity_type: "person", role_title: "土耳其国家情报组织局长", category: "中东情报", priority: 75 }
+
+thinktank:
+  - { name: "Michael Froman", name_zh: "迈克尔·弗罗曼", name_aliases: ["CFR President Froman", "M. Froman"], country_code: "US", entity_type: "person", role_title: "美国外交关系协会（CFR）总裁", category: "美国智库", priority: 80 }
+  - { name: "Cecilia Rouse", name_zh: "塞西莉亚·劳斯", name_aliases: ["Brookings President Rouse", "C. Rouse"], country_code: "US", entity_type: "person", role_title: "布鲁金斯学会总裁", category: "美国智库", priority: 75 }
+  - { name: "Jason Matheny", name_zh: "杰森·马瑟尼", name_aliases: ["RAND President Matheny", "J. Matheny"], country_code: "US", entity_type: "person", role_title: "兰德公司总裁", category: "美国智库", priority: 75 }
+  - { name: "John Hamre", name_zh: "约翰·哈姆雷", name_aliases: ["CSIS President Hamre", "J. Hamre"], country_code: "US", entity_type: "person", role_title: "战略与国际研究中心（CSIS）总裁", category: "美国智库", priority: 75 }

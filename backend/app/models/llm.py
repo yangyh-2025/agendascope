@@ -36,7 +36,7 @@ class LLMJudgement(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "task_type IN ('topic_naming','topic_category','topic_summary','first_utterance','final_review','merge_confirm','report_narrative','reestimate_confirm','alert_summary','translate')",
+            "task_type IN ('topic_naming','topic_category','topic_summary','first_utterance','final_review','merge_confirm','reestimate_confirm','alert_summary','translate')",
             name="ck_llm_judgements_task_type",
         ),
     )

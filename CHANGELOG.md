@@ -4,6 +4,47 @@
 
 ---
 
+## 监控对象重构 + 数据 API 开放平台 + 报告板块下线（2026-08-05）
+
+> **本轮范围**：四大调整——下线报告板块、侧边栏整合到"系统"、人物监测重构为"监控对象"精品 50 实体社交网络、新增数据开放平台对外开放数据库 API。
+
+### 报告板块下线（全删）
+
+- **前端删除**：`ReportsPage.tsx/.css`、`api/reportExports.ts`、`App.tsx` 路由、`Layout.tsx` 侧边栏入口、`contracts.test.ts` 契约断言
+- **后端删除**：`api/routes/reports.py`、`services/report_service.py`、`services/report_narrative.py`、`models/report.py`（report_exports 表）、`worker/alerting_worker.py` 中的报告队列处理、`prompts.py` 的 TASK_REPORT_NARRATIVE + `_REPORT_NARRATIVE_SYSTEM_V1` + 注册项、`schemas.py` 的 `ReportNarrativeOutput`、`models/llm.py` 的 task_type 白名单
+- **alembic 0013**：`DROP TABLE report_exports` + llm_judgements.task_type CHECK 去掉 'report_narrative' + 清理历史"系统-报告导出通知"告警规则
+
+### 侧边栏整合
+
+- 删除"内容管理"分组；媒体源/修正历史/系统管理统一收纳到"系统"分组
+- "人物监测"改名"监控对象"，图标 👤 → 🕸️
+- 调整后分组：总览 / 议题分析（议题+议程事件）/ 监测预警（监控对象+预警配置）/ 系统（媒体源+修正历史+系统管理）
+
+### 监控对象（核心改造）
+
+- **50 精品名单**（`backend/app/seeds/watchlist_50.yaml`）：美国 12 / 欧盟 7 / 俄罗斯 5 / 中东 6 / 印太 8 / 多边 8 / 智库 4；避开国家元首与中国相关实体；聚焦副手/阁员/情报首长/央行行长/智库总裁等关键决策者
+- **persons_orgs 加列**：`is_seed`（种子标记）、`category`（业务分类）、`priority`（排序权重）
+- **新表**：`entity_relations`（主体-客体-关系类型三元组，含时间衰减置信度）+ `relation_evidences`（每条边的新闻证据，evidence_quote 必须为原文子串）
+- **新 LLM prompt**：`relation-extract-v1`（封闭 16 种关系类型 + 强制 evidence_quote + 支持外围实体 high 置信度入库）
+- **新 worker**：`relation_worker` 每日 03:00 跑批，扫描 24h 文章 → 命中种子实体 → LLM 抽关系 → upsert 关系 + 插证据 + 时间衰减
+- **新 endpoint**：`/api/v1/watchlist/graph`（节点+边）、`/entities`、`/entities/{id}`、`/relations/{id}/evidences`
+- **前端 PersonsPage 重写**：ECharts graph force layout 图谱（按 category 着色、边宽=证据数、边透明度=置信度）+ 点边右侧抽屉列出支撑新闻（标题+来源+时间+evidence_quote 高亮+原文链接）+ "展开外围实体"开关
+
+### 数据 API 开放平台
+
+- **api_keys 表**（alembic 0014）：sha256 哈希存储、prefix 显示、限流/过期/吊销
+- **X-API-Key 鉴权**：`app/core/api_key_auth.py::get_api_key_user`，Redis token bucket 限流（默认 60/分钟）
+- **开放只读 endpoint**：`/api/v1/open/topics|articles|entities|agenda-events|sources|countries|snapshots`
+- **Key 管理 endpoint**（JWT 鉴权）：`/api/v1/api-keys` CRUD
+- **前端 /developer 独立布局**：`DeveloperLayout` + `DocsPage`（API 文档）+ `KeysPage`（Key 管理），与主系统并列
+- **Landing 双 CTA**：HeroSection + CtaSection 加"数据 API"按钮（白底蓝边次按钮样式）；导航加"数据 API"链接
+
+### 部署调整
+
+- `deploy/docker-compose.yml` 新增 `relation-worker` 服务（256MB 内存预算、每日跑批）
+
+---
+
 ## 多模型 LLM 推理池（2026-08-03）
 
 > **本轮范围**：单模型（讯飞星辰 QPS2/并发2）吞吐受限且多 worker 并发争抢触发超限降级。接入多供应商免费推理模型（SiliconFlow / 智谱 / 讯飞星辰），per-model 独立限流 + 综合并发调度 + 失败转移熔断，命名/判定吞吐提升一个数量级。

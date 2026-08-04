@@ -25,26 +25,22 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/topics", label: "议题", icon: "💬" },
       { to: "/events", label: "议程事件", icon: "🔥" },
-      { to: "/revisions", label: "修正历史", icon: "📝" },
     ],
   },
   {
     title: "监测预警",
     items: [
-      { to: "/persons", label: "人物监测", icon: "👤" },
+      { to: "/persons", label: "监控对象", icon: "🕸️" },
       { to: "/alerts", label: "预警配置", icon: "🔔" },
     ],
   },
   {
-    title: "内容管理",
-    items: [
-      { to: "/reports", label: "报告", icon: "📄" },
-      { to: "/sources", label: "媒体源", icon: "📡" },
-    ],
-  },
-  {
     title: "系统",
-    items: [{ to: "/system", label: "系统管理", icon: "⚙️" }],
+    items: [
+      { to: "/sources", label: "媒体源", icon: "📡" },
+      { to: "/revisions", label: "修正历史", icon: "📝" },
+      { to: "/system", label: "系统管理", icon: "⚙️" },
+    ],
   },
 ];
 

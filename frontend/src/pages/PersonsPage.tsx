@@ -1,141 +1,332 @@
-/** 人物/机构监测页（T4.11）：发起信号列表（新表述、首发时间、跟进媒体数）。 */
-import { useCallback, useEffect, useState } from "react";
+/** 监控对象（关键实体社交网络）：50 精品实体 + LLM 关系图谱。 */
+import { useCallback, useEffect, useMemo, useState } from "react";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
 import { ApiError } from "../api/client";
-import { COUNTRIES, countryLabel } from "../api/meta";
 import {
-  listPersonsOrgs,
-  type EntityType,
-  type PersonOrgListItem,
-} from "../api/persons";
+  fetchRelationEvidences,
+  fetchWatchlistGraph,
+  type RelationDetail,
+  type WatchlistGraph,
+  type WatchlistLink,
+} from "../api/watchlist";
 import "./PersonsPage.css";
 
-const ENTITY_TYPE_LABEL: Record<EntityType, string> = {
-  person: "人物",
-  thinktank: "智库",
-  intl_org: "国际组织",
-  gov_body: "政府机构",
+const CATEGORY_COLORS: Record<string, string> = {
+  "美国白宫": "#c8102e",
+  "美国外交": "#1a4fa0",
+  "美国经济": "#16a34a",
+  "美国国防": "#7c3aed",
+  "美国国安": "#9333ea",
+  "美国情报": "#dc2626",
+  "美国智库": "#0891b2",
+  "欧盟决策": "#2563eb",
+  "欧盟外交": "#3b82f6",
+  "欧盟经济": "#60a5fa",
+  "北约": "#1e40af",
+  "俄罗斯外交": "#ea580c",
+  "俄罗斯国安": "#c2410c",
+  "俄罗斯情报": "#9a3412",
+  "俄罗斯经济": "#f59e0b",
+  "中东决策": "#d4a017",
+  "中东外交": "#ca8a04",
+  "中东国安": "#a16207",
+  "中东情报": "#854d0e",
+  "印太外交": "#059669",
+  "印太国防": "#047857",
+  "印太国安": "#065f46",
+  "联合国": "#6366f1",
+  "多边经济": "#8b5cf6",
+  "全球南方": "#ec4899",
+  "外围": "#9ca3af",
+  "其他": "#6b7280",
 };
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "name", label: "按名称" },
-  { value: "latest_utterance_at", label: "按最新表述" },
-  { value: "created_at", label: "按登记时间" },
-];
+const RELATION_LABEL: Record<string, string> = {
+  meets: "会面",
+  sanctions: "制裁",
+  appoints: "任命",
+  criticizes: "批评",
+  supports: "支持",
+  opposes: "反对",
+  allies_with: "结盟",
+  member_of: "任职",
+  advises: "顾问",
+  funds: "资助",
+  invests_in: "投资",
+  signals_support: "释放支持信号",
+  travelled_to: "访问",
+  statement_about: "声明谈及",
+  family_of: "亲属",
+  other: "其他",
+};
 
 function errMsg(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
 }
 
 export default function PersonsPage() {
-  const [items, setItems] = useState<PersonOrgListItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [entityType, setEntityType] = useState<string>("");
-  const [country, setCountry] = useState("");
-  const [monitoredOnly, setMonitoredOnly] = useState(false);
-  const [sort, setSort] = useState("name");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [graph, setGraph] = useState<WatchlistGraph | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [includePeripheral, setIncludePeripheral] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedRelation, setSelectedRelation] = useState<WatchlistLink | null>(null);
+  const [evidences, setEvidences] = useState<RelationDetail | null>(null);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(() => {
-    setError(null);
     setLoading(true);
-    listPersonsOrgs({
-      entity_type: (entityType || undefined) as EntityType | undefined,
-      country_code: country || undefined,
-      monitored: monitoredOnly ? true : undefined,
-      sort: (sort || undefined) as "name" | "latest_utterance_at" | "created_at" | undefined,
-      page,
-      page_size: 20,
-    })
-      .then((r) => {
-        setItems(r.items);
-        setTotal(r.total);
-      })
-      .catch((err) => setError(errMsg(err, "人物/机构数据加载失败")))
+    setError(null);
+    fetchWatchlistGraph({ include_peripheral: includePeripheral })
+      .then(setGraph)
+      .catch((e) => setError(errMsg(e, "监控对象图谱加载失败")))
       .finally(() => setLoading(false));
-  }, [entityType, country, monitoredOnly, sort, page]);
+  }, [includePeripheral]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // 点边 → 拉证据
+  useEffect(() => {
+    if (!selectedRelation) {
+      setEvidences(null);
+      return;
+    }
+    setEvidenceLoading(true);
+    fetchRelationEvidences(selectedRelation.id, { page_size: 50 })
+      .then(setEvidences)
+      .catch((e) => setError(errMsg(e, "证据加载失败")))
+      .finally(() => setEvidenceLoading(false));
+  }, [selectedRelation]);
+
+  const categories = useMemo(() => {
+    if (!graph) return [];
+    return Array.from(new Set(graph.nodes.map((n) => n.category))).sort();
+  }, [graph]);
+
+  const chartOption = useMemo<EChartsOption | null>(() => {
+    if (!graph) return null;
+    let nodes = graph.nodes;
+    let links = graph.links;
+    if (selectedCategory) {
+      const keep = new Set(
+        nodes.filter((n) => n.category === selectedCategory).map((n) => n.id),
+      );
+      // 保留两类节点：选中类别的节点 + 与它们相连的种子节点
+      links.forEach((l) => {
+        if (keep.has(l.source)) keep.add(l.target);
+        if (keep.has(l.target)) keep.add(l.source);
+      });
+      nodes = nodes.filter((n) => keep.has(n.id));
+      links = links.filter((l) => keep.has(l.source) && keep.has(l.target));
+    }
+    if (search.trim()) {
+      // 搜索命中节点高亮，其他不删
+      // 搜索逻辑由 ECharts emphasis 处理
+    }
+    return {
+      backgroundColor: "transparent",
+      tooltip: {
+        formatter: (params: { dataType: string; data: { name?: string; relation_type?: string; evidence_count?: number; confidence?: number } }) => {
+          if (params.dataType === "edge") {
+            const d = params.data;
+            return `${RELATION_LABEL[d.relation_type ?? "other"] ?? d.relation_type}<br/>证据 ${d.evidence_count} 条 · 置信度 ${(Number(d.confidence ?? 0) * 100).toFixed(0)}%`;
+          }
+          return params.data.name ?? "";
+        },
+      },
+      series: [
+        {
+          type: "graph",
+          layout: "force",
+          roam: true,
+          scaleLimit: { min: 0.4, max: 3 },
+          data: nodes.map((n) => ({
+            id: n.id,
+            name: n.name,
+            value: n.priority,
+            symbolSize: n.is_seed
+              ? Math.max(18, 14 + n.priority / 6)
+              : 10,
+            itemStyle: {
+              color: CATEGORY_COLORS[n.category] ?? CATEGORY_COLORS["其他"],
+              opacity: n.is_seed ? 1 : 0.5,
+              borderColor: "rgba(255,255,255,0.4)",
+              borderWidth: n.is_seed ? 1.5 : 0.5,
+            },
+            label: {
+              show: n.is_seed,
+              color: "#1f2d3d",
+              fontSize: n.priority >= 90 ? 12 : 10,
+              fontWeight: n.priority >= 90 ? 700 : 500,
+            },
+            category: n.category,
+          })),
+          links: links.map((l) => ({
+            id: l.id,
+            source: l.source,
+            target: l.target,
+            relation_type: l.relation_type,
+            confidence: l.confidence,
+            evidence_count: l.evidence_count,
+            lineStyle: {
+              width: Math.min(4, 1 + l.evidence_count / 3),
+              opacity: Math.max(0.3, l.confidence),
+              color: "#1a4fa0",
+              curveness: 0.18,
+            },
+          })),
+          force: {
+            repulsion: 380,
+            edgeLength: [60, 140],
+            gravity: 0.15,
+            friction: 0.3,
+            layoutAnimation: true,
+          },
+          label: { position: "bottom", distance: 4 },
+          emphasis: {
+            focus: "adjacency",
+            lineStyle: { width: 4 },
+          },
+        },
+      ],
+    };
+  }, [graph, selectedCategory, search]);
+
+  if (error) {
+    return (
+      <div className="persons-page">
+        <header className="page-header">
+          <h1 className="page-title">监控对象</h1>
+        </header>
+        <p className="page-error" role="alert">{error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="persons-page">
+    <div className="persons-page watchlist-page">
       <header className="page-header">
         <div>
-          <h1 className="page-title">人物 / 机构监测</h1>
-          <p className="page-desc">跟踪关键人物、智库与国际组织的首次发声信号。</p>
+          <h1 className="page-title">监控对象 · 关键实体社交网络</h1>
+          <p className="page-desc">
+            50 个精品关键人物与机构。每条关系边都有新闻证据支撑，点击边查看原始报道。
+          </p>
+        </div>
+        <div className="watchlist-header-actions">
+          <label className="watchlist-toggle">
+            <input
+              type="checkbox"
+              checked={includePeripheral}
+              onChange={(e) => setIncludePeripheral(e.target.checked)}
+            />
+            展开外围实体
+          </label>
         </div>
       </header>
-      <div className="filters">
-        <select value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(1); }}>
-          <option value="">全部类型</option>
-          {(Object.entries(ENTITY_TYPE_LABEL) as [EntityType, string][]).map(([v, label]) => (
-            <option key={v} value={v}>{label}</option>
-          ))}
-        </select>
-        <select value={country} onChange={(e) => { setCountry(e.target.value); setPage(1); }}>
-          <option value="">全部国家</option>
-          {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
-        </select>
-        <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
-          {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <label className="monitored-toggle">
-          <input
-            type="checkbox"
-            checked={monitoredOnly}
-            onChange={(e) => { setMonitoredOnly(e.target.checked); setPage(1); }}
-          />
-          仅看重点监测
-        </label>
-      </div>
 
-      {error && <p className="page-error" role="alert">{error}</p>}
-      {!error && loading && items.length === 0 && <p className="page-loading">加载中…</p>}
-      {!error && !loading && items.length === 0 && <p className="page-loading">暂无监测对象</p>}
+      <div className="watchlist-body">
+        <div className="watchlist-graph-wrap">
+          <div className="watchlist-toolbar">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="">全部分类</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <input
+              type="search"
+              placeholder="搜索实体名..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {graph && (
+              <span className="watchlist-stats">
+                {graph.total_nodes} 节点 · {graph.total_links} 边
+              </span>
+            )}
+          </div>
+          {loading && <p className="page-loading">加载中…</p>}
+          {!loading && chartOption && (
+            <ReactECharts
+              option={chartOption}
+              style={{ width: "100%", height: "640px" }}
+              notMerge
+              lazyUpdate
+              onEvents={{
+                click: (params: { dataType?: string; data?: { id?: string } }) => {
+                  if (params.dataType === "edge" && params.data?.id) {
+                    const link = graph?.links.find((l) => l.id === params.data?.id);
+                    if (link) setSelectedRelation(link);
+                  }
+                },
+              }}
+            />
+          )}
+          {!loading && graph && graph.total_links === 0 && (
+            <p className="page-loading" style={{ padding: 40 }}>
+              暂无关系统计。等待每日跑批从新闻中抽取实体关系。
+            </p>
+          )}
+        </div>
 
-      <div className="entity-list">
-        {items.map((e) => {
-          const signals = e.first_utterances ?? [];
-          const expanded = expandedId === e.id;
-          return (
-            <div key={e.id} className="entity-card">
-              <button className="entity-head" onClick={() => setExpandedId(expanded ? null : e.id)}>
-                <span className={`entity-type-tag et-${e.entity_type}`}>{ENTITY_TYPE_LABEL[e.entity_type] ?? e.entity_type}</span>
-                <span className="entity-name">{e.name_zh || e.name}</span>
-                {e.role_title && <span className="entity-role">{e.role_title}</span>}
-                <span className="entity-country">{countryLabel(e.country_code)}</span>
-                {e.monitored && <span className="monitored-tag">重点监测</span>}
-                <span className="entity-signal-count">发起信号 {signals.length} 条 {expanded ? "▲" : "▼"}</span>
-              </button>
-              {expanded && (
-                <div className="signal-list">
-                  {signals.length === 0 && <p className="drawer-empty">暂无发起信号</p>}
-                  {signals.map((s, i) => (
-                    <div key={i} className="signal-item">
-                      <p className="signal-quote">"{s.quote_zh || s.quote}"</p>
-                      <div className="signal-meta">
-                        <span>首发 {s.first_seen_at?.slice(0, 16).replace("T", " ") ?? "—"}</span>
-                        <span>跟进媒体 {s.media_follow_count} 家</span>
-                        {s.topic_name && <span>关联议题:{s.topic_name}</span>}
-                        <span>置信度 {s.confidence}</span>
-                      </div>
-                    </div>
-                  ))}
+        {/* 右侧证据抽屉 */}
+        {selectedRelation && (
+          <aside className="watchlist-evidence-drawer">
+            <div className="watchlist-evidence-header">
+              <div>
+                <div className="watchlist-evidence-title">
+                  {RELATION_LABEL[selectedRelation.relation_type] ?? selectedRelation.relation_type}
                 </div>
-              )}
+                <div className="watchlist-evidence-meta">
+                  证据 {selectedRelation.evidence_count} 条 ·
+                  置信度 {(selectedRelation.confidence * 100).toFixed(0)}%
+                </div>
+              </div>
+              <button
+                type="button"
+                className="watchlist-evidence-close"
+                onClick={() => setSelectedRelation(null)}
+                aria-label="关闭"
+              >
+                ✕
+              </button>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="pagination">
-        <button disabled={page <= 1} onClick={() => setPage(page - 1)}>上一页</button>
-        <span>{page} / {Math.max(Math.ceil(total / 20), 1)}（共 {total} 条）</span>
-        <button disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>下一页</button>
+            <div className="watchlist-evidence-body">
+              {evidenceLoading && <p>证据加载中…</p>}
+              {!evidenceLoading && evidences && evidences.items.length === 0 && (
+                <p className="watchlist-evidence-empty">暂无证据</p>
+              )}
+              {!evidenceLoading && evidences && evidences.items.map((ev) => (
+                <article key={ev.evidence_id} className="watchlist-evidence-item">
+                  <blockquote className="watchlist-evidence-quote">
+                    “{ev.evidence_quote}”
+                  </blockquote>
+                  <div className="watchlist-evidence-article">
+                    <a
+                      href={ev.article_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="watchlist-evidence-link"
+                    >
+                      {ev.article_title_translated || ev.article_title}
+                    </a>
+                    <div className="watchlist-evidence-src">
+                          {ev.source_name} · {ev.source_country_code} ·
+                          {" "}{ev.published_at?.slice(0, 16).replace("T", " ") ?? "—"}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );

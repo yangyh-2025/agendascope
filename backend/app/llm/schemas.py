@@ -149,25 +149,6 @@ class MergeConfirmOutput(BaseModel):
         return value.strip()[:200]
 
 
-class ReportNarrativeOutput(BaseModel):
-    """LLM 报告叙述性段输出（T4.17 增强：报告概览/小结用 LLM 生成）。
-
-    narrative 是给读者的分析性叙述段（非模板句）：说明该议题/对比的主要看点、
-    关键进展与显著性，基于给定数据，不编造事实。
-    """
-
-    narrative: str = Field(
-        min_length=10,
-        max_length=400,
-        description="3-5 句中文分析叙述（≤400 字）：主要看点 + 关键数据支撑，客观中立",
-    )
-
-    @field_validator("narrative")
-    @classmethod
-    def _strip(cls, value: str) -> str:
-        return value.strip()
-
-
 class ReestimateConfirmOutput(BaseModel):
     """LLM 重估佐证输出（T3.13 增强：增量重估的 LLM 复核）。
 
@@ -222,6 +203,85 @@ class TranslateOutput(BaseModel):
     @classmethod
     def _strip(cls, value: str) -> str:
         return value.strip()
+
+
+# ---------------------------------------------------------------------------
+# 监控对象关系抽取（监控对象大改造）：从新闻正文识别实体对间的关系。
+# 关键约束：
+#   - relation 必须从封闭集合选择（防关系类型爆炸）
+#   - evidence_quote 必须是 article.content 的原文子串（程序强校验，防幻觉）
+#   - 发现新的"外围实体"时（object_is_new=True 或 subject_is_new=True），
+#     需给出 new_entity_name + new_entity_type + new_entity_role，
+#     且 confidence 必须为 high 才会落库（外围入库门槛）
+# ---------------------------------------------------------------------------
+
+RELATION_TYPES: tuple[str, ...] = (
+    "meets",           # 会面/会谈/通话
+    "sanctions",       # 制裁
+    "appoints",        # 任命/提名人选
+    "criticizes",      # 公开批评/谴责
+    "supports",        # 公开支持/背书
+    "opposes",         # 公开反对
+    "allies_with",     # 结盟/战略合作
+    "member_of",       # 任职/成员
+    "advises",         # 顾问/咨询
+    "funds",           # 资助/拨款
+    "invests_in",      # 投资
+    "signals_support", # 释放支持信号（间接表态）
+    "travelled_to",    # 访问/出访
+    "statement_about", # 发表声明谈及
+    "family_of",       # 亲属关系
+    "other",           # 其他（兜底）
+)
+
+
+class RelationItem(BaseModel):
+    """单条抽取到的实体间关系。"""
+
+    subject_name: str = Field(min_length=1, description="主体实体名（与新闻里写法一致）")
+    object_name: str = Field(min_length=1, description="客体实体名")
+    relation: str = Field(description="关系类型（封闭集合）")
+    evidence_quote: str = Field(
+        min_length=10,
+        max_length=300,
+        description="新闻正文中支撑此关系的原文句子（逐字摘抄，不得改写）",
+    )
+    confidence: str = Field(description="置信度：high/medium/low")
+    subject_is_new: bool = Field(default=False, description="subject 是否为非种子新实体")
+    object_is_new: bool = Field(default=False, description="object 是否为非种子新实体")
+    new_entity_type: str | None = Field(
+        default=None,
+        description="若一端为新实体，给出其类型 person/thinktank/intl_org/gov_body",
+    )
+    new_entity_role: str | None = Field(
+        default=None,
+        description="若一端为新实体，给出其职务/角色简述",
+    )
+
+    @field_validator("relation")
+    @classmethod
+    def _normalize_relation(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if cleaned not in RELATION_TYPES:
+            return "other"
+        return cleaned
+
+    @field_validator("confidence")
+    @classmethod
+    def _normalize_confidence(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if cleaned not in ("high", "medium", "low"):
+            raise ValueError(f"confidence 必须为 high/medium/low: {value!r}")
+        return cleaned
+
+
+class RelationExtractOutput(BaseModel):
+    """关系抽取输出。"""
+
+    relations: list[RelationItem] = Field(
+        default_factory=list,
+        description="抽取到的关系列表；新闻只是同时提到两实体但无实际交互时返回空列表",
+    )
 
 
 def parse_structured(raw_text: str, output_model: type[BaseModel]) -> Any:

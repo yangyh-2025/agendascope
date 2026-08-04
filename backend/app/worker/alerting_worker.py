@@ -274,24 +274,6 @@ class AlertingWorker:
         finally:
             db.close()
 
-    def maybe_process_report_queue(self) -> bool:
-        """执行 pending 报告导出任务（并发 >3 排队，按创建序）。"""
-        from app.services.report_service import process_pending_exports
-
-        db = self.session_factory()
-        try:
-            processed = process_pending_exports(db)
-            db.commit()
-            if processed:
-                logger.info("report_export_queue_done", processed=processed)
-            return processed > 0
-        except Exception as exc:  # noqa: BLE001
-            db.rollback()
-            logger.error("report_export_queue_fail", error=str(exc)[:300])
-            return False
-        finally:
-            db.close()
-
     # ------------------------------------------------------------------
     # 主循环
     # ------------------------------------------------------------------
@@ -304,8 +286,6 @@ class AlertingWorker:
         if self.maybe_retry_notifications():
             done += 1
         if self.maybe_send_subscriptions():
-            done += 1
-        if self.maybe_process_report_queue():
             done += 1
         return done
 

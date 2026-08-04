@@ -362,6 +362,23 @@
   border-color: var(--lp-accent);
 }
 
+/* 数据 API 并列次按钮：与主按钮同尺寸、白底深蓝边 */
+.lp-btn-secondary,
+.lp-btn-secondary:visited,
+.lp-btn-secondary:link {
+  background: #ffffff;
+  color: var(--lp-accent) !important;
+  border: 1.5px solid var(--lp-accent);
+  font-weight: 600;
+}
+.lp-btn-secondary:hover {
+  background: var(--lp-accent-soft);
+  border-color: var(--lp-accent-hover);
+  color: var(--lp-accent-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.18);
+}
+
 .lp-btn-lg {
   padding: 16px 32px;
   font-size: 16px;
