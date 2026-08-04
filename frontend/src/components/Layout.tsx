@@ -120,6 +120,10 @@ export default function Layout() {
           ))}
         </nav>
         <div className="layout-sidebar-footer">
+          <div className="layout-lab">
+            <span className="layout-lab-name">国际关系学院</span>
+            <span className="layout-lab-sub">国家安全计算模拟实验室</span>
+          </div>
           <span className="layout-version">v1.2 · © 观澜</span>
         </div>
       </aside>

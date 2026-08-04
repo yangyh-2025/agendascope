@@ -163,6 +163,32 @@
   padding: var(--as-spacing-md);
   border-top: 1px solid var(--as-colors-border);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layout-lab {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px 10px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(26, 79, 160, 0.05), rgba(200, 16, 46, 0.03));
+  border: 1px solid rgba(26, 79, 160, 0.10);
+}
+
+.layout-lab-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--as-colors-textPrimary);
+  letter-spacing: 0.12em;
+}
+
+.layout-lab-sub {
+  font-size: 11px;
+  color: var(--as-colors-textMuted);
+  letter-spacing: 0.06em;
 }
 
 .layout-version {
