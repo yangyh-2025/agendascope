@@ -34,40 +34,9 @@
 
 ## 🏗️ v4.0 分布式架构
 
-```mermaid
-flowchart TB
-    subgraph Local["本地算力机（实验室）"]
-        direction TB
-        W1["采集 collector"]
-        W2["NLP worker"]
-        W3["聚类 cluster"]
-        W4["关系抽取 relation"]
-        W5["快照 snapshot"]
-    end
-
-    subgraph Cloud["云端 阿里云 2C2G"]
-        direction TB
-        DB[("PostgreSQL + pgvector")]
-        API["FastAPI"]
-        WEB["nginx"]
-    end
-
-    subgraph Client["客户端"]
-        direction TB
-        B1["浏览器"]
-        B2["API 调用方"]
-    end
-
-    W1 --> DB
-    W2 --> DB
-    W3 --> DB
-    W4 --> DB
-    W5 --> DB
-    DB --> API
-    API --> WEB
-    WEB --> B1
-    WEB --> B2
-```
+<div align="center">
+<img src="docs/assets/architecture.svg" alt="AgendaScope v4.0 分布式架构" width="900">
+</div>
 
 **关键设计**：
 - **数据库即事实源**：所有看板/议题/事件/监控对象/预警功能都是对数据库的 `SELECT` 查询
