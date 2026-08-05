@@ -133,12 +133,6 @@ Platform [Computer software]. GitHub. https://github.com/yangyh-2025/agendascope
 }
 ```
 
-**GB/T 7714**：
-```
-杨昱航. AgendaScope：全球议程设置实时监控平台[CP/OL]. (2026-08-05).
-https://github.com/yangyh-2025/agendascope.
-```
-
 ## 🤝 贡献
 
 本项目为学术研究项目，欢迎 Issue 与 Discussion。如需贡献代码，请先阅读 [详细设计](docs/dev/2-详细设计.md)。
@@ -149,6 +143,5 @@ https://github.com/yangyh-2025/agendascope.
 
 ## 📧 联系
 
-- **作者**：杨昱航
 - **邮箱**：yangyuhang2667@163.com
 - **GitHub Issues**：[yangyh-2025/agendascope/issues](https://github.com/yangyh-2025/agendascope/issues)
