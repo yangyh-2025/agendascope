@@ -16,15 +16,9 @@
 
 </div>
 
-**English** | [中文](#中文)
+平台持续监控 **172 个国家** 的 **408 个主流媒体源**，实时识别"议程设置"行为：某国媒体、官员或重要人士率先提出议题，多国媒体随后跟随报道——平台自动判定**首发源、跟随国序列与时滞**，呈现完整传播链路，并随证据积累自我纠错（议题演化、次日归并、首发判定自动修正并全程留痕）。
 
-A real-time monitoring and agenda-setting detection platform covering mainstream media across **172 countries** and **408 media outlets**. Designed for national security and international relations research, AgendaScope identifies who sets the agenda, who follows, and how narratives propagate across borders — with full traceability from raw articles to entity relationship graphs.
-
----
-
-## 中文
-
-### 🌟 核心能力
+## 🌟 核心能力
 
 | 能力 | 说明 |
 | --- | --- |
@@ -38,27 +32,40 @@ A real-time monitoring and agenda-setting detection platform covering mainstream
 | 🔑 **数据开放平台** | RESTful API + X-API-Key 鉴权 + Redis 限流（`/developer`） |
 | 📦 **私有化部署** | Docker Compose 单机交付，LLM 走经批准的云通道 |
 
-### 🏗️ v4.0 分布式架构（NEW）
+## 🏗️ v4.0 分布式架构
 
 ```mermaid
-graph TB
-    subgraph Local["本地算力机（导师实验室）"]
-        A1[采集 Collector] --> DB
-        A2[NLP Worker] --> DB
-        A3[聚类 Cluster] --> DB
-        A4[关系抽取 Relation] --> DB
-        A5[快照 Snapshot] --> DB
+flowchart TB
+    subgraph Local["本地算力机（实验室）"]
+        direction TB
+        W1["采集 collector"]
+        W2["NLP worker"]
+        W3["聚类 cluster"]
+        W4["关系抽取 relation"]
+        W5["快照 snapshot"]
     end
-    subgraph Cloud["云端（阿里云 2C2G）"]
-        DB[(PostgreSQL + pgvector)]
-        API[FastAPI]
-        WEB[nginx]
+
+    subgraph Cloud["云端 阿里云 2C2G"]
+        direction TB
+        DB[("PostgreSQL + pgvector")]
+        API["FastAPI"]
+        WEB["nginx"]
     end
+
     subgraph Client["客户端"]
-        B1[浏览器]
-        B2[API 调用方]
+        direction TB
+        B1["浏览器"]
+        B2["API 调用方"]
     end
-    DB --> API --> WEB --> B1
+
+    W1 --> DB
+    W2 --> DB
+    W3 --> DB
+    W4 --> DB
+    W5 --> DB
+    DB --> API
+    API --> WEB
+    WEB --> B1
     WEB --> B2
 ```
 
@@ -69,7 +76,7 @@ graph TB
 - **议题生命周期事件**：每次合并/重命名/首发修正都留 `topic_lifecycle_events` 表
 - **实体-文章显式关联**：`article_entities` 表替代 JSONB，可索引可连接
 
-### 🗄️ 数据库四层架构（L0-L3）
+## 🗄️ 数据库四层架构
 
 | 层 | 表 | 职责 |
 |----|----|------|
@@ -78,9 +85,9 @@ graph TB
 | **L2 事实层** | `topics` / `agenda_events` / `persons_orgs` / `entity_relations` | 对外呈现的事实 |
 | **L3 快照层** | `topic_snapshots` / `entity_snapshots` / `source_snapshots` | 预聚合时序数据，看板秒查 |
 
-### 🚀 快速开始
+## 🚀 快速开始
 
-#### 仅使用云端服务（无需部署）
+### 仅使用云端服务（无需部署）
 
 ```bash
 # 浏览：https://www.wordread.cn
@@ -90,7 +97,7 @@ curl -H "X-API-Key: YOUR_KEY" \
   "https://www.wordread.cn/api/v1/open/topics?status=heating&page_size=10"
 ```
 
-#### 本地算力机接入（贡献采集/NLP 算力）
+### 本地算力机接入（贡献采集/NLP 算力）
 
 ```bash
 git clone https://github.com/yangyh-2025/agendascope.git
@@ -101,7 +108,7 @@ docker compose --env-file .env up -d
 
 详见 [local_workers/README.md](local_workers/README.md)。
 
-#### 完整私有化部署（云端）
+### 完整私有化部署（云端）
 
 ```bash
 cd deploy
@@ -109,7 +116,7 @@ cp .env.example .env  # 配置 LLM_API_KEY 等
 docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 ```
 
-### 📚 文档
+## 📚 文档
 
 - [详细设计](docs/dev/2-详细设计.md)：数据库 schema、状态机、算法
 - [分布式部署指南](docs/dev/分布式部署指南.md)：本地算力机接入步骤
@@ -117,7 +124,7 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 - [API 文档](https://www.wordread.cn/developer/docs)：数据开放平台在线文档
 - [CHANGELOG](CHANGELOG.md)：版本演进历史
 
-### 🛠️ 技术栈
+## 🛠️ 技术栈
 
 - **后端**：Python 3.11 + FastAPI + SQLAlchemy 2 + Alembic + pgvector
 - **前端**：React 18 + TypeScript + Vite + ECharts + Three.js
@@ -128,7 +135,7 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 - **采集**：RSS + 网页抓取 + GDELT 兜底
 - **部署**：Docker Compose + nginx + HTTPS
 
-### 📊 数据规模
+## 📊 数据规模
 
 - **172** 个国家（含全球南方代表性国家）
 - **408** 个媒体源（报纸/通讯社/广播/网络）
@@ -136,7 +143,7 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 - **50** 个精品监控对象（避开元首与中国相关实体）
 - **16** 种封闭关系类型（meets/sanctions/appoints/...）
 
-### 📖 论文引用
+## 📖 论文引用
 
 如果本项目对您的研究或教学有帮助，请按以下格式引用：
 
@@ -163,125 +170,16 @@ Platform [Computer software]. GitHub. https://github.com/yangyh-2025/agendascope
 https://github.com/yangyh-2025/agendascope.
 ```
 
-### 🤝 贡献
+## 🤝 贡献
 
 本项目为学术研究项目，欢迎 Issue 与 Discussion。如需贡献代码，请先阅读 [详细设计](docs/dev/2-详细设计.md)。
 
-### 📄 License
+## 📄 License
 
 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — 仅限非商业学术用途
 
-### 📧 联系
+## 📧 联系
 
 - **作者**：杨昱航
 - **邮箱**：yangyuhang2667@163.com
 - **GitHub Issues**：[yangyh-2025/agendascope/issues](https://github.com/yangyh-2025/agendascope/issues)
-
----
-
-## English
-
-### 🌟 Key Features
-
-- **Global Agenda Map**: 172-country heatmap with drill-down to top topics
-- **Topic Clustering**: Cross-lingual vector clustering (bge-m3) + LLM naming
-- **Real-time Collection**: 408 media sources, ≤15min publication-to-visibility
-- **Agenda Tracing**: First-source detection + cross-border propagation chain
-- **Entity Watchlist**: 50 curated entities with evidence-backed relation graph
-- **Structured Database**: L0-L3 layered schema + processing state machine + distributed task queue
-- **Open Data API**: RESTful endpoints with X-API-Key authentication
-- **Self-hosted**: Docker Compose single-machine deployment
-
-### 🏗️ Architecture (v4.0)
-
-```mermaid
-graph TB
-    subgraph Local["Local Compute Node (Lab)"]
-        A1[Collector] --> DB
-        A2[NLP Worker] --> DB
-        A3[Cluster Worker] --> DB
-        A4[Relation Extractor] --> DB
-        A5[Snapshot Worker] --> DB
-    end
-    subgraph Cloud["Aliyun 2C2G"]
-        DB[(PostgreSQL + pgvector)]
-        API[FastAPI]
-        WEB[nginx]
-    end
-    subgraph Client["Clients"]
-        B1[Browser]
-        B2[API Consumer]
-    end
-    DB --> API --> WEB --> B1
-    WEB --> B2
-```
-
-### 🗄️ Database Layers
-
-| Layer | Tables | Purpose |
-|-------|--------|---------|
-| **L0 Raw** | `articles`, `sources`, `collection_jobs` | Raw crawled content |
-| **L1 Processing** | `article_processing`, `article_entities`, `worker_tasks` | State machine + task queue |
-| **L2 Facts** | `topics`, `agenda_events`, `persons_orgs`, `entity_relations` | Presentation-ready facts |
-| **L3 Snapshots** | `topic_snapshots`, `entity_snapshots`, `source_snapshots` | Pre-aggregated time series |
-
-### 🚀 Quick Start
-
-**Use hosted service** (no deployment):
-```bash
-curl -H "X-API-Key: YOUR_KEY" \
-  "https://www.wordread.cn/api/v1/open/topics?status=heating"
-```
-
-**Run local compute node**:
-```bash
-git clone https://github.com/yangyh-2025/agendascope.git
-cd agendascope/local_workers
-cp .env.example .env  # Fill in DATABASE_URL and LLM_API_KEY
-docker compose --env-file .env up -d
-```
-
-**Self-host full stack**:
-```bash
-cd deploy
-cp .env.example .env
-docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
-```
-
-### 📊 Scale
-
-- **172** countries · **408** media sources · **~500** articles/day
-- **50** curated entities (heads of state & China-related excluded by design)
-- **16** closed relation types (meets/sanctions/appoints/...)
-
-### 📖 Citation
-
-If you use this platform in your research or teaching, please cite:
-
-**APA**：
-```
-Yang, Y. (2026). AgendaScope: A Real-time Global Agenda-Setting Monitoring
-Platform [Computer software]. GitHub. https://github.com/yangyh-2025/agendascope
-```
-
-**BibTeX**：
-```bibtex
-@software{yang2026agendascope,
-  author = {Yang, Yuhang},
-  title = {AgendaScope: A Real-time Global Agenda-Setting Monitoring Platform},
-  year = {2026},
-  publisher = {GitHub},
-  url = {https://github.com/yangyh-2025/agendascope}
-}
-```
-
-### 📄 License
-
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — Academic non-commercial use only
-
-### 📧 Contact
-
-- **Author**: Yuhang Yang
-- **Email**: yangyuhang2667@163.com
-- **Issues**: [yangyh-2025/agendascope/issues](https://github.com/yangyh-2025/agendascope/issues)
-
