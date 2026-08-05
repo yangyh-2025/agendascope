@@ -1,135 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
-  <defs>
-    <linearGradient id="grad-local" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#eff6ff"/>
-      <stop offset="100%" stop-color="#dbeafe"/>
-    </linearGradient>
-    <linearGradient id="grad-cloud" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f0fdf4"/>
-      <stop offset="100%" stop-color="#dcfce7"/>
-    </linearGradient>
-    <linearGradient id="grad-client" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#faf5ff"/>
-      <stop offset="100%" stop-color="#ede9fe"/>
-    </linearGradient>
-    <linearGradient id="grad-accent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2563eb"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
-    </linearGradient>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
-    </marker>
-    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
-    </marker>
-  </defs>
-
-  <!-- 背景 -->
-  <rect width="1200" height="700" fill="#fafbfc"/>
-
-  <!-- 标题 -->
-  <text x="600" y="50" text-anchor="middle" font-size="28" font-weight="700" fill="#0f172a">AgendaScope v4.0 分布式架构</text>
-  <text x="600" y="80" text-anchor="middle" font-size="14" fill="#64748b">本地算力机 · 云端数据库 · 客户端</text>
-
-  <!-- 本地算力机 -->
-  <rect x="60" y="120" width="320" height="460" rx="12" fill="url(#grad-local)" stroke="#2563eb" stroke-width="2"/>
-  <text x="220" y="155" text-anchor="middle" font-size="18" font-weight="700" fill="#1e40af">本地算力机</text>
-  <text x="220" y="175" text-anchor="middle" font-size="12" fill="#64748b">8 核 · 32GB · 无 GPU</text>
-
-  <!-- 本地 worker 列表 -->
-  <g font-size="13" fill="#1e293b">
-    <rect x="80" y="195" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="220" font-weight="600">📡 collector</text>
-    <text x="265" y="220" text-anchor="end" font-size="11" fill="#64748b">408 媒体源</text>
-
-    <rect x="80" y="247" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="272" font-weight="600">🧠 nlp-worker</text>
-    <text x="265" y="272" text-anchor="end" font-size="11" fill="#64748b">bge-m3 embedding</text>
-
-    <rect x="80" y="299" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="324" font-weight="600">🗂️ cluster-worker</text>
-    <text x="265" y="324" text-anchor="end" font-size="11" fill="#64748b">BERTopic</text>
-
-    <rect x="80" y="351" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="376" font-weight="600">🕸️ relation-worker</text>
-    <text x="265" y="376" text-anchor="end" font-size="11" fill="#64748b">LLM 云 API</text>
-
-    <rect x="80" y="403" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="428" font-weight="600">📊 snapshot-worker</text>
-    <text x="265" y="428" text-anchor="end" font-size="11" fill="#64748b">L3 预聚合</text>
-
-    <rect x="80" y="455" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="480" font-weight="600">🔍 detection-worker</text>
-    <text x="265" y="480" text-anchor="end" font-size="11" fill="#64748b">议程事件</text>
-
-    <rect x="80" y="507" width="280" height="42" rx="6" fill="#fff" stroke="#cbd5e1"/>
-    <text x="95" y="532" font-weight="600">⚙️ 其他 worker</text>
-    <text x="265" y="532" text-anchor="end" font-size="11" fill="#64748b">naming / alerting / entity</text>
-  </g>
-
-  <!-- 云端 -->
-  <rect x="450" y="120" width="320" height="460" rx="12" fill="url(#grad-cloud)" stroke="#059669" stroke-width="2"/>
-  <text x="610" y="155" text-anchor="middle" font-size="18" font-weight="700" fill="#047857">云端 阿里云</text>
-  <text x="610" y="175" text-anchor="middle" font-size="12" fill="#64748b">2C2G · 3Mbps · 39.106.2.28</text>
-
-  <!-- 云端服务 -->
-  <g font-size="13" fill="#1e293b">
-    <rect x="470" y="200" width="280" height="70" rx="6" fill="#fff" stroke="#10b981" stroke-width="1.5"/>
-    <text x="485" y="225" font-weight="700" fill="#047857">🗄️ PostgreSQL 16</text>
-    <text x="485" y="245" font-size="11" fill="#64748b">+ pgvector · 768MB</text>
-    <text x="485" y="260" font-size="11" fill="#64748b">L0-L3 四层 · 30+ 张表</text>
-
-    <rect x="470" y="290" width="280" height="60" rx="6" fill="#fff" stroke="#10b981" stroke-width="1.5"/>
-    <text x="485" y="312" font-weight="700" fill="#047857">⚡ FastAPI</text>
-    <text x="485" y="330" font-size="11" fill="#64748b">只读 API · JWT + X-API-Key</text>
-
-    <rect x="470" y="365" width="280" height="60" rx="6" fill="#fff" stroke="#10b981" stroke-width="1.5"/>
-    <text x="485" y="387" font-weight="700" fill="#047857">🌐 nginx</text>
-    <text x="485" y="405" font-size="11" fill="#64748b">静态 · /api 反代 · HTTPS</text>
-
-    <rect x="470" y="440" width="280" height="60" rx="6" fill="#fff" stroke="#10b981" stroke-width="1.5"/>
-    <text x="485" y="462" font-weight="700" fill="#047857">💾 Redis</text>
-    <text x="485" y="480" font-size="11" fill="#64748b">响应缓存 · API 限流</text>
-
-    <text x="610" y="540" text-anchor="middle" font-size="11" fill="#64748b" font-style="italic">worker 全部退役到本地</text>
-  </g>
-
-  <!-- 客户端 -->
-  <rect x="840" y="120" width="320" height="460" rx="12" fill="url(#grad-client)" stroke="#7c3aed" stroke-width="2"/>
-  <text x="1000" y="155" text-anchor="middle" font-size="18" font-weight="700" fill="#6d28d9">客户端</text>
-  <text x="1000" y="175" text-anchor="middle" font-size="12" fill="#64748b">浏览器 / API 调用方</text>
-
-  <g font-size="13" fill="#1e293b">
-    <rect x="860" y="200" width="280" height="70" rx="6" fill="#fff" stroke="#a855f7" stroke-width="1.5"/>
-    <text x="875" y="225" font-weight="700" fill="#6d28d9">🖥️ 浏览器</text>
-    <text x="875" y="245" font-size="11" fill="#64748b">Landing / 看板 / 议题</text>
-    <text x="875" y="260" font-size="11" fill="#64748b">监控对象图谱 / 预警</text>
-
-    <rect x="860" y="290" width="280" height="70" rx="6" fill="#fff" stroke="#a855f7" stroke-width="1.5"/>
-    <text x="875" y="315" font-weight="700" fill="#6d28d9">🔑 数据 API</text>
-    <text x="875" y="335" font-size="11" fill="#64748b">/api/v1/open/*</text>
-    <text x="875" y="350" font-size="11" fill="#64748b">X-API-Key 鉴权 · 60/min 限流</text>
-
-    <rect x="860" y="380" width="280" height="60" rx="6" fill="#fff" stroke="#a855f7" stroke-width="1.5"/>
-    <text x="875" y="402" font-weight="700" fill="#6d28d9">🛠️ /developer</text>
-    <text x="875" y="420" font-size="11" fill="#64748b">文档 · Key 管理 · 在线调试</text>
-  </g>
-
-  <!-- 箭头：本地 → 云端 -->
-  <path d="M 380 350 L 445 350" stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <text x="412" y="335" text-anchor="middle" font-size="12" font-weight="700" fill="#2563eb">PG SSL</text>
-  <text x="412" y="370" text-anchor="middle" font-size="10" fill="#64748b">WRITE</text>
-
-  <!-- 箭头：云端 → 客户端 -->
-  <path d="M 770 350 L 835 350" stroke="#059669" stroke-width="3" fill="none" marker-end="url(#arrow-green)"/>
-  <text x="802" y="335" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">HTTPS</text>
-  <text x="802" y="370" text-anchor="middle" font-size="10" fill="#64748b">READ</text>
-
-  <!-- 底部说明 -->
-  <rect x="60" y="610" width="1100" height="70" rx="8" fill="#fff" stroke="#e2e8f0"/>
-  <text x="80" y="635" font-size="13" font-weight="600" fill="#0f172a">关键设计</text>
-  <text x="80" y="655" font-size="12" fill="#475569">· 数据库即事实源：所有看板/议题/事件/监控对象都是 SELECT 查询</text>
-  <text x="80" y="672" font-size="12" fill="#475569">· 状态机落库：article_processing 跟踪每篇文章的加工进度，失败可重跑</text>
-  <text x="680" y="655" font-size="12" fill="#475569">· 分布式任务队列：worker_tasks + FOR UPDATE SKIP LOCKED</text>
-  <text x="680" y="672" font-size="12" fill="#475569">· 离线容错：本地宕机不丢数据，云端宕机本地暂存后批量回传</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="'SF Mono', Monaco, Consolas, 'Courier New', monospace">
+  <rect width="900" height="460" fill="#ffffff"/>
+  <text font-size="13" fill="#1e293b" xml:space="preserve">
+    <tspan x="10" y="25">┌─────────────────────────────────────────────────────────────────┐</tspan>
+    <tspan x="10" y="45">│  本地算力机（导师实验室）                                       │</tspan>
+    <tspan x="10" y="65">│  - 采集 worker（408 媒体源 RSS + 网页抓取）                     │</tspan>
+    <tspan x="10" y="85">│  - NLP worker（bge-m3 embedding、语言检测、情感）               │</tspan>
+    <tspan x="10" y="105">│  - 实体抽取 worker（NER + 50 精品种子匹配 + article_entities）  │</tspan>
+    <tspan x="10" y="125">│  - 聚类 worker（BERTopic / Agglomerative 全局重聚类）           │</tspan>
+    <tspan x="10" y="145">│  - 关系抽取 worker（调云端 LLM API：GLM-4-Flash / SiliconFlow） │</tspan>
+    <tspan x="10" y="165">│  - 快照 worker（聚合写 topic/entity/source_snapshots）          │</tspan>
+    <tspan x="10" y="185">│  通过公网 PG 连接云服务器读写数据库                              │</tspan>
+    <tspan x="10" y="205">└─────────────────────────────────────────────────────────────────┘</tspan>
+    <tspan x="10" y="230">                          ↓ PostgreSQL 公网连接（SSL）</tspan>
+    <tspan x="10" y="255">┌─────────────────────────────────────────────────────────────────┐</tspan>
+    <tspan x="10" y="275">│  阿里云 2C2G/3Mbps（仅 3 个服务）                                │</tspan>
+    <tspan x="10" y="295">│  - PostgreSQL 16 + pgvector（数据库存储，~768MB RAM）            │</tspan>
+    <tspan x="10" y="315">│  - backend FastAPI（只读 API + JWT/API Key 鉴权，~384MB RAM）    │</tspan>
+    <tspan x="10" y="335">│  - frontend nginx（静态文件 + /api 反代 + HTTPS，~64MB RAM）     │</tspan>
+    <tspan x="10" y="355">│  不再跑：worker / Redis Stream / ES（全部退役）                  │</tspan>
+    <tspan x="10" y="375">└─────────────────────────────────────────────────────────────────┘</tspan>
+    <tspan x="10" y="400">                          ↓ HTTPS</tspan>
+    <tspan x="10" y="425">┌─────────────────────────────────────────────────────────────────┐</tspan>
+    <tspan x="10" y="445">│  用户浏览器 / 数据 API 客户端                                    │</tspan>
+    <tspan x="10" y="465">└─────────────────────────────────────────────────────────────────┘</tspan>
+  </text>
 </svg>
