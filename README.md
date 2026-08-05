@@ -4,9 +4,7 @@
 
 # AgendaScope 观澜 · 全球议程设置监控平台
 
-**面向国家安全与国际关系研究机构的全球主流媒体舆情实时监控与议程设置识别系统**
-
-**国际关系学院 · 国家安全计算模拟实验室**
+**面向国家安全与国际关系研究的全球主流媒体舆情实时监控与议程设置识别系统**
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](backend/)
@@ -42,20 +40,26 @@ A real-time monitoring and agenda-setting detection platform covering mainstream
 
 ### 🏗️ v4.0 分布式架构（NEW）
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  本地算力机（8核 32GB，导师实验室）                              │
-│  采集 · NLP · 聚类 · 关系抽取 · 快照聚合                          │
-└─────────────────────────────────────────────────────────────────┘
-                          ↓ PostgreSQL（SSL 加密）
-┌─────────────────────────────────────────────────────────────────┐
-│  阿里云 2C2G/3Mbps                                              │
-│  PostgreSQL · FastAPI · nginx（只读 API + 前端展示）             │
-└─────────────────────────────────────────────────────────────────┘
-                          ↓ HTTPS
-┌─────────────────────────────────────────────────────────────────┐
-│  用户浏览器 / 数据 API 客户端                                    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Local["本地算力机（导师实验室）"]
+        A1[采集 Collector] --> DB
+        A2[NLP Worker] --> DB
+        A3[聚类 Cluster] --> DB
+        A4[关系抽取 Relation] --> DB
+        A5[快照 Snapshot] --> DB
+    end
+    subgraph Cloud["云端（阿里云 2C2G）"]
+        DB[(PostgreSQL + pgvector)]
+        API[FastAPI]
+        WEB[nginx]
+    end
+    subgraph Client["客户端"]
+        B1[浏览器]
+        B2[API 调用方]
+    end
+    DB --> API --> WEB --> B1
+    WEB --> B2
 ```
 
 **关键设计**：
@@ -109,7 +113,7 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 
 - [详细设计](docs/dev/2-详细设计.md)：数据库 schema、状态机、算法
 - [分布式部署指南](docs/dev/分布式部署指南.md)：本地算力机接入步骤
-- [算力机申请单](docs/apply/本地算力机申请单.md)：给导师的硬件配置申请
+- [算力机申请单](docs/apply/本地算力机申请单.md)：硬件配置申请模板
 - [API 文档](https://www.wordread.cn/developer/docs)：数据开放平台在线文档
 - [CHANGELOG](CHANGELOG.md)：版本演进历史
 
@@ -122,7 +126,7 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 - **LLM**：GLM-4-Flash / SiliconFlow（多模型池 + 失败转移熔断）
 - **Embedding**：bge-m3（1024 维跨语言）
 - **采集**：RSS + 网页抓取 + GDELT 兜底
-- **部署**：Docker Compose + nginx + HTTPS（阿里云 SSL）
+- **部署**：Docker Compose + nginx + HTTPS
 
 ### 📊 数据规模
 
@@ -131,6 +135,33 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 - **~500** 篇/天 文章采集
 - **50** 个精品监控对象（避开元首与中国相关实体）
 - **16** 种封闭关系类型（meets/sanctions/appoints/...）
+
+### 📖 论文引用
+
+如果本项目对您的研究或教学有帮助，请按以下格式引用：
+
+**APA**：
+```
+Yang, Y. (2026). AgendaScope: A Real-time Global Agenda-Setting Monitoring
+Platform [Computer software]. GitHub. https://github.com/yangyh-2025/agendascope
+```
+
+**BibTeX**：
+```bibtex
+@software{yang2026agendascope,
+  author = {Yang, Yuhang},
+  title = {AgendaScope: A Real-time Global Agenda-Setting Monitoring Platform},
+  year = {2026},
+  publisher = {GitHub},
+  url = {https://github.com/yangyh-2025/agendascope}
+}
+```
+
+**GB/T 7714**：
+```
+杨昱航. AgendaScope：全球议程设置实时监控平台[CP/OL]. (2026-08-05).
+https://github.com/yangyh-2025/agendascope.
+```
 
 ### 🤝 贡献
 
@@ -142,7 +173,7 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 
 ### 📧 联系
 
-- **单位**：国际关系学院 · 国家安全计算模拟实验室
+- **作者**：杨昱航
 - **邮箱**：yangyuhang2667@163.com
 - **GitHub Issues**：[yangyh-2025/agendascope/issues](https://github.com/yangyh-2025/agendascope/issues)
 
@@ -223,12 +254,34 @@ docker compose --env-file .env -f docker-compose.yml -f compose.deploy.yml up -d
 - **50** curated entities (heads of state & China-related excluded by design)
 - **16** closed relation types (meets/sanctions/appoints/...)
 
+### 📖 Citation
+
+If you use this platform in your research or teaching, please cite:
+
+**APA**：
+```
+Yang, Y. (2026). AgendaScope: A Real-time Global Agenda-Setting Monitoring
+Platform [Computer software]. GitHub. https://github.com/yangyh-2025/agendascope
+```
+
+**BibTeX**：
+```bibtex
+@software{yang2026agendascope,
+  author = {Yang, Yuhang},
+  title = {AgendaScope: A Real-time Global Agenda-Setting Monitoring Platform},
+  year = {2026},
+  publisher = {GitHub},
+  url = {https://github.com/yangyh-2025/agendascope}
+}
+```
+
 ### 📄 License
 
 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — Academic non-commercial use only
 
 ### 📧 Contact
 
-- **Lab**: School of International Relations · National Security Computational Simulation Lab
+- **Author**: Yuhang Yang
 - **Email**: yangyuhang2667@163.com
 - **Issues**: [yangyh-2025/agendascope/issues](https://github.com/yangyh-2025/agendascope/issues)
+
